@@ -2,7 +2,7 @@
 <!-- 
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 5.7 — Demo Isolation Fix           ║
+  ║  Version: 5.8                                ║
   ║  Date: 2025-04-30                            ║
   ║  Changes: Full backend wiring via fetch()    ║
   ║           sessionStorage auth (session-long) ║
@@ -572,25 +572,159 @@ body {
 }
 
 /* Welcome flash */
-.welcome-flash {
+/* ══════════════════════════════════════════════
+   SPLASH SCREEN — two-phase animation
+   Phase 1: bouncing pickleball while data loads
+   Phase 2: lime sweep + FORGE reveal after login
+══════════════════════════════════════════════ */
+.splash {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: var(--accent);
+  background: #0f0f0f;
   z-index: 800;
-  display: flex;
+  display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  opacity: 0;
-  pointer-events: none;
+  overflow: hidden;
+}
+.splash.show { display: flex; }
+
+/* Phase 1: loading bounce */
+.splash-phase1 {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
   transition: opacity 0.3s;
 }
-.welcome-flash.show { opacity: 1; pointer-events: all; }
-.welcome-check {
-  font-size: 64px;
-  animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+.splash-phase1.hide { opacity: 0; pointer-events: none; }
+
+.splash-ball-wrap {
+  animation: splashBounce 0.6s cubic-bezier(0.4,0,0.2,1) infinite alternate;
 }
+@keyframes splashBounce {
+  0%   { transform: translateY(0) scaleY(1) scaleX(1); }
+  85%  { transform: translateY(68px) scaleY(1) scaleX(1); }
+  100% { transform: translateY(76px) scaleY(0.82) scaleX(1.15); }
+}
+
+.splash-shadow {
+  width: 56px; height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.07);
+  margin-top: 6px;
+  animation: splashShadow 0.6s cubic-bezier(0.4,0,0.2,1) infinite alternate;
+}
+@keyframes splashShadow {
+  0%   { transform: scaleX(1); opacity: 0.07; }
+  100% { transform: scaleX(0.48); opacity: 0.025; }
+}
+
+.splash-loading-text {
+  font-family: 'Barlow Condensed', -apple-system, sans-serif;
+  font-weight: 700; font-size: 12px;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: #3a3a3a;
+  margin-top: 92px;
+  animation: splashTextPulse 1.4s ease infinite;
+}
+@keyframes splashTextPulse {
+  0%, 100% { opacity: 0.35; }
+  50%       { opacity: 1; }
+}
+
+.splash-dots {
+  display: inline-flex; gap: 5px;
+  margin-left: 8px; vertical-align: middle;
+}
+.splash-dots span {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: #2e2e2e; display: inline-block;
+  animation: splashDot 0.9s ease infinite;
+}
+.splash-dots span:nth-child(2) { animation-delay: 0.15s; }
+.splash-dots span:nth-child(3) { animation-delay: 0.30s; }
+@keyframes splashDot {
+  0%, 100% { background: #2e2e2e; }
+  50%       { background: #AADC32; }
+}
+
+/* Phase 2: forge reveal */
+.splash-phase2 {
+  position: absolute; inset: 0;
+  background: #0f0f0f;
+  opacity: 0; pointer-events: none;
+}
+.splash-phase2.show { opacity: 1; }
+
+/* lime sweep wipe */
+.splash-sweep {
+  position: absolute; top: 0; bottom: 0;
+  left: -100%; width: 100%;
+  background: #AADC32;
+  opacity: 0;
+}
+.splash-sweep.run {
+  opacity: 1;
+  animation: splashSweep 0.5s cubic-bezier(0.86,0,0.07,1) forwards;
+}
+@keyframes splashSweep {
+  0%   { left: -100%; }
+  45%  { left: 0; }
+  55%  { left: 0; }
+  100% { left: 100%; }
+}
+
+/* accent bar */
+.splash-bar {
+  position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: #AADC32;
+  transform: scaleX(0); transform-origin: left;
+}
+.splash-bar.run { animation: splashBar 0.35s ease 0.42s forwards; }
+@keyframes splashBar { to { transform: scaleX(1); } }
+
+/* FORGE word */
+.splash-forge {
+  position: absolute; left: 0; right: 0; top: 200px;
+  text-align: center;
+  font-family: 'Barlow Condensed', -apple-system, sans-serif;
+  font-weight: 900; font-size: 92px; color: #fff;
+  letter-spacing: -3px; line-height: 1;
+  opacity: 0; transform: scale(0.78);
+}
+.splash-forge.run { animation: splashForge 0.5s cubic-bezier(0.34,1.5,0.64,1) 0.5s forwards; }
+@keyframes splashForge { to { opacity: 1; transform: scale(1); } }
+
+/* underline — strictly below FORGE: 200+92+10 = 302 */
+.splash-underline {
+  position: absolute; top: 302px; left: 50%;
+  transform: translateX(-50%);
+  height: 4px; width: 0;
+  background: #AADC32; border-radius: 2px;
+}
+.splash-underline.run { animation: splashLine 0.4s ease 0.88s forwards; }
+@keyframes splashLine { to { width: 94px; } }
+
+/* tagline — below underline: 302+4+14 = 320 */
+.splash-tagline {
+  position: absolute; left: 0; right: 0; top: 324px;
+  text-align: center;
+  font-family: 'Barlow', -apple-system, sans-serif;
+  font-weight: 300; font-size: 14px; color: #666;
+  letter-spacing: 1.5px;
+  opacity: 0;
+}
+.splash-tagline.run { animation: splashTag 0.45s ease 0.98s forwards; }
+.splash-tagline em { color: #AADC32; font-style: normal; font-weight: 500; }
+@keyframes splashTag {
+  0%   { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* legacy — kept so no reference errors */
+.welcome-flash { display: none; }
+.welcome-check { display: none; }
 .welcome-text {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-weight: 900;
@@ -2461,9 +2595,74 @@ body {
 <div class="ball-deco-2" id="ballDeco2"></div>
 
 <!-- Welcome flash -->
-<div class="welcome-flash" id="welcomeFlash">
-  <div class="welcome-check">✓</div>
-  <div class="welcome-text">Welcome to Forge</div>
+<!-- ══ SPLASH SCREEN ══ -->
+<div class="splash" id="splashScreen">
+
+  <!-- Phase 1: bouncing pickleball while data loads -->
+  <div class="splash-phase1" id="splashPhase1">
+    <div class="splash-ball-wrap">
+      <svg width="88" height="88" viewBox="0 0 90 90">
+        <defs>
+          <radialGradient id="spBallGrad" cx="38%" cy="35%" r="60%">
+            <stop offset="0%"   stop-color="#f2efe8"/>
+            <stop offset="60%"  stop-color="#e2dfd7"/>
+            <stop offset="100%" stop-color="#cac6bc"/>
+          </radialGradient>
+          <radialGradient id="spHoleGrad" cx="35%" cy="35%" r="65%">
+            <stop offset="0%"   stop-color="#2a2a28"/>
+            <stop offset="100%" stop-color="#111110"/>
+          </radialGradient>
+          <clipPath id="spBallClip"><circle cx="45" cy="45" r="42"/></clipPath>
+        </defs>
+        <!-- ball body -->
+        <circle cx="45" cy="45" r="42" fill="url(#spBallGrad)"/>
+        <!-- holes: large ovals, foreshortened near edges like real pickleball -->
+        <!-- top row -->
+        <ellipse cx="27" cy="18" rx="5.5" ry="4.5" fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <ellipse cx="45" cy="14" rx="6.5" ry="5.5" fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <ellipse cx="63" cy="18" rx="5.5" ry="4.5" fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <!-- upper-mid row -->
+        <ellipse cx="14" cy="33" rx="4.5" ry="6"   fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <ellipse cx="33" cy="31" rx="6.5" ry="6.5" fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <ellipse cx="57" cy="31" rx="6.5" ry="6.5" fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <ellipse cx="75" cy="33" rx="4.5" ry="6"   fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <!-- mid row -->
+        <ellipse cx="9"  cy="48" rx="3.5" ry="6.5" fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <ellipse cx="45" cy="46" rx="7"   ry="7"   fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <ellipse cx="81" cy="48" rx="3.5" ry="6.5" fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <!-- lower-mid row -->
+        <ellipse cx="15" cy="63" rx="4.5" ry="6"   fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <ellipse cx="33" cy="61" rx="6.5" ry="6.5" fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <ellipse cx="57" cy="61" rx="6.5" ry="6.5" fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <ellipse cx="75" cy="63" rx="4.5" ry="6"   fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <!-- bottom row -->
+        <ellipse cx="27" cy="74" rx="5.5" ry="4.5" fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <ellipse cx="45" cy="77" rx="6.5" ry="5"   fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <ellipse cx="63" cy="74" rx="5.5" ry="4.5" fill="url(#spHoleGrad)" clip-path="url(#spBallClip)"/>
+        <!-- specular highlight -->
+        <ellipse cx="33" cy="27" rx="9" ry="6"
+          fill="rgba(255,255,255,0.32)" transform="rotate(-22 33 27)"/>
+        <!-- edge shading ring -->
+        <circle cx="45" cy="45" r="42"
+          fill="none" stroke="rgba(0,0,0,0.1)" stroke-width="2.5"/>
+      </svg>
+    </div>
+    <div class="splash-shadow"></div>
+    <div class="splash-loading-text">
+      Loading data
+      <span class="splash-dots"><span></span><span></span><span></span></span>
+    </div>
+  </div>
+
+  <!-- Phase 2: FORGE reveal -->
+  <div class="splash-phase2" id="splashPhase2">
+    <div class="splash-sweep"     id="splashSweep"></div>
+    <div class="splash-bar"       id="splashBar"></div>
+    <div class="splash-forge"     id="splashForge">FORGE</div>
+    <div class="splash-underline" id="splashUnderline"></div>
+    <div class="splash-tagline"   id="splashTagline">your pickleball <em>mettle</em></div>
+  </div>
+
 </div>
 
 <!-- Toast -->
@@ -2732,7 +2931,7 @@ body {
       <div class="success-headline">Match Recorded!</div>
       <div class="success-sub">Ratings updated for all 4 players</div>
       <div class="rating-changes" id="ratingChanges"></div>
-      <button class="done-btn" onclick="resetAddMatch()">Done</button>
+      <button class="done-btn" type="button" onclick="onMatchDone()">Done</button>
     </div>
 
     <!-- STEP 1: DATE -->
@@ -2790,10 +2989,10 @@ body {
         <div class="game-label">Game 1</div>
         <div class="score-row">
           <input class="score-input team-a" id="g1a" type="number" min="0" max="99" placeholder="0"
-            oninput="onScoreInput()">
+            oninput="clampScoreInput(this);onScoreInput()">
           <div class="score-dash">—</div>
           <input class="score-input" id="g1b" type="number" min="0" max="99" placeholder="0"
-            oninput="onScoreInput()">
+            oninput="clampScoreInput(this);onScoreInput()">
         </div>
         <div id="g1winner"></div>
       </div>
@@ -2803,10 +3002,10 @@ body {
         <div class="game-label">Game 2</div>
         <div class="score-row">
           <input class="score-input team-a" id="g2a" type="number" min="0" max="99" placeholder="0"
-            oninput="onScoreInput()" disabled>
+            oninput="clampScoreInput(this);onScoreInput()" disabled>
           <div class="score-dash">—</div>
           <input class="score-input" id="g2b" type="number" min="0" max="99" placeholder="0"
-            oninput="onScoreInput()" disabled>
+            oninput="clampScoreInput(this);onScoreInput()" disabled>
         </div>
         <div id="g2winner"></div>
       </div>
@@ -2816,10 +3015,10 @@ body {
         <div class="game-label">Game 3</div>
         <div class="score-row">
           <input class="score-input team-a" id="g3a" type="number" min="0" max="99" placeholder="0"
-            oninput="onScoreInput()" disabled>
+            oninput="clampScoreInput(this);onScoreInput()" disabled>
           <div class="score-dash">—</div>
           <input class="score-input" id="g3b" type="number" min="0" max="99" placeholder="0"
-            oninput="onScoreInput()" disabled>
+            oninput="clampScoreInput(this);onScoreInput()" disabled>
         </div>
         <div id="g3winner"></div>
       </div>
@@ -2924,7 +3123,21 @@ body {
 
   </div><!-- /screenMatches -->
 
+
 </div><!-- /appShell -->
+
+<!-- Tooltip Info Sheet — outside appShell so it works in both
+     password path and demo mode regardless of appShell visibility -->
+<div class="modal-overlay" id="tooltipModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="tooltip-sheet-title" id="tooltipSheetTitle"></div>
+    <div class="tooltip-sheet-body" id="tooltipSheetBody"></div>
+    <div class="modal-btns" style="margin-top:20px;">
+      <button class="modal-cancel" type="button" onclick="closeTooltipModal()">Got it</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ BOTTOM NAV ══ -->
 <nav class="nav-bar" id="navBar">
@@ -3679,20 +3892,100 @@ function showPwError() {
 }
 
 function showWelcome() {
-  const flash = document.getElementById('welcomeFlash');
-  flash.classList.add('show');
+  // Hide password screen immediately
+  document.getElementById('pwScreen').style.display  = 'none';
+  document.getElementById('ballDeco1').style.display = 'none';
+  document.getElementById('ballDeco2').style.display = 'none';
+
+  // Show splash — Phase 1 (bouncing ball) plays automatically
+  const splash = document.getElementById('splashScreen');
+  splash.classList.add('show');
+
+  // Start fetching data in the background while animation plays
+  // launchApp handles the data load; splash dismisses when done
+  _runSplashThenLaunch();
+}
+
+async function _runSplashThenLaunch() {
+  const PHASE1_MIN = 2800; // minimum ms Phase 1 shows (feels intentional)
+  const fetchStart = Date.now();
+
+  // Clear stale data immediately
+  players = [];
+  matches = [];
+  pairs   = [];
+  _clearRenderedScreens();
+
+  // Pre-show appShell behind splash so it renders instantly after dismiss
+  document.getElementById('appShell').style.display = 'block';
+  document.getElementById('navBar').classList.add('visible');
+  document.getElementById('appHeader').classList.add('visible');
+  document.getElementById('addPlayerArea').classList.add('visible');
+  document.getElementById('headerTitle').textContent = 'Players';
+  document.getElementById('headerBadge').style.display = 'block';
+
+  // Fetch data in parallel while ball bounces
+  let fetchError = null;
+  try {
+    const [playersRes, matchesRes] = await Promise.all([
+      callBackend(getPayload('getPlayers')),
+      callBackend(getPayload('getMatches'))
+    ]);
+    players = playersRes.players || [];
+    matches = matchesRes.matches || [];
+    lastKnownVersion = matchesRes.writeVersion || lastKnownVersion;
+    buildPairsFromMatches();
+    renderPlayers();
+    renderAnalytics();
+    renderLeaderboard();
+    startBackgroundSync();
+  } catch(e) {
+    fetchError = e;
+    console.error('Fetch error during splash:', e);
+  }
+
+  // Ensure Phase 1 played for at least PHASE1_MIN ms
+  const elapsed = Date.now() - fetchStart;
+  const wait = Math.max(0, PHASE1_MIN - elapsed);
+
   setTimeout(() => {
-    flash.classList.remove('show');
-    document.getElementById('pwScreen').style.display   = 'none';
-    document.getElementById('ballDeco1').style.display  = 'none';
-    document.getElementById('ballDeco2').style.display  = 'none';
-    document.getElementById('appShell').style.display   = 'block';
-    document.getElementById('navBar').classList.add('visible');
-    document.getElementById('appHeader').classList.add('visible');
-    const activeScreen = document.querySelector('.screen.active');
-    if (activeScreen) activeScreen.scrollTop = 0;
-    launchApp();
-  }, 1400);
+    // Transition to Phase 2 (FORGE reveal)
+    const phase1 = document.getElementById('splashPhase1');
+    const phase2 = document.getElementById('splashPhase2');
+    phase1.classList.add('hide');
+    phase2.classList.add('show');
+
+    // Trigger CSS animations on phase 2 elements
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.getElementById('splashSweep').classList.add('run');
+        document.getElementById('splashBar').classList.add('run');
+        document.getElementById('splashForge').classList.add('run');
+        document.getElementById('splashUnderline').classList.add('run');
+        document.getElementById('splashTagline').classList.add('run');
+      });
+    });
+
+    // Dismiss splash after Phase 2 completes (~1.5s)
+    setTimeout(() => {
+      const splash = document.getElementById('splashScreen');
+      splash.style.transition = 'opacity 0.3s';
+      splash.style.opacity = '0';
+      setTimeout(() => {
+        splash.classList.remove('show');
+        splash.style.opacity = '';
+        splash.style.transition = '';
+        // Reset phase states for next login
+        phase1.classList.remove('hide');
+        phase2.classList.remove('show');
+        ['splashSweep','splashBar','splashForge','splashUnderline','splashTagline']
+          .forEach(id => document.getElementById(id).classList.remove('run'));
+        // Show error if fetch failed
+        if (fetchError) showError('Failed to load data. Please refresh.');
+      }, 320);
+    }, 1500);
+
+  }, wait);
 }
 
 // ==========================================================
@@ -3700,18 +3993,17 @@ function showWelcome() {
 // ==========================================================
 
 async function launchApp() {
-  // ── Step 1: Immediately wipe any stale in-memory data ──
-  // Critical: if user came from demo mode, arrays may still hold
-  // demo data. Clear them before showing a single pixel of UI.
+  // Called directly only from:
+  //   1. Session restore in startup() — bypasses splash, data already loaded
+  //   2. Demo mode exit (never reaches here — demo uses enterDemoMode)
+  // Password login goes via showWelcome() -> _runSplashThenLaunch()
+  // which handles fetch + splash simultaneously.
+
   players = [];
   matches = [];
   pairs   = [];
-
-  // ── Step 2: Reset all rendered screens to blank/skeleton state ──
-  // Prevents stale demo data flashing on screen while fetch is in-flight.
   _clearRenderedScreens();
 
-  // ── Step 3: Show app shell with skeletons ──
   document.getElementById('appShell').style.display = 'block';
   document.getElementById('navBar').classList.add('visible');
   document.getElementById('appHeader').classList.add('visible');
@@ -3720,22 +4012,18 @@ async function launchApp() {
   document.getElementById('headerBadge').style.display = 'block';
 
   try {
-    // Fetch players and matches in parallel
     const [playersRes, matchesRes] = await Promise.all([
       callBackend(getPayload('getPlayers')),
       callBackend(getPayload('getMatches'))
     ]);
-
     players = playersRes.players || [];
     matches = matchesRes.matches || [];
     lastKnownVersion = matchesRes.writeVersion || lastKnownVersion;
-
     buildPairsFromMatches();
     renderPlayers();
     renderAnalytics();
     renderLeaderboard();
     startBackgroundSync();
-
   } catch(e) {
     showError('Failed to load data. Please refresh.');
     console.error('launchApp error:', e);
@@ -4437,6 +4725,13 @@ function togglePairCard(i) {
 
 function initAddMatch() { resetAddMatch(true); }
 
+function onMatchDone() {
+  // Reset the wizard state silently, then navigate to Matches
+  // so the user can immediately see the match they just logged
+  resetAddMatch(true);
+  navigateTo('matches');
+}
+
 function resetAddMatch(silent) {
   am = { step:1, date:'', teamA:[], teamB:[], scoring:'', points:'', scores:[] };
   document.getElementById('submitSuccess').classList.remove('show');
@@ -4467,7 +4762,16 @@ function resetAddMatch(silent) {
   const gw = document.getElementById('scoreGapWarning'); if (gw) gw.classList.remove('show');
   const sb = document.getElementById('matchStatusBar'); if (sb) { sb.textContent = 'Enter scores above'; sb.classList.remove('decisive'); }
 
+  // Reset team summary display
+  const eA = document.getElementById('teamANames');
+  const eB = document.getElementById('teamBNames');
+  if (eA) { eA.textContent = 'Select 2 players'; eA.className = 'team-summary-names empty'; }
+  if (eB) { eB.textContent = 'Select 2 players'; eB.className = 'team-summary-names empty'; }
+
   renderPlayerSelectGrid();
+  // Clear all chip visual states — am.teamA/B are already [] so
+  // updatePlayerSelectUI removes team-a/team-b classes from every chip
+  updatePlayerSelectUI();
   showStep(1);
   if (!silent) { currentScreen = 'add'; navigateTo('players'); }
 }
@@ -4533,12 +4837,28 @@ function renderPlayerSelectGrid() {
   const grid   = document.getElementById('playerSelectGrid');
 
   if (active.length === 0) {
-    // Show a friendly notice spanning both columns
     grid.innerHTML = `<div class="no-players-notice" style="grid-column:1/-1;">
       <div class="no-players-notice-icon">👥</div>
       <div class="no-players-notice-text">No Players Yet</div>
       <div class="no-players-notice-sub">Add players on the Players screen first, then come back to log a match.</div>
     </div>`;
+    return;
+  }
+  if (active.length < 4) {
+    const need = 4 - active.length;
+    const notice = `<div class="no-players-notice" style="grid-column:1/-1;margin-bottom:12px;">
+      <div class="no-players-notice-icon">⚠️</div>
+      <div class="no-players-notice-text">Not Enough Players</div>
+      <div class="no-players-notice-sub">A match needs 4 players. You have ${active.length} — add ${need} more to continue.</div>
+    </div>`;
+    // Still show available players below the notice
+    grid.innerHTML = notice + active.map(p =>
+      `<div class="player-select-chip disabled" id="psc-${p.id}">
+        <div class="psc-avatar">${getInitials(p.name)}</div>
+        <span class="psc-name">${escHtml(p.name)}</span>
+        <span class="psc-badge" id="pscbadge-${p.id}" style="display:none;"></span>
+      </div>`
+    ).join('');
     return;
   }
 
@@ -4606,6 +4926,16 @@ function getRowScores(a, b) {
 function checkScoreGap() {
   const r1 = isRowFilled('g1a','g1b'), r2 = isRowFilled('g2a','g2b'), r3 = isRowFilled('g3a','g3b');
   return (!r1 && (r2 || r3)) || (!r2 && r3);
+}
+
+function clampScoreInput(el) {
+  // Clamp score to valid range: 0 <= score <= pointsToWin
+  // Called on every score input change
+  if (el.value === '') return;
+  const pts = parseInt(am.points) || 99;
+  let v = parseInt(el.value);
+  if (isNaN(v) || v < 0) { el.value = 0; return; }
+  if (v > pts) { el.value = pts; }
 }
 
 function onScoreInput() {
