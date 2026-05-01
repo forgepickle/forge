@@ -2489,10 +2489,10 @@ body {
         placeholder="Enter group password"
         autocomplete="off" autocorrect="off" spellcheck="false">
       <button class="eye-btn" onclick="togglePwVisibility()" aria-label="Toggle password visibility">
-        <svg id="eyeShow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg id="eyeShow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
         </svg>
-        <svg id="eyeHide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+        <svg id="eyeHide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
           <line x1="1" y1="1" x2="23" y2="23"/>
         </svg>
@@ -3053,7 +3053,7 @@ body {
 ============================================ */
 
 // == Backend URL ==
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxEQd8k0FXEXfeXri-03j6GYaLTSdMVTvnKcuTm88i68Vr1RpEK1yf8BUiZYuK0Is9tIw/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyqpFMzHVSiLai1Hf8iM_QMTTMukDTfRd5R-obOCpHa6i1umYmFP-9JuYocNVtx0dsk/exec';
 
 
 // ═══════════════════════════════════════════════
@@ -3629,8 +3629,10 @@ document.getElementById('pwInput').addEventListener('input', () => {
 function togglePwVisibility() {
   pwVisible = !pwVisible;
   document.getElementById('pwInput').type = pwVisible ? 'text' : 'password';
-  document.getElementById('eyeShow').style.display = pwVisible ? 'none' : 'block';
-  document.getElementById('eyeHide').style.display = pwVisible ? 'block' : 'none';
+  // Show open eye when password IS visible (user can see it)
+  // Show crossed eye when password IS hidden
+  document.getElementById('eyeShow').style.display = pwVisible ? 'block' : 'none';
+  document.getElementById('eyeHide').style.display = pwVisible ? 'none' : 'block';
 }
 
 async function handleEnter() {
