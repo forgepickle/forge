@@ -3398,6 +3398,8 @@ function resetDemoData() {
   matches = [];
   pairs   = [];
   isDemoMode = false;
+  // Reset add match wizard so no demo team/score state leaks into real session
+  am = { step:1, date:'', teamA:[], teamB:[], scoring:'', points:'', scores:[] };
 }
 
 // ── Demo-mode local rating computation ──
@@ -3745,6 +3747,21 @@ function _resetAppUI() {
   document.getElementById('demoBanner').classList.remove('show');
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('demo-offset'));
 
+  // ── CRITICAL: reset screen state so post-login always lands on Players ──
+  // Remove .active from ALL screens, restore it only to screenPlayers.
+  // Without this, whatever screen was active in demo stays active after login.
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const playersScreen = document.getElementById('screenPlayers');
+  if (playersScreen) playersScreen.classList.add('active');
+
+  // Reset currentScreen so navigateTo('players') is never skipped by the guard
+  currentScreen = 'players';
+
+  // Reset nav bar — highlight Players tab
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const navPlayers = document.getElementById('nav-players');
+  if (navPlayers) navPlayers.classList.add('active');
+
   // Hide password screen (will be shown explicitly by showPasswordScreen)
   document.getElementById('pwScreen').style.display = 'none';
   document.getElementById('ballDeco1').style.display = 'none';
@@ -3756,7 +3773,7 @@ function _resetAppUI() {
     if (el) el.classList.remove('show');
   });
 
-  // Reset any open forms
+  // Reset add match wizard if it was open
   try { closeAddForm(); } catch(e) {}
 
   // Reset demo mode flag
