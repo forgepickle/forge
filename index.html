@@ -5571,13 +5571,20 @@ function buildWinLossMap() {
 function renderLbIndividual() {
   const skelEl = document.getElementById('lbSkeletonIndividual');
   const listEl = document.getElementById('lbListIndividual');
-  const sorted = [...players].sort((a,b) => {
-    if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
-    return b.rating - a.rating;
-  });
+
+  // GOVERNANCE: Only rank players who have played at least 1 match.
+  // Players with 0 games have identical starting ratings — ranking them
+  // is meaningless. They appear on the Players screen instead.
+  const sorted = [...players]
+    .filter(p => p.games > 0)
+    .sort((a,b) => {
+      if (a.status !== b.status) return a.status === 'active' ? -1 : 1;
+      return b.rating - a.rating;
+    });
+
   skelEl.style.display = 'none'; listEl.style.display = 'flex';
 
-  // Empty state — no players at all
+  // Empty state — no players, or no one has played yet
   if (sorted.length === 0) {
     listEl.innerHTML = `<div class="lb-empty">
       <div class="lb-empty-icon">📊</div>
