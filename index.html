@@ -2,7 +2,7 @@
 <!-- 
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 5.8                                ║
+  ║  Version: 5.9 — Governance & Ties                                ║
   ║  Date: 2025-04-30                            ║
   ║  Changes: Full backend wiring via fetch()    ║
   ║           sessionStorage auth (session-long) ║
@@ -2080,6 +2080,7 @@ body {
 
 .match-winner-chip {
   display: inline-block;
+  align-self: flex-start;
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-weight: 700; font-size: 10px;
   letter-spacing: 0.8px; text-transform: uppercase;
@@ -2087,6 +2088,7 @@ body {
   color: var(--accent-dim);
   padding: 2px 7px; border-radius: 6px;
   margin-top: 2px; white-space: nowrap;
+  width: fit-content;
 }
 
 /* Rating changes row */
@@ -2581,6 +2583,46 @@ body {
   text-transform: uppercase; color: var(--grey-mid);
 }
 .no-players-notice-sub { font-size: 12px; color: var(--grey-mid); }
+
+/* ── TIE game / match styles ── */
+.match-tie-chip {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 2px 7px; border-radius: 6px;
+  background: rgba(245,166,35,0.12); color: #F5A623;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase; white-space: nowrap;
+  margin-top: 2px; width: fit-content;
+}
+.form-dot.t {
+  background: rgba(245,166,35,0.15);
+  color: #F5A623;
+  border: 1.5px solid #F5A623;
+}
+.lb-wl-pill.t { background: rgba(245,166,35,0.12); color: #F5A623; }
+.wl-pill.t    { background: rgba(245,166,35,0.12); color: #F5A623; }
+
+/* ── Pair card: unqualified (<2 matches) ── */
+.pair-card.unqualified {
+  border-style: dashed;
+  border-color: var(--grey-light);
+  opacity: 0.75;
+}
+.pair-unqualified-notice {
+  font-size: 12px; color: #F5A623;
+  padding: 10px 0 4px;
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* ── LB pairs: unranked card ── */
+.lb-card.unranked {
+  opacity: 0.6;
+  border-left: 3px solid var(--grey-light);
+}
+.lb-rank.unranked-rank {
+  font-size: 16px; color: var(--grey-mid); font-weight: 400;
+}
 </style>
 </head>
 <body>
@@ -3434,7 +3476,10 @@ function demoComputeRatings(teamA, teamB, scores) {
   const n = scores.length;
   const deltaA = parseFloat((totalDeltaA / n).toFixed(3));
   const deltaB = parseFloat((-totalDeltaA / n).toFixed(3));
-  const aWon  = scores.filter(s => s.a > s.b).length > scores.filter(s => s.b > s.a).length;
+  const aGameWins = scores.filter(s => s.a > s.b).length;
+  const bGameWins = scores.filter(s => s.b > s.a).length;
+  const aWon   = aGameWins > bGameWins;
+  const isTied = aGameWins === bGameWins;
   const aIsUD = rA < rB;
 
   const ratingChanges = [], updatedPlayers = [];
@@ -3445,8 +3490,8 @@ function demoComputeRatings(teamA, teamB, scores) {
       player.rating        = newRating;
       player.games        += 1;
       player.ratingHistory = [...(player.ratingHistory || []), newRating].slice(-10);
-      player.last5         = [...(player.last5 || []), won ? 'W' : 'L'].slice(-5);
-      if (isUD) { won ? player.clutchW++ : player.clutchL++; }
+      player.last5         = [...(player.last5 || []), isTied ? 'T' : won ? 'W' : 'L'].slice(-5);
+      if (isUD && !isTied) { won ? player.clutchW++ : player.clutchL++; } // ties: no clutch credit
       ratingChanges.push({ id: player.id, name: player.name, oldRating, newRating, delta });
       updatedPlayers.push({ ...player });
     });
@@ -3663,16 +3708,19 @@ function buildPairsFromMatches() {
 function applyMatchToPair(id1, id2, m, isTeamA) {
   const [a, b] = [id1, id2].sort();
   let pair = pairs.find(p => p.p1 === a && p.p2 === b);
-  if (!pair) { pair = { p1:a, p2:b, wins:0, losses:0, dominance:0, synergy:0 }; pairs.push(pair); }
+  if (!pair) { pair = { p1:a, p2:b, wins:0, losses:0, ties:0, dominance:0, synergy:0 }; pairs.push(pair); }
 
   // Determine if this pair won
   const aWins = m.scores.filter(s => s.a > s.b).length;
   const bWins = m.scores.filter(s => s.b > s.a).length;
-  const teamWon = isTeamA ? aWins > bWins : bWins > aWins;
-  if (teamWon) pair.wins++; else pair.losses++;
+  const teamWon  = isTeamA ? aWins > bWins : bWins > aWins;
+  const matchTie = aWins === bWins;
+  if (matchTie)       pair.ties++;
+  else if (teamWon)   pair.wins++;
+  else                pair.losses++;
 
   // Dominance: avg point margin from this pair's perspective
-  const total = pair.wins + pair.losses;
+  const total = pair.wins + pair.losses + pair.ties;
   const margin = m.scores.reduce((sum, s) => {
     return sum + (isTeamA ? (s.a - s.b) : (s.b - s.a));
   }, 0) / m.scores.length;
@@ -4592,18 +4640,32 @@ function renderRatingTrend(p) {
   deltaEl.textContent = (delta >= 0 ? '▲ +' : '▼ ') + Math.abs(delta).toFixed(2);
   deltaEl.className = 'rating-delta ' + (delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat');
 
-  // history[0] is always the starting baseline (not a match result)
-  // history[1] = Match 1, history[2] = Match 2, etc.
-  const matchCount = history.length - 1; // number of actual matches in history
+  // ── GOVERNANCE: chart label accuracy across 3 scenarios ──
+  // Scenario 1: 0 matches — ratingHistory has only the starting value
+  // Scenario 2: 1-10 matches — history[0] IS the actual starting rating
+  // Scenario 3: >10 matches — history is capped at 10, history[0] is NOT starting rating
+  const matchCount = history.length - 1; // entries beyond the baseline
   const labelStart = document.getElementById('chartStart');
   const labelEnd   = document.getElementById('chartEnd');
+  const totalMatches = p.games; // lifetime match count from player object
   if (matchCount === 0) {
-    // No matches yet — hide both labels, chart shows "No matches yet" text
+    // Scenario 1: no matches yet — hide both labels
     labelStart.textContent = '';
     labelEnd.textContent   = '';
-  } else {
+    // Delta should show flat
+    deltaEl.textContent = '▲ +0.00';
+    deltaEl.className   = 'rating-delta flat';
+  } else if (totalMatches <= 10) {
+    // Scenario 2: all matches fit in history — history[0] is true starting rating
     labelStart.textContent = 'Start';
-    labelEnd.textContent   = matchCount === 1 ? 'Match 1' : 'Match ' + matchCount;
+    labelEnd.textContent   = 'Match ' + totalMatches;
+  } else {
+    // Scenario 3: >10 matches — hide left label, right label shows window
+    labelStart.textContent = '';
+    labelEnd.textContent   = 'Last 10 matches';
+    // Delta label: append window indicator
+    const deltaText = (delta >= 0 ? '▲ +' : '▼ ') + Math.abs(delta).toFixed(2);
+    deltaEl.textContent = deltaText + ' (last 10)';
   }
 
   drawTrendChart(history);
@@ -4633,9 +4695,14 @@ function drawTrendChart(history) {
 
 function renderFormIndex(p) {
   const last5 = p.last5.slice(-5);
-  const wins  = last5.filter(r => r === 'W').length;
+  // GOVERNANCE: T (tie) is neutral — count only W and L for badge classification
+  const wins   = last5.filter(r => r === 'W').length;
+  const losses = last5.filter(r => r === 'L').length;
+  const played = wins + losses; // ties excluded from classification window
   let badgeClass, badgeText;
-  if (wins === 5)      { badgeClass = 'onfire'; badgeText = '🔥 On Fire'; }
+  if (played === 0 && last5.length === 0) {
+    badgeClass = 'cold'; badgeText = '🔴 Cold';
+  } else if (wins === 5)      { badgeClass = 'onfire'; badgeText = '🔥 On Fire'; }
   else if (wins >= 3)  { badgeClass = 'hot';    badgeText = '🟢 Hot'; }
   else if (wins === 2) { badgeClass = 'warm';   badgeText = '🟡 Warm'; }
   else                 { badgeClass = 'cold';   badgeText = '🔴 Cold'; }
@@ -4644,7 +4711,7 @@ function renderFormIndex(p) {
   const dotsEl = document.getElementById('formDots');
   dotsEl.innerHTML = last5.length === 0
     ? '<span style="font-size:12px;color:var(--grey-mid);">No matches yet</span>'
-    : last5.map(r => `<div class="form-dot ${r==='W'?'w':'l'}">${r}</div>`).join('');
+    : last5.map(r => `<div class="form-dot ${r==='W'?'w':r==='T'?'t':'l'}">${r}</div>`).join('');
 }
 
 function renderClutchRating(p) {
@@ -4655,7 +4722,7 @@ function renderClutchRating(p) {
     wrap.innerHTML = `<div class="clutch-no-data">🏅 Yet to be tested as underdog</div>`;
   } else {
     const pct = Math.round((cw / total) * 100);
-    wrap.innerHTML = `<div class="clutch-wrap"><div class="clutch-pct">${pct}%</div><div class="clutch-right"><div class="clutch-label">Win rate as underdog</div><div class="wl-pills"><div class="wl-pill w">${cw}W</div><div class="wl-pill l">${cl}L</div></div><div class="clutch-label" style="margin-top:2px;">${total} underdog match${total!==1?'es':''}</div></div></div>`;
+    wrap.innerHTML = `<div class="clutch-wrap"><div class="clutch-pct">${pct}%</div><div class="clutch-right"><div class="clutch-label">Win rate as underdog</div><div class="wl-pills"><div class="wl-pill w">${cw}W</div><div class="wl-pill l">${cl}L</div></div><div class="clutch-label" style="margin-top:2px;">${total} underdog match${total!==1?'es':''} · All-time</div></div></div>`;
   }
   const existing = document.getElementById('viewMatchesBtn');
   if (existing) existing.remove();
@@ -4690,9 +4757,11 @@ function renderPairCards() {
     const p2 = players.find(p => p.id === pair.p2);
     if (!p1 || !p2) return '';
     const isInactivePair = p1.status === 'inactive' || p2.status === 'inactive';
+    const isUnqualified  = pair.total < 2; // <2 matches: show but muted, no advanced stats
     const rankClass = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
     const pairLabel = truncatePairNames(p1.name, p2.name, 'tier2');
     const lowSample = pair.total < 4;
+    const tiesHtml  = pair.ties > 0 ? `<div class="wl-pill t">${pair.ties}T</div>` : '';
     const syn = pair.synergy;
     const synClass = syn >= 0.20 ? 'pos' : syn <= -0.20 ? 'neg' : 'neu';
     const synLabel = syn >= 0.20 ? '⚡ Strong Chemistry' : syn <= -0.20 ? '⚠ Mismatch' : '〰 Neutral';
@@ -4700,21 +4769,14 @@ function renderPairCards() {
     const dom = pair.dominance;
     const domClass = dom >= 3.0 ? 'green' : dom <= -3.0 ? 'red' : 'amber';
     const domSign  = dom >= 0 ? '+' : '';
-    return `<div class="pair-card ${isInactivePair?'inactive-pair':''}" id="paircard-${i}">
-      <div class="pair-card-header" onclick="togglePairCard(${i})">
-        <div class="pair-rank ${rankClass}">${i+1}</div>
-        <div class="pair-names-wrap">
-          <div class="pair-names">${escHtml(pairLabel)}${isInactivePair?'<span class="inactive-indicator">Inactive</span>':''}</div>
-          <div class="pair-games-played">${pair.total} match${pair.total!==1?'es':''} together</div>
-        </div>
-        <div class="pair-winpct">${pair.winPct}%</div>
-        <svg class="pair-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </div>
-      <div class="pair-expanded">
-        <div class="pair-metric">
+
+    // Advanced stats only shown for qualified pairs (≥2 matches)
+    const advancedStats = isUnqualified
+      ? `<div class="pair-unqualified-notice">⚠ Play 1 more match together to unlock full stats</div>`
+      : `<div class="pair-metric">
           <div class="pair-metric-label">Partnership Win Rate ${lowSample?'<span class="low-sample-tag">⚠ Low sample</span>':''}<button class="tooltip-btn" onclick="showTooltipKey('pairWinRate')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></button></div>
           <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pair.winPct}%"></div></div>
-          <div class="progress-meta"><div class="wl-pills"><div class="wl-pill w">${pair.wins}W</div><div class="wl-pill l">${pair.losses}L</div></div><span>${pair.winPct}%</span></div>
+          <div class="progress-meta"><div class="wl-pills"><div class="wl-pill w">${pair.wins}W</div><div class="wl-pill l">${pair.losses}L</div>${tiesHtml}</div><span>${pair.winPct}%</span></div>
         </div>
         <div class="pair-metric">
           <div class="pair-metric-label">Synergy Score<button class="tooltip-btn" onclick="showTooltipKey('synergyScore')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></button></div>
@@ -4722,8 +4784,21 @@ function renderPairCards() {
         </div>
         <div class="pair-metric">
           <div class="pair-metric-label">Dominance Score<button class="tooltip-btn" onclick="showTooltipKey('dominanceScore')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></button></div>
-          <div class="dominance-row"><div class="dominance-score ${domClass}">${domSign}${dom.toFixed(1)}</div><div class="dominance-sub">avg pts/game = ${pair.total} match${pair.total!==1?'es':''}</div></div>
+          <div class="dominance-row"><div class="dominance-score ${domClass}">${domSign}${dom.toFixed(1)}</div><div class="dominance-sub">avg pts/game · ${pair.total} match${pair.total!==1?'es':''}</div></div>
+        </div>`;
+
+    return `<div class="pair-card ${isInactivePair?'inactive-pair':''} ${isUnqualified?'unqualified':''}" id="paircard-${i}">
+      <div class="pair-card-header" onclick="togglePairCard(${i})">
+        <div class="pair-rank ${rankClass}">${isUnqualified?'—':i+1}</div>
+        <div class="pair-names-wrap">
+          <div class="pair-names">${escHtml(pairLabel)}${isInactivePair?'<span class="inactive-indicator">Inactive</span>':''}</div>
+          <div class="pair-games-played">${pair.total} match${pair.total!==1?'es':''} together</div>
         </div>
+        <div class="pair-winpct">${isUnqualified?'—':pair.winPct+'%'}</div>
+        <svg class="pair-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+      <div class="pair-expanded">
+        ${advancedStats}
         <button class="pair-view-matches-btn" onclick="goToFilteredMatches('pair','${pair.p1}','${pair.p2}')">
           <svg class="pvmb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           <span class="pair-view-matches-btn-text">View Their Matches Together</span>
@@ -5127,6 +5202,34 @@ function switchLbTab(tab) {
 
 function renderLeaderboard() { renderLbIndividual(); renderLbPairs(); }
 
+
+// ── GOVERNANCE: W/L derived from authoritative matches[] array ──
+// Never estimated from last5 win rate.
+// A tied match (equal game wins) records 'T' — not W or L.
+function buildWinLossMap() {
+  const map = {}; // { playerId: { w:0, l:0, t:0 } }
+  players.forEach(p => { map[p.id] = { w:0, l:0, t:0 }; });
+  matches.forEach(m => {
+    const aGW = m.scores.filter(s => s.a > s.b).length;
+    const bGW = m.scores.filter(s => s.b > s.a).length;
+    const aWon = aGW > bGW, bWon = bGW > aGW, tied = aGW === bGW;
+    [...m.teamA, ...m.teamB].forEach(pid => {
+      if (!map[pid]) map[pid] = { w:0, l:0, t:0 };
+    });
+    m.teamA.forEach(pid => {
+      if (tied)      map[pid].t++;
+      else if (aWon) map[pid].w++;
+      else           map[pid].l++;
+    });
+    m.teamB.forEach(pid => {
+      if (tied)      map[pid].t++;
+      else if (bWon) map[pid].w++;
+      else           map[pid].l++;
+    });
+  });
+  return map;
+}
+
 function renderLbIndividual() {
   const skelEl = document.getElementById('lbSkeletonIndividual');
   const listEl = document.getElementById('lbListIndividual');
@@ -5146,31 +5249,33 @@ function renderLbIndividual() {
     return;
   }
 
+  // GOVERNANCE: W/L from authoritative matches[] scan, not last5 extrapolation
+  const wlMap = buildWinLossMap();
   listEl.innerHTML = sorted.map((p, i) => {
     const rank = i + 1;
     const rankClass = rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
     const cardClass = rank===1?'rank1':rank===2?'rank2':rank===3?'rank3':'';
     const isInactive = p.status === 'inactive';
-    const last3 = p.last5.slice(-3);
-    const wins3 = last3.filter(r => r==='W').length;
-    const trend = last3.length===0?'flat':wins3>=2?'up':wins3===0?'down':'flat';
+    // GOVERNANCE: trend uses full last5 window (not last3 sub-window)
+    const last5 = p.last5 || [];
+    const wins5 = last5.filter(r => r==='W').length;
+    const trend = last5.length===0?'flat':wins5>=4?'up':wins5<=1?'down':'flat';
     const trendIcon = trend==='up'
       ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`
       : trend==='down'
       ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>`
       : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
-    const totalGames = p.games;
-    const winRate = p.last5.filter(r=>r==='W').length / Math.max(p.last5.length,1);
-    const winCount  = Math.round(totalGames * winRate);
-    const lossCount = totalGames - winCount;
+    const rec = wlMap[p.id] || { w:0, l:0, t:0 };
+    const tiesHtml = rec.t > 0 ? `<span class="lb-wl-pill t">${rec.t}T</span>` : '';
     return `<div class="lb-card ${cardClass} ${isInactive?'inactive-card':''}" style="animation-delay:${i*0.05}s;cursor:pointer;" onclick="goToFilteredMatches('player','${p.id}')">
       <div class="lb-rank ${rankClass}">${rank}</div>
       <div class="lb-avatar ${isInactive?'muted':''}">${getInitials(p.name)}</div>
       <div class="lb-info">
         <div class="lb-name">${escHtml(p.name)}${isInactive?'<span class="inactive-indicator">Inactive</span>':''}</div>
         <div class="lb-sub">
-          <span class="lb-wl-pill w">${winCount}W</span>
-          <span class="lb-wl-pill l">${lossCount}L</span>
+          <span class="lb-wl-pill w">${rec.w}W</span>
+          <span class="lb-wl-pill l">${rec.l}L</span>
+          ${tiesHtml}
           <span class="lb-combined">${p.games} played</span>
         </div>
       </div>
@@ -5185,6 +5290,7 @@ function renderLbIndividual() {
 function renderLbPairs() {
   const skelEl = document.getElementById('lbSkeletonPairs');
   const listEl = document.getElementById('lbListPairs');
+  // Qualified: ≥2 matches (ranked). Unqualified: shown at bottom unranked.
   const qualified = pairs.filter(pair => (pair.wins+pair.losses) >= 2).map(pair => {
     const total  = pair.wins + pair.losses;
     const winPct = Math.round((pair.wins/total)*100);
@@ -5201,28 +5307,42 @@ function renderLbPairs() {
     listEl.innerHTML = `<div class="lb-empty"><div class="lb-empty-icon">🤝</div><div class="lb-empty-title">No Pair Data Yet</div><div class="lb-empty-sub">Pair rankings appear after at least 2 matches together.</div></div>`;
     return;
   }
-  listEl.innerHTML = qualified.map((pair, i) => {
-    const rank = i+1;
-    const rankClass = rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
-    const cardClass = rank===1?'rank1':rank===2?'rank2':rank===3?'rank3':'';
+  // Unqualified pairs: 1 match only — shown at bottom, no rank
+  const unqualified = pairs.filter(pair => (pair.wins+pair.losses+pair.ties) === 1).map(pair => {
+    const p1u = players.find(p=>p.id===pair.p1), p2u = players.find(p=>p.id===pair.p2);
+    const hasInactiveU = (p1u&&p1u.status==='inactive')||(p2u&&p2u.status==='inactive');
+    return { ...pair, total: 1, winPct: 0, hasInactive: hasInactiveU };
+  });
+
+  const renderLbPairCard = (pair, rank, rankClass, cardClass, isUnranked) => {
     const p1 = players.find(p=>p.id===pair.p1), p2 = players.find(p=>p.id===pair.p2);
     if (!p1||!p2) return '';
     const pairLabel = truncatePairNames(p1.name, p2.name, 'tier2');
     const combinedRating = ((p1.rating+p2.rating)/2).toFixed(2);
     const av1 = getInitials(p1.name), av2 = getInitials(p2.name);
-    return `<div class="lb-card ${cardClass} ${pair.hasInactive?'inactive-card':''}" style="animation-delay:${i*0.05}s;cursor:pointer;" onclick="goToFilteredMatches('pair','${pair.p1}','${pair.p2}')">
-      <div class="lb-rank ${rankClass}">${rank}</div>
+    const tiesHtml = pair.ties > 0 ? `<span class="lb-wl-pill t">${pair.ties}T</span>` : '';
+    return `<div class="lb-card ${cardClass} ${pair.hasInactive?'inactive-card':''} ${isUnranked?'unranked':''}" style="cursor:pointer;" onclick="goToFilteredMatches('pair','${pair.p1}','${pair.p2}')">
+      <div class="lb-rank ${rankClass} ${isUnranked?'unranked-rank':''}">${isUnranked?'—':rank}</div>
       <div style="position:relative;width:42px;height:42px;flex-shrink:0;">
         <div class="lb-avatar muted" style="position:absolute;top:0;left:0;width:30px;height:30px;font-size:11px;border-radius:8px;">${av1}</div>
         <div class="lb-avatar" style="position:absolute;bottom:0;right:0;width:30px;height:30px;font-size:11px;border-radius:8px;">${av2}</div>
       </div>
       <div class="lb-info">
         <div class="lb-name pair-name">${escHtml(pairLabel)}${pair.hasInactive?'<span class="inactive-indicator">Inactive</span>':''}</div>
-        <div class="lb-sub"><span class="lb-wl-pill w">${pair.wins}W</span><span class="lb-wl-pill l">${pair.losses}L</span><span class="lb-combined">avg ${combinedRating}</span></div>
+        <div class="lb-sub"><span class="lb-wl-pill w">${pair.wins}W</span><span class="lb-wl-pill l">${pair.losses}L</span>${tiesHtml}<span class="lb-combined">avg ${combinedRating}</span></div>
       </div>
-      <div class="lb-right"><div class="lb-winpct">${pair.winPct}%</div><div class="lb-combined" style="font-size:11px;">${pair.total} matches</div></div>
+      <div class="lb-right">
+        ${isUnranked?'<div class="lb-combined" style="font-size:11px;color:var(--grey-mid);">1 match</div>':'<div class="lb-winpct">'+pair.winPct+'%</div><div class="lb-combined" style="font-size:11px;">'+pair.total+' matches</div>'}
+      </div>
     </div>`;
-  }).join('');
+  };
+
+  listEl.innerHTML = qualified.map((pair, i) => {
+    const rank = i+1;
+    const rankClass = rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
+    const cardClass  = rank===1?'rank1':rank===2?'rank2':rank===3?'rank3':'';
+    return renderLbPairCard(pair, rank, rankClass, cardClass, false);
+  }).join('') + unqualified.map(pair => renderLbPairCard(pair, 0, '', '', true)).join('');
 }
 
 // ==========================================================
@@ -5301,9 +5421,9 @@ function loadMoreMatches() {
 function renderMatchCard(m, idx) {
   const getNames = ids => ids.map(id => { const p = players.find(pl => pl.id===id); return p?p.name:'Unknown'; });
   const teamANames = getNames(m.teamA), teamBNames = getNames(m.teamB);
-  let aWins=0, bWins=0;
-  m.scores.forEach(s => { if(s.a>s.b) aWins++; else if(s.b>s.a) bWins++; });
-  const teamAWon = aWins > bWins, teamBWon = bWins > aWins;
+  let aWins=0, bWins=0, tiedGames=0;
+  m.scores.forEach(s => { if(s.a>s.b) aWins++; else if(s.b>s.a) bWins++; else tiedGames++; });
+  const teamAWon = aWins > bWins, teamBWon = bWins > aWins, matchTied = !teamAWon && !teamBWon;
   const dateObj = new Date(m.date + 'T00:00:00');
   const dateStr = dateObj.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   const fmtBadge = (m.scoring?m.scoring.charAt(0).toUpperCase()+m.scoring.slice(1):'Standard') + ' = To ' + (m.points||'11');
@@ -5325,12 +5445,12 @@ function renderMatchCard(m, idx) {
       <div class="match-teams-wrap">
         <div class="match-team">
           <div class="match-team-names ${teamAWon?'winner':teamBWon?'loser':''}">${escHtml(pairA)}</div>
-          ${teamAWon?'<div class="match-winner-chip">Winner ✓</div>':''}
+          ${teamAWon?'<div class="match-winner-chip">Winner ✓</div>':matchTied?'<div class="match-tie-chip">Tie =</div>':''}
         </div>
         <div class="match-scores-col">${scoresHtml}</div>
         <div class="match-team" style="text-align:right;">
           <div class="match-team-names ${teamBWon?'winner':teamAWon?'loser':''}">${escHtml(pairB)}</div>
-          ${teamBWon?'<div class="match-winner-chip" style="margin-left:auto;">Winner ✓</div>':''}
+          ${teamBWon?'<div class="match-winner-chip" style="align-self:flex-end;">Winner ✓</div>':matchTied?'<div class="match-tie-chip" style="align-self:flex-end;">Tie =</div>':''}
         </div>
       </div>
     </div>
@@ -5549,9 +5669,9 @@ function clearMatchFilter() {
 const TOOLTIPS = {
   duprTrend:      { title: 'DUPR Rating Trend',    body: 'Your DUPR rating after each match, on a scale of 2.0-8.0. Shows your last 10 matches.\n\n📈 Best: Steep upward curve — improving fast.\n📉 Worst: Downward slide — time to regroup.\n\nMost club players sit between 3.0 and 4.5.' },
   formIndex:      { title: 'Form Index',            body: 'Rolling score from your last 5 matches, weighted by opponent strength and point margin.\n\n🔥 On Fire: Dominant run — keep it up!\n🟢 Hot: Strong recent form.\n🟡 Warm: Mixed — could go either way.\n🔴 Cold: Rough patch. Time to heat up.' },
-  clutchRating:   { title: 'Clutch Rating',         body: "Win rate when your team's combined rating was lower than your opponents' going in.\n\n📈 Best: 100% — you thrive under pressure!\n📉 Worst: 0% — tough when outgunned.\n\nNo data = you haven't been the underdog yet." },
+  clutchRating:   { title: 'Clutch Rating',         body: "All-time win rate when your team's combined rating was lower than your opponents' going in.\n\n📈 Best: 100% — you thrive under pressure!\n📉 Worst: 0% — tough when outgunned.\n\nNo data = you haven't been the underdog yet." },
   pairWinRate:    { title: 'Partnership Win Rate',  body: 'Win % for this pair (min 2 games to qualify).\n\n📈 Best: 100% — unbeaten as a duo!\n📉 Worst: 0% — yet to find their groove.\n\n⚠ = fewer than 4 games, treat with caution.' },
-  synergyScore:   { title: 'Synergy Score',         body: 'Actual win % minus expected win % from ratings. Positive = beating expectations together.\n\n⚡ Best: above +0.20 — real chemistry!\n⚠ Worst: below −0.20 — underperforming together.\n〰 Neutral: playing to your ratings.' },
+  synergyScore:   { title: 'Synergy Score',         body: 'How much better (or worse) this pair performs compared to what their individual ratings would predict. Positive = they make each other better. Negative = they underperform together.\n\n⚡ Best: above +0.20 — real chemistry!\n⚠ Worst: below −0.20 — underperforming together.\n〰 Neutral: playing to their ratings.' },
   dominanceScore: { title: 'Dominance Score',       body: 'Avg point margin per game together. Positive = winning by that margin on average.\n\n📈 Best: large positive (e.g. +6) — dominant!\n📉 Worst: large negative — tough together.\nNear zero = closely contested games.' }
 };
 
