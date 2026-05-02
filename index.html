@@ -4578,10 +4578,16 @@ function renderRatingTrend(p) {
   // history[0] is always the starting baseline (not a match result)
   // history[1] = Match 1, history[2] = Match 2, etc.
   const matchCount = history.length - 1; // number of actual matches in history
-  document.getElementById('chartStart').textContent = 'Start';
-  document.getElementById('chartEnd').textContent   =
-    matchCount === 0 ? 'Start' :
-    matchCount === 1 ? 'Match 1' : 'Match ' + matchCount;
+  const labelStart = document.getElementById('chartStart');
+  const labelEnd   = document.getElementById('chartEnd');
+  if (matchCount === 0) {
+    // No matches yet — hide both labels, chart shows "No matches yet" text
+    labelStart.textContent = '';
+    labelEnd.textContent   = '';
+  } else {
+    labelStart.textContent = 'Start';
+    labelEnd.textContent   = matchCount === 1 ? 'Match 1' : 'Match ' + matchCount;
+  }
 
   drawTrendChart(history);
 }
@@ -4849,7 +4855,7 @@ function renderPlayerSelectGrid() {
     const notice = `<div class="no-players-notice" style="grid-column:1/-1;margin-bottom:12px;">
       <div class="no-players-notice-icon">⚠️</div>
       <div class="no-players-notice-text">Not Enough Players</div>
-      <div class="no-players-notice-sub">A match needs 4 players. You have ${active.length} — add ${need} more to continue.</div>
+      <div class="no-players-notice-sub">A doubles match needs 4 players. You have ${active.length} — add ${need} more to continue.</div>
     </div>`;
     // Still show available players below the notice
     grid.innerHTML = notice + active.map(p =>
