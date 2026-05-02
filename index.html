@@ -3660,10 +3660,12 @@ function demoComputeRatings(teamA, teamB, scores) {
   const bGameWins = scores.filter(s => s.b > s.a).length;
   const aWon   = aGameWins > bGameWins;
   const isTied = aGameWins === bGameWins;
-  const aIsUD = rA < rB;
+  const aIsUD  = rA < rB;
+  const bIsUD  = rB < rA; // GOVERNANCE: independent check, not !aIsUD
+                           // Mirrors Code.gs fix — equal ratings = no underdog
 
   const ratingChanges = [], updatedPlayers = [];
-  [[p1, p2, deltaA, aWon, aIsUD], [p3, p4, deltaB, !aWon, !aIsUD]].forEach(([pa, pb, delta, won, isUD]) => {
+  [[p1, p2, deltaA, aWon, aIsUD], [p3, p4, deltaB, !aWon, bIsUD]].forEach(([pa, pb, delta, won, isUD]) => {
     [pa, pb].forEach(player => {
       const oldRating = player.rating;
       const newRating = parseFloat(Math.max(2.0, Math.min(8.0, oldRating + delta)).toFixed(2));
@@ -5594,8 +5596,18 @@ function renderLbIndividual() {
     const isInactive = p.status === 'inactive';
     // GOVERNANCE: trend uses full last5 window (not last3 sub-window)
     const last5 = p.last5 || [];
-    const wins5 = last5.filter(r => r==='W').length;
-    const trend = last5.length===0?'flat':wins5>=4?'up':wins5<=1?'down':'flat';
+    // GOVERNANCE: trend uses win rate ratio, not absolute counts,
+    // so it scales correctly for players with few matches.
+    // Rising: >60% wins, Sliding: <30% wins, Steady: in between.
+    // 0 matches = flat (no data to determine trend).
+    const winsOnly  = last5.filter(r => r === 'W').length;
+    const lossesOnly = last5.filter(r => r === 'L').length;
+    const decided   = winsOnly + lossesOnly; // exclude ties from rate
+    const winRate   = decided > 0 ? winsOnly / decided : null;
+    const trend     = winRate === null ? 'flat'
+                    : winRate > 0.6   ? 'up'
+                    : winRate < 0.3   ? 'down'
+                    : 'flat';
     const trendIcon = trend==='up'
       ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`
       : trend==='down'
