@@ -2,7 +2,7 @@
 <!-- 
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 5.9 — Governance & Ties                                ║
+  ║  Version: 6.0 — UX & Share                                ║
   ║  Date: 2025-04-30                            ║
   ║  Changes: Full backend wiring via fetch()    ║
   ║           sessionStorage auth (session-long) ║
@@ -2623,6 +2623,184 @@ body {
 .lb-rank.unranked-rank {
   font-size: 16px; color: var(--grey-mid); font-weight: 400;
 }
+
+/* ════════════════════════════════════════════
+   SHARE CARD
+════════════════════════════════════════════ */
+.share-card-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 700;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 24px 20px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+}
+.share-card-overlay.show { opacity: 1; pointer-events: all; }
+
+.share-card {
+  width: 100%; max-width: 320px;
+  background: #ffffff;
+  border-radius: 20px;
+  overflow: hidden;
+  font-family: 'Barlow Condensed', -apple-system, sans-serif;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+}
+.share-card-top-bar {
+  height: 5px; background: #AADC32;
+}
+.share-card-body {
+  padding: 24px 24px 20px;
+  background: #ffffff;
+}
+.share-card-avatar {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: rgba(170,220,50,0.15);
+  border: 2px solid #AADC32;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 18px; color: #AADC32;
+  margin-bottom: 12px;
+}
+.share-card-name {
+  font-weight: 900; font-size: 26px; color: #fff;
+  letter-spacing: -0.5px; line-height: 1;
+  margin-bottom: 2px;
+}
+.share-card-subtitle {
+  font-size: 11px; color: #555; letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 20px;
+}
+.share-card-rating {
+  font-weight: 900; font-size: 52px; color: #fff;
+  letter-spacing: -2px; line-height: 1;
+}
+.share-card-delta {
+  font-size: 14px; font-weight: 700; margin-left: 10px;
+  vertical-align: middle;
+}
+.share-card-delta.up { color: #AADC32; }
+.share-card-delta.down { color: #e05252; }
+.share-card-delta.flat { color: #888; }
+.share-card-divider {
+  height: 1px; background: #222;
+  margin: 18px 0;
+}
+.share-card-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+}
+.share-card-row-label {
+  font-size: 10px; color: #555; letter-spacing: 1.5px;
+  text-transform: uppercase; flex: 1;
+}
+.share-card-row-value {
+  font-size: 14px; font-weight: 700; color: #fff;
+}
+.share-card-form-dots {
+  display: flex; gap: 4px;
+}
+.share-card-dot {
+  width: 18px; height: 18px; border-radius: 50%;
+  font-size: 9px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.share-card-dot.w { background: rgba(170,220,50,0.15); color: #AADC32; border: 1.5px solid #AADC32; }
+.share-card-dot.l { background: rgba(224,82,82,0.12); color: #e05252; border: 1.5px solid #e05252; }
+.share-card-dot.t { background: rgba(245,166,35,0.12); color: #F5A623; border: 1.5px solid #F5A623; }
+.share-card-footer {
+  background: #f4f4f0;
+  border-top: 1px solid #ebebeb;
+  padding: 14px 24px;
+  display: flex; align-items: center; gap: 10px;
+}
+.share-card-footer-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: #AADC32;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 16px; color: #0f0f0f;
+  flex-shrink: 0;
+}
+.share-card-footer-text { flex: 1; }
+.share-card-footer-title {
+  font-size: 12px; font-weight: 700; color: #0f0f0f; letter-spacing: 0.5px;
+}
+.share-card-footer-url {
+  font-size: 10px; color: #5a8a00; letter-spacing: 0.5px;
+}
+.share-card-match-result {
+  margin-bottom: 10px;
+}
+.share-card-match-teams {
+  font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px;
+}
+.share-card-match-score {
+  font-size: 28px; font-weight: 900; color: #AADC32; letter-spacing: -1px;
+}
+.share-card-match-format {
+  font-size: 10px; color: #555; letter-spacing: 1.5px; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.share-card-match-chips {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.share-card-instructions {
+  text-align: center;
+  font-family: 'Barlow', -apple-system, sans-serif;
+  font-size: 12px; color: #888;
+  margin-top: 14px; line-height: 1.5;
+}
+.share-card-btn-row {
+  display: flex; gap: 10px; margin-top: 14px; width: 100%; max-width: 320px;
+}
+.share-card-share-btn {
+  flex: 1; padding: 12px 16px;
+  background: #AADC32; border: none;
+  border-radius: 12px; color: #0f0f0f;
+  font-family: 'Barlow Condensed', -apple-system, sans-serif;
+  font-size: 15px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; cursor: pointer;
+  transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.share-card-share-btn:active { background: #8db82a; }
+.share-card-close-btn {
+  padding: 12px 20px;
+  background: transparent; border: 1.5px solid rgba(255,255,255,0.2);
+  border-radius: 12px; color: rgba(255,255,255,0.6);
+  font-family: 'Barlow Condensed', -apple-system, sans-serif;
+  font-size: 15px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; cursor: pointer;
+  transition: all 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.share-card-close-btn:active { border-color: rgba(255,255,255,0.5); color: #fff; }
+
+/* Step 2 tap hint */
+.step2-hint {
+  font-size: 11px; color: var(--grey-mid);
+  text-align: center; letter-spacing: 0.3px;
+  margin-bottom: 12px; margin-top: -4px;
+  padding: 6px 12px;
+  background: var(--grey-light);
+  border-radius: 8px;
+}
+
+.share-match-btn {
+  background: transparent;
+  border: 1.5px solid var(--grey-light);
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-family: 'Barlow Condensed', -apple-system, sans-serif;
+  font-weight: 700; font-size: 14px;
+  letter-spacing: 1px; text-transform: uppercase;
+  color: var(--grey-mid); cursor: pointer;
+  margin-top: 8px; width: 100%;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.share-match-btn:hover, .share-match-btn:active {
+  border-color: var(--accent); color: var(--accent-dim);
+  background: var(--accent-bg);
+}
 </style>
 </head>
 <body>
@@ -2974,6 +3152,7 @@ body {
       <div class="success-sub">Ratings updated for all 4 players</div>
       <div class="rating-changes" id="ratingChanges"></div>
       <button class="done-btn" type="button" onclick="onMatchDone()">Done</button>
+      <button class="share-match-btn" type="button" onclick="showMatchShareCard()">📤 Share this result</button>
     </div>
 
     <!-- STEP 1: DATE -->
@@ -2985,6 +3164,7 @@ body {
     <!-- STEP 2: PLAYERS -->
     <div class="step-panel" id="step2">
       <div class="step-title">Who played?</div>
+      <div class="step2-hint" id="step2Hint">Tap once → Team A &nbsp;·&nbsp; Tap again → Team B &nbsp;·&nbsp; Tap again → Deselect</div>
       <div class="player-select-grid" id="playerSelectGrid"></div>
       <div class="team-summary" id="teamASummary">
         <span class="team-summary-label a">Team A</span>
@@ -3816,10 +3996,13 @@ function _resetAppUI() {
   document.getElementById('ballDeco2').style.display = 'none';
 
   // Close any open modals
-  ['removeModal','deleteMatchModal','reinstateModal','tooltipModal'].forEach(id => {
+  ['removeModal','deleteMatchModal','reinstateModal','tooltipModal','leaveMatchModal'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('show');
   });
+  // Close share card if open
+  const sc = document.getElementById('shareCardOverlay');
+  if (sc) sc.classList.remove('show');
 
   // Reset add match wizard if it was open
   try { closeAddForm(); } catch(e) {}
@@ -4190,6 +4373,43 @@ const screenMap = {
 
 function navigateTo(screen) {
   if (currentScreen === screen) return;
+
+  // ── Guard: warn before leaving Add Match mid-flow ──
+  if (currentScreen === 'add' && screen !== 'add') {
+    const hasProgress = (
+      (am.step >= 2 && (am.teamA.length > 0 || am.teamB.length > 0)) ||
+      am.step >= 3 ||
+      document.getElementById('submitSuccess')?.classList.contains('show')
+    );
+    // Don't intercept if submit success is showing — Done handles that
+    const successShowing = document.getElementById('submitSuccess')?.classList.contains('show');
+    if (hasProgress && !successShowing) {
+      pendingNavTarget = screen;
+      document.getElementById('leaveMatchModal').classList.add('show');
+      return;
+    }
+  }
+
+  _doNavigateTo(screen);
+}
+
+let pendingNavTarget = null;
+
+function confirmLeaveMatch() {
+  document.getElementById('leaveMatchModal').classList.remove('show');
+  resetAddMatch(true);
+  if (pendingNavTarget) {
+    _doNavigateTo(pendingNavTarget);
+    pendingNavTarget = null;
+  }
+}
+
+function closeLeaveMatchModal() {
+  document.getElementById('leaveMatchModal').classList.remove('show');
+  pendingNavTarget = null;
+}
+
+function _doNavigateTo(screen) {
   if (currentScreen === 'matches' && screen !== 'matches') {
     matchListFilter = null;
     mlSelectedIds   = [];
@@ -4212,6 +4432,124 @@ function navigateTo(screen) {
 
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('nav-' + (screen === 'add' ? 'add' : screen)).classList.add('active');
+}
+
+// ── Share Card ──
+function closeShareCard() {
+  document.getElementById('shareCardOverlay').classList.remove('show');
+}
+
+function nativeShareCard() {
+  const text = window._shareText || 'Check out Forge — pickleball rating tracker';
+  const url  = window._shareUrl  || 'https://forgepickle.github.io/app/';
+  if (navigator.share) {
+    navigator.share({ title: 'Forge Match Result', text, url })
+      .catch(err => { if (err.name !== 'AbortError') copyShareFallback(text + '\n' + url); });
+  } else {
+    copyShareFallback(text + '\n' + url);
+  }
+}
+
+function copyShareFallback(text) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard ✓'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showToast('Copied to clipboard ✓'); } catch(e) {}
+    document.body.removeChild(ta);
+  }
+}
+
+function showMatchShareCard() {
+  // Build share card for the last submitted match result
+  const lastMatch = matches[matches.length - 1];
+  if (!lastMatch) return;
+
+  const pairA = lastMatch.teamA.map(id => { const p = players.find(x => x.id === id); return p ? p.name : id; });
+  const pairB = lastMatch.teamB.map(id => { const p = players.find(x => x.id === id); return p ? p.name : id; });
+  const aWins = lastMatch.scores.filter(s => s.a > s.b).length;
+  const bWins = lastMatch.scores.filter(s => s.b > s.a).length;
+  const tied  = aWins === bWins;
+  const teamAWon = aWins > bWins;
+  const winnerNames = teamAWon ? pairA : (tied ? null : pairB);
+  const outcomeLabel = tied ? 'TIE =' : 'WINNER ✓';
+  const outcomeColor = tied ? '#F5A623' : '#AADC32';
+
+  const scoresHtml = lastMatch.scores.map(s =>
+    `<span style="font-weight:900;font-size:22px;color:#0f0f0f;">${s.a}</span>
+     <span style="color:#bbb;margin:0 4px;">—</span>
+     <span style="font-weight:900;font-size:22px;color:#0f0f0f;">${s.b}</span>`
+  ).join('<span style="color:#ddd;margin:0 8px;">·</span>');
+
+  const chipsHtml = (lastMatch.ratingChanges || []).map(rc => {
+    const d = parseFloat((rc.newRating - rc.oldRating).toFixed(2));
+    const sign = d >= 0 ? '▲ +' : '▼ ';
+    const bg   = d > 0 ? 'rgba(170,220,50,0.12)' : d < 0 ? 'rgba(224,82,82,0.1)' : '#f4f4f0';
+    const col  = d > 0 ? '#3d7a00' : d < 0 ? '#c0392b' : '#888';
+    return `<div style="display:inline-flex;align-items:center;gap:4px;background:${bg};border-radius:8px;padding:4px 8px;margin:3px;">
+      <span style="font-weight:700;font-size:11px;color:#333;">${escHtml(rc.name)}</span>
+      <span style="font-weight:700;font-size:11px;color:${col};">${sign}${Math.abs(d).toFixed(2)}</span>
+    </div>`;
+  }).join('');
+
+  const formatLabel = `${lastMatch.scoring === 'rally' ? 'Rally' : 'Standard'} · To ${lastMatch.points}`;
+  const dateStr = lastMatch.date ? new Date(lastMatch.date + 'T00:00:00').toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short', year:'numeric'}) : '';
+
+  // Build share text for native share
+  const winnerText = tied ? 'Tied match' : `${(teamAWon?pairA:pairB).join(' & ')} won`;
+  const scoresText = lastMatch.scores.map(s => `${s.a}-${s.b}`).join(', ');
+  const ratingText = (lastMatch.ratingChanges||[]).map(rc => {
+    const d = parseFloat((rc.newRating - rc.oldRating).toFixed(2));
+    return `${rc.name} ${d>=0?'+':''}${d.toFixed(2)}`;
+  }).join(' · ');
+  window._shareText = `🏓 ${pairA.join(' & ')} vs ${pairB.join(' & ')}
+${winnerText} · ${scoresText}
+${ratingText}
+
+Track your game on Forge 👇`;
+  window._shareUrl  = 'https://forgepickle.github.io/app/';
+
+  // White-background card
+  const winnerColA  = teamAWon ? '#2d7a00' : (!tied ? '#999' : '#666');
+  const winnerColB  = !teamAWon&&!tied ? '#2d7a00' : (teamAWon ? '#999' : '#666');
+  const outcomeChipA = teamAWon ? `<span style="font-size:10px;font-weight:700;color:#2d7a00;background:rgba(170,220,50,0.15);padding:2px 7px;border-radius:6px;margin-left:6px;">WINNER ✓</span>` : tied ? `<span style="font-size:10px;font-weight:700;color:#b87000;background:rgba(245,166,35,0.15);padding:2px 7px;border-radius:6px;margin-left:6px;">TIE =</span>` : '';
+  const outcomeChipB = (!teamAWon&&!tied) ? `<span style="font-size:10px;font-weight:700;color:#2d7a00;background:rgba(170,220,50,0.15);padding:2px 7px;border-radius:6px;margin-left:6px;">WINNER ✓</span>` : tied ? `<span style="font-size:10px;font-weight:700;color:#b87000;background:rgba(245,166,35,0.15);padding:2px 7px;border-radius:6px;margin-left:6px;">TIE =</span>` : '';
+
+  document.getElementById('shareCardEl').innerHTML = `
+    <div class="share-card-top-bar"></div>
+    <div class="share-card-body">
+      <div style="font-size:10px;color:#aaa;letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;">Match Result</div>
+      <div style="font-size:11px;color:#888;margin-bottom:18px;">${dateStr} · ${escHtml(formatLabel)}</div>
+
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;align-items:center;margin-bottom:8px;">
+          <div style="font-family:'Barlow Condensed',-apple-system,sans-serif;font-weight:900;font-size:19px;color:${winnerColA};">${escHtml(pairA.join(' & '))}</div>
+          ${outcomeChipA}
+        </div>
+        <div style="margin-bottom:8px;font-family:'Barlow Condensed',-apple-system,sans-serif;">${scoresHtml}</div>
+        <div style="display:flex;align-items:center;">
+          <div style="font-family:'Barlow Condensed',-apple-system,sans-serif;font-weight:900;font-size:19px;color:${winnerColB};">${escHtml(pairB.join(' & '))}</div>
+          ${outcomeChipB}
+        </div>
+      </div>
+
+      <div style="height:1px;background:#f0f0f0;margin:14px 0;"></div>
+
+      <div style="font-size:10px;color:#aaa;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Rating Changes</div>
+      <div style="display:flex;flex-wrap:wrap;gap:0;">${chipsHtml}</div>
+    </div>
+    <div class="share-card-footer">
+      <div class="share-card-footer-icon">F</div>
+      <div class="share-card-footer-text">
+        <div class="share-card-footer-title">Track your pickleball game</div>
+        <div class="share-card-footer-url">forgepickle.github.io/app/</div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('shareCardOverlay').classList.add('show');
 }
 
 function renderMatchList() { _renderMatchList(); }
@@ -4700,8 +5038,8 @@ function renderFormIndex(p) {
   const losses = last5.filter(r => r === 'L').length;
   const played = wins + losses; // ties excluded from classification window
   let badgeClass, badgeText;
-  if (played === 0 && last5.length === 0) {
-    badgeClass = 'cold'; badgeText = '🔴 Cold';
+  if (last5.length === 0) {
+    badgeClass = 'none'; badgeText = '— No data yet';
   } else if (wins === 5)      { badgeClass = 'onfire'; badgeText = '🔥 On Fire'; }
   else if (wins >= 3)  { badgeClass = 'hot';    badgeText = '🟢 Hot'; }
   else if (wins === 2) { badgeClass = 'warm';   badgeText = '🟡 Warm'; }
@@ -4789,7 +5127,6 @@ function renderPairCards() {
 
     return `<div class="pair-card ${isInactivePair?'inactive-pair':''} ${isUnqualified?'unqualified':''}" id="paircard-${i}">
       <div class="pair-card-header" onclick="togglePairCard(${i})">
-        <div class="pair-rank ${rankClass}">${isUnqualified?'—':i+1}</div>
         <div class="pair-names-wrap">
           <div class="pair-names">${escHtml(pairLabel)}${isInactivePair?'<span class="inactive-indicator">Inactive</span>':''}</div>
           <div class="pair-games-played">${pair.total} match${pair.total!==1?'es':''} together</div>
@@ -5027,13 +5364,12 @@ function checkScoreGap() {
 }
 
 function clampScoreInput(el) {
-  // Clamp score to valid range: 0 <= score <= pointsToWin
-  // Called on every score input change
+  // GOVERNANCE: Only prevent negative numbers.
+  // No upper bound — deuce/advantage can legally exceed points-to-win
+  // (e.g. 16-14 in a "to 15" game). Upper bound validation removed.
   if (el.value === '') return;
-  const pts = parseInt(am.points) || 99;
   let v = parseInt(el.value);
-  if (isNaN(v) || v < 0) { el.value = 0; return; }
-  if (v > pts) { el.value = pts; }
+  if (isNaN(v) || v < 0) el.value = 0;
 }
 
 function onScoreInput() {
@@ -5709,6 +6045,31 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <!-- Tooltip Info Sheet (inside app-container for correct stacking) -->
+
+<!-- Leave Add Match confirmation modal -->
+<div class="modal-overlay" id="leaveMatchModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div id="leaveMatchContent">
+      <div class="modal-title">Leave This Match?</div>
+      <div class="modal-subtitle">Your progress will be lost.</div>
+      <div class="modal-btns">
+        <button class="modal-confirm" id="leaveMatchConfirmBtn" type="button" onclick="confirmLeaveMatch()">Leave Match</button>
+        <button class="modal-cancel" type="button" onclick="closeLeaveMatchModal()">Stay</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Share Card Overlay -->
+<div class="share-card-overlay" id="shareCardOverlay">
+  <div class="share-card" id="shareCardEl"></div>
+  <div class="share-card-btn-row">
+    <button class="share-card-share-btn" type="button" onclick="nativeShareCard()">📤 Share</button>
+    <button class="share-card-close-btn" type="button" onclick="closeShareCard()">Close</button>
+  </div>
+</div>
+
 </div><!-- /#app-container -->
 </body>
 </html>
