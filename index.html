@@ -2,7 +2,7 @@
 <!-- 
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 6.1 — iOS Safe Area & Share Fix     ║
+  ║  Version: 6.2 — iOS Scroll & Layout Fixes     ║
   ║  Date: 2025-04-30                            ║
   ║  Changes: Full backend wiring via fetch()    ║
   ║           sessionStorage auth (session-long) ║
@@ -71,7 +71,8 @@ html, body {
   width: 100%;
   margin: 0;
   padding: 0;
-  background: var(--bg);
+  /* Dark background prevents any bleed showing below nav bar on iOS */
+  background: #0f0f0f;
 }
 
 body {
@@ -80,6 +81,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
+  /* iOS: prevent body rubber-band scroll escaping position:fixed container.
+     This eliminates the nav bar bounce on press-hold and the gap below nav bar.
+     position:fixed on body locks it to the viewport on iOS Safari.
+     No effect on Android Chrome which doesn't exhibit this behaviour. */
+  position: fixed;
+  overflow: hidden;
 }
 
 /* ── App Container ──
@@ -405,7 +412,8 @@ body {
   top: 0; left: 0; right: 0; bottom: 0;
   z-index: 1;
   padding-top: calc(var(--topbar-h) + var(--header-h));
-  padding-bottom: calc(var(--nav-h) + 8px);
+  /* iOS: add safe-area-inset-bottom so content is not hidden behind the nav bar */
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 8px);
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -415,7 +423,8 @@ body {
 
 /* Players screen needs extra bottom padding for the fixed add-player-area */
 #screenPlayers {
-  padding-bottom: calc(var(--nav-h) + var(--addbar-h) + 12px);
+  /* iOS: add safe-area-inset-bottom for full scroll reach */
+  padding-bottom: calc(var(--nav-h) + var(--addbar-h) + env(safe-area-inset-bottom, 0px) + 12px);
 }
 
 /* ════════════════════════════════════════════
@@ -4730,13 +4739,25 @@ function renderInactiveCard(p) {
 function openEditMode(id) {
   if (currentEditId && currentEditId !== id) closeEditMode(currentEditId);
   currentEditId = id;
-  const card  = document.getElementById('card-' + id);
+  const card    = document.getElementById('card-' + id);
   const editRow = document.getElementById('edit-' + id);
-  const input = document.getElementById('editInput-' + id);
+  const input   = document.getElementById('editInput-' + id);
   card.classList.add('editing');
   editRow.classList.add('open');
   input.focus(); input.select();
   onEditInput(id);
+  // Scroll the Players screen so the edit row is visible.
+  // iOS Safari does not reliably auto-scroll to focused inputs inside
+  // overflow:auto containers — we do it manually after one paint cycle.
+  const screenEl = document.getElementById('screenPlayers');
+  if (screenEl) {
+    requestAnimationFrame(() => {
+      // card.offsetTop positions the top of the card; scroll so card
+      // plus its expanded edit row are comfortably in view
+      const targetTop = Math.max(0, card.offsetTop - 16);
+      screenEl.scrollTop = targetTop;
+    });
+  }
 }
 function closeEditMode(id) {
   const p = players.find(p => p.id === id);
@@ -6116,13 +6137,15 @@ function goToPairAnalytics(id1, id2) {
     // of the screen unreachable. Manual scrollTop is fully contained.
     const screenEl = document.getElementById('screenAnalytics');
     if (screenEl) {
-      // Small delay to allow the expanded card to render and get its final offsetTop
-      requestAnimationFrame(() => {
+      // Wait 300ms for the CSS expand transition to fully complete before
+      // measuring offsetTop. requestAnimationFrame fires after one paint
+      // but the expand animation continues for ~200ms after that, causing
+      // the scroll to land short. setTimeout(300) ensures final card height
+      // is settled on both iOS and Android.
+      setTimeout(() => {
         const cardTop = card.offsetTop;
-        // Scroll so card appears near the top with a small gap — works on both
-        // iOS Safari (browser + standalone) and Android Chrome
         screenEl.scrollTop = Math.max(0, cardTop - 16);
-      });
+      }, 300);
     }
   }, 150);
 }
