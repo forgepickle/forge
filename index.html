@@ -60,7 +60,7 @@
   --inactive-bg: #f3f3f0;
   --nav-h:       68px;
   --header-h:    60px;
-  --topbar-h:    4px;
+  --topbar-h:    calc(4px + env(safe-area-inset-top, 0px));
   --addbar-h:    72px; /* add player area height */
 }
 
@@ -101,9 +101,6 @@ body {
   overflow: hidden;
   touch-action: pan-x pan-y;
   z-index: 1;
-  /* iOS standalone: push content below the status bar.
-     env(safe-area-inset-top) = 0 in browser, ~44-59px when added to home screen. */
-  padding-top: env(safe-area-inset-top, 0px);
 }
 
 
@@ -125,7 +122,7 @@ body {
 ════════════════════════════════════════════ */
 .top-bar {
   position: absolute;
-  top: env(safe-area-inset-top, 0px);
+  top: 0;
   left: 0;
   right: 0;
   height: var(--topbar-h);
@@ -6111,7 +6108,22 @@ function goToPairAnalytics(id1, id2) {
     if (idx === -1) return;
     document.querySelectorAll('.pair-card').forEach(c => c.classList.remove('expanded'));
     const card = document.getElementById('paircard-' + idx);
-    if (card) { card.classList.add('expanded'); card.scrollIntoView({ behavior:'smooth', block:'center' }); }
+    if (!card) return;
+    card.classList.add('expanded');
+    // SCROLL FIX: use manual scrollTop instead of scrollIntoView().
+    // scrollIntoView() can scroll the window/body on iOS Safari standalone mode,
+    // escaping the #screenAnalytics scroll container and making the top
+    // of the screen unreachable. Manual scrollTop is fully contained.
+    const screenEl = document.getElementById('screenAnalytics');
+    if (screenEl) {
+      // Small delay to allow the expanded card to render and get its final offsetTop
+      requestAnimationFrame(() => {
+        const cardTop = card.offsetTop;
+        // Scroll so card appears near the top with a small gap — works on both
+        // iOS Safari (browser + standalone) and Android Chrome
+        screenEl.scrollTop = Math.max(0, cardTop - 16);
+      });
+    }
   }, 150);
 }
 
