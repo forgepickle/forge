@@ -2,7 +2,7 @@
 <!-- 
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 6.0 — UX & Share                                ║
+  ║  Version: 6.1 — iOS Safe Area & Share Fix     ║
   ║  Date: 2025-04-30                            ║
   ║  Changes: Full backend wiring via fetch()    ║
   ║           sessionStorage auth (session-long) ║
@@ -101,6 +101,9 @@ body {
   overflow: hidden;
   touch-action: pan-x pan-y;
   z-index: 1;
+  /* iOS standalone: push content below the status bar.
+     env(safe-area-inset-top) = 0 in browser, ~44-59px when added to home screen. */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 
@@ -122,7 +125,7 @@ body {
 ════════════════════════════════════════════ */
 .top-bar {
   position: absolute;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   left: 0;
   right: 0;
   height: var(--topbar-h);
@@ -3130,6 +3133,27 @@ body {
 
     <!-- PAIRS PANEL -->
     <div class="analytics-panel" id="panelPairs">
+
+      <!-- Pairs filter area — mirrors Matches screen filter -->
+      <div class="ml-filter-area" id="apFilterArea">
+        <div class="ml-chips-row" id="apChipsRow"></div>
+        <div class="ml-same-team-row" id="apSameTeamRow" style="display:none;">
+          <span class="ml-same-team-label">Same team only</span>
+          <button class="ml-toggle" id="apSameTeamToggle" onclick="toggleApSameTeam()" aria-label="Toggle same team filter">
+            <div class="ml-toggle-thumb"></div>
+          </button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <div class="ml-filter-desc" id="apFilterDesc">Tap a player to filter pairs</div>
+          <button class="ml-reset-btn" id="apResetBtn" onclick="clearApFilter()" style="display:none;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            Reset
+          </button>
+        </div>
+      </div>
+
       <div class="pair-cards" id="pairCards"></div>
     </div>
 
@@ -3514,79 +3538,91 @@ let isDemoMode = false;
 // used to reset when user exits demo.
 const DEMO_DATA = (function() {
   const players = [
-    { id:'d1', name:'Kai', status:'active', rating:3.72, games:23, ratingHistory:[3.95, 3.96, 3.73, 3.56, 3.62, 3.7, 3.66, 3.71, 3.83, 3.72], last5:["W", "L", "W", "W", "L"], clutchW:3, clutchL:1, removedDate:null },
-    { id:'d2', name:'Priya', status:'active', rating:3.47, games:29, ratingHistory:[3.44, 3.33, 3.4, 3.38, 3.32, 3.24, 3.37, 3.5, 3.51, 3.47], last5:["L", "W", "W", "W", "L"], clutchW:7, clutchL:6, removedDate:null },
-    { id:'d3', name:'Marco', status:'active', rating:3.52, games:26, ratingHistory:[3.28, 3.3, 3.24, 3.14, 3.21, 3.38, 3.51, 3.61, 3.56, 3.52], last5:["W", "W", "W", "L", "L"], clutchW:8, clutchL:10, removedDate:null },
-    { id:'d4', name:'Yuki', status:'active', rating:3.34, games:24, ratingHistory:[3.31, 3.41, 3.35, 3.18, 3.22, 3.25, 3.29, 3.28, 3.23, 3.34], last5:["W", "W", "L", "L", "W"], clutchW:6, clutchL:5, removedDate:null },
-    { id:'d5', name:'Sasha', status:'active', rating:3.79, games:24, ratingHistory:[3.27, 3.37, 3.45, 3.41, 3.28, 3.38, 3.42, 3.54, 3.68, 3.79], last5:["W", "W", "W", "W", "W"], clutchW:7, clutchL:5, removedDate:null },
-    { id:'d6', name:'Reuben', status:'active', rating:3.75, games:20, ratingHistory:[3.57, 3.63, 3.61, 3.54, 3.77, 3.83, 3.89, 3.76, 3.73, 3.75], last5:["W", "W", "L", "L", "W"], clutchW:5, clutchL:2, removedDate:null },
-    { id:'d7', name:'Divya', status:'active', rating:3.26, games:28, ratingHistory:[3.12, 3.18, 3.08, 3.25, 3.19, 3.09, 3.05, 3.1, 3.12, 3.26], last5:["L", "L", "W", "W", "W"], clutchW:9, clutchL:13, removedDate:null },
-    { id:'d8', name:'Tomas', status:'active', rating:3.56, games:20, ratingHistory:[3.74, 3.73, 3.84, 3.83, 3.9, 3.92, 3.93, 3.81, 3.67, 3.56], last5:["W", "W", "L", "L", "L"], clutchW:6, clutchL:2, removedDate:null },
-    { id:'d9', name:'Lena', status:'active', rating:3.35, games:21, ratingHistory:[3.73, 3.62, 3.61, 3.55, 3.68, 3.55, 3.45, 3.33, 3.31, 3.35], last5:["L", "L", "L", "L", "W"], clutchW:5, clutchL:7, removedDate:null },
-    { id:'d10', name:'Farhan', status:'active', rating:3.26, games:25, ratingHistory:[3.62, 3.54, 3.58, 3.45, 3.43, 3.39, 3.38, 3.36, 3.22, 3.26], last5:["L", "L", "L", "L", "W"], clutchW:6, clutchL:7, removedDate:null }
+    { id:'d1', name:'Kai',    status:'active', rating:3.81, games:25, ratingHistory:[3.60, 3.65, 3.68, 3.72, 3.70, 3.74, 3.76, 3.79, 3.78, 3.81], last5:["W","W","W","L","W"], clutchW:4, clutchL:2, removedDate:null },
+    { id:'d2', name:'Priya',  status:'active', rating:3.44, games:33, ratingHistory:[3.52, 3.48, 3.45, 3.43, 3.40, 3.38, 3.42, 3.46, 3.44, 3.44], last5:["L","W","W","L","W"], clutchW:8, clutchL:7, removedDate:null },
+    { id:'d3', name:'Marco',  status:'active', rating:3.49, games:35, ratingHistory:[3.28, 3.32, 3.38, 3.41, 3.45, 3.47, 3.50, 3.52, 3.49, 3.49], last5:["W","L","W","W","L"], clutchW:9, clutchL:11, removedDate:null },
+    { id:'d4', name:'Yuki',   status:'active', rating:3.31, games:30, ratingHistory:[3.40, 3.38, 3.35, 3.30, 3.28, 3.26, 3.29, 3.33, 3.31, 3.31], last5:["L","W","L","W","W"], clutchW:5, clutchL:6, removedDate:null },
+    { id:'d5', name:'Sasha',  status:'active', rating:3.84, games:25, ratingHistory:[3.55, 3.60, 3.65, 3.68, 3.72, 3.75, 3.78, 3.80, 3.82, 3.84], last5:["W","W","W","L","W"], clutchW:6, clutchL:3, removedDate:null },
+    { id:'d6', name:'Reuben', status:'active', rating:3.68, games:34, ratingHistory:[3.80, 3.78, 3.75, 3.72, 3.70, 3.68, 3.65, 3.67, 3.69, 3.68], last5:["W","L","L","W","L"], clutchW:6, clutchL:3, removedDate:null },
+    { id:'d7', name:'Divya',  status:'active', rating:3.22, games:29, ratingHistory:[3.35, 3.30, 3.28, 3.25, 3.22, 3.20, 3.18, 3.22, 3.24, 3.22], last5:["L","W","L","L","W"], clutchW:7, clutchL:12, removedDate:null },
+    { id:'d8', name:'Tomas',  status:'active', rating:3.53, games:24, ratingHistory:[3.70, 3.68, 3.62, 3.58, 3.55, 3.52, 3.50, 3.53, 3.54, 3.53], last5:["W","L","L","W","W"], clutchW:5, clutchL:3, removedDate:null },
+    { id:'d9', name:'Lena',   status:'active', rating:3.50, games:1,  ratingHistory:[3.50], last5:["L"], clutchW:0, clutchL:0, removedDate:null },
+    { id:'d10', name:'Farhan', status:'active', rating:3.50, games:4, ratingHistory:[3.50, 3.48, 3.47, 3.50], last5:["L","L","L","W"], clutchW:0, clutchL:1, removedDate:null }
   ];
 
   const matches = [
-    { id:'dm001', date:'2025-01-11', teamA:['d2','d1'], teamB:['d5','d10'], scoring:'standard', points:'11', scores:[{a:11,b:4}], ratingChanges:[] },
-    { id:'dm002', date:'2025-01-11', teamA:['d9','d2'], teamB:['d7','d1'], scoring:'standard', points:'11', scores:[{a:11,b:5}], ratingChanges:[] },
-    { id:'dm003', date:'2025-01-11', teamA:['d10','d1'], teamB:['d4','d6'], scoring:'rally', points:'21', scores:[{a:21,b:15},{a:21,b:17}], ratingChanges:[] },
-    { id:'dm004', date:'2025-01-11', teamA:['d1','d3'], teamB:['d7','d9'], scoring:'standard', points:'11', scores:[{a:11,b:9},{a:11,b:9}], ratingChanges:[] },
-    { id:'dm005', date:'2025-01-11', teamA:['d7','d2'], teamB:['d6','d10'], scoring:'standard', points:'11', scores:[{a:4,b:11}], ratingChanges:[] },
-    { id:'dm006', date:'2025-01-11', teamA:['d8','d9'], teamB:['d2','d4'], scoring:'standard', points:'11', scores:[{a:11,b:7},{a:5,b:11},{a:8,b:11}], ratingChanges:[] },
-    { id:'dm007', date:'2025-01-18', teamA:['d4','d5'], teamB:['d2','d7'], scoring:'standard', points:'11', scores:[{a:7,b:11},{a:6,b:11}], ratingChanges:[] },
-    { id:'dm008', date:'2025-01-18', teamA:['d6','d3'], teamB:['d10','d9'], scoring:'standard', points:'11', scores:[{a:5,b:11}], ratingChanges:[] },
-    { id:'dm009', date:'2025-01-18', teamA:['d3','d9'], teamB:['d4','d2'], scoring:'rally', points:'15', scores:[{a:15,b:12},{a:11,b:15},{a:15,b:13}], ratingChanges:[] },
-    { id:'dm010', date:'2025-01-18', teamA:['d1','d6'], teamB:['d7','d3'], scoring:'standard', points:'11', scores:[{a:7,b:11},{a:11,b:8},{a:11,b:6}], ratingChanges:[] },
-    { id:'dm011', date:'2025-01-18', teamA:['d8','d3'], teamB:['d5','d2'], scoring:'standard', points:'11', scores:[{a:7,b:11},{a:11,b:5},{a:6,b:11}], ratingChanges:[] },
-    { id:'dm012', date:'2025-01-18', teamA:['d6','d4'], teamB:['d3','d5'], scoring:'rally', points:'15', scores:[{a:15,b:13}], ratingChanges:[] },
-    { id:'dm013', date:'2025-01-27', teamA:['d3','d7'], teamB:['d2','d4'], scoring:'rally', points:'15', scores:[{a:9,b:15},{a:11,b:15}], ratingChanges:[] },
-    { id:'dm014', date:'2025-01-27', teamA:['d9','d1'], teamB:['d2','d6'], scoring:'rally', points:'21', scores:[{a:19,b:21},{a:17,b:21}], ratingChanges:[] },
-    { id:'dm015', date:'2025-01-27', teamA:['d7','d3'], teamB:['d8','d1'], scoring:'standard', points:'11', scores:[{a:5,b:11}], ratingChanges:[] },
-    { id:'dm016', date:'2025-01-27', teamA:['d2','d5'], teamB:['d4','d10'], scoring:'standard', points:'11', scores:[{a:5,b:11},{a:11,b:9},{a:5,b:11}], ratingChanges:[] },
-    { id:'dm017', date:'2025-01-27', teamA:['d8','d1'], teamB:['d2','d3'], scoring:'standard', points:'11', scores:[{a:11,b:5}], ratingChanges:[] },
-    { id:'dm018', date:'2025-01-27', teamA:['d2','d10'], teamB:['d8','d7'], scoring:'standard', points:'11', scores:[{a:11,b:8},{a:8,b:11},{a:6,b:11}], ratingChanges:[] },
-    { id:'dm019', date:'2025-02-07', teamA:['d10','d7'], teamB:['d4','d5'], scoring:'standard', points:'11', scores:[{a:4,b:11},{a:4,b:11}], ratingChanges:[] },
-    { id:'dm020', date:'2025-02-07', teamA:['d6','d8'], teamB:['d9','d1'], scoring:'standard', points:'11', scores:[{a:11,b:9},{a:11,b:5}], ratingChanges:[] },
-    { id:'dm021', date:'2025-02-07', teamA:['d9','d4'], teamB:['d10','d1'], scoring:'standard', points:'11', scores:[{a:8,b:11}], ratingChanges:[] },
-    { id:'dm022', date:'2025-02-07', teamA:['d2','d1'], teamB:['d6','d9'], scoring:'rally', points:'21', scores:[{a:21,b:18},{a:21,b:15}], ratingChanges:[] },
-    { id:'dm023', date:'2025-02-07', teamA:['d3','d8'], teamB:['d4','d7'], scoring:'rally', points:'15', scores:[{a:13,b:15}], ratingChanges:[] },
-    { id:'dm024', date:'2025-02-07', teamA:['d2','d7'], teamB:['d6','d4'], scoring:'rally', points:'15', scores:[{a:15,b:8}], ratingChanges:[] },
-    { id:'dm025', date:'2025-02-15', teamA:['d7','d6'], teamB:['d2','d8'], scoring:'standard', points:'11', scores:[{a:11,b:8},{a:11,b:6}], ratingChanges:[] },
-    { id:'dm026', date:'2025-02-15', teamA:['d3','d5'], teamB:['d8','d2'], scoring:'standard', points:'11', scores:[{a:11,b:9},{a:9,b:11},{a:11,b:5}], ratingChanges:[] },
-    { id:'dm027', date:'2025-02-15', teamA:['d2','d4'], teamB:['d3','d9'], scoring:'rally', points:'15', scores:[{a:15,b:13},{a:15,b:12}], ratingChanges:[] },
-    { id:'dm028', date:'2025-02-15', teamA:['d7','d1'], teamB:['d10','d3'], scoring:'rally', points:'15', scores:[{a:10,b:15},{a:15,b:12},{a:15,b:12}], ratingChanges:[] },
-    { id:'dm029', date:'2025-02-25', teamA:['d10','d9'], teamB:['d1','d6'], scoring:'standard', points:'11', scores:[{a:11,b:6},{a:5,b:11},{a:11,b:5}], ratingChanges:[] },
-    { id:'dm030', date:'2025-02-25', teamA:['d1','d9'], teamB:['d2','d7'], scoring:'standard', points:'11', scores:[{a:11,b:4}], ratingChanges:[] },
-    { id:'dm031', date:'2025-02-25', teamA:['d4','d7'], teamB:['d2','d5'], scoring:'standard', points:'11', scores:[{a:5,b:11}], ratingChanges:[] },
-    { id:'dm032', date:'2025-02-25', teamA:['d2','d7'], teamB:['d6','d3'], scoring:'standard', points:'11', scores:[{a:8,b:11},{a:7,b:11}], ratingChanges:[] },
-    { id:'dm033', date:'2025-03-10', teamA:['d5','d8'], teamB:['d6','d7'], scoring:'standard', points:'11', scores:[{a:11,b:5},{a:9,b:11},{a:11,b:9}], ratingChanges:[] },
-    { id:'dm034', date:'2025-03-10', teamA:['d9','d5'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:7,b:11},{a:8,b:11}], ratingChanges:[] },
-    { id:'dm035', date:'2025-03-10', teamA:['d8','d9'], teamB:['d5','d10'], scoring:'rally', points:'21', scores:[{a:17,b:21},{a:21,b:19},{a:21,b:18}], ratingChanges:[] },
-    { id:'dm036', date:'2025-03-10', teamA:['d2','d10'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:8,b:11},{a:4,b:11}], ratingChanges:[] },
-    { id:'dm037', date:'2025-03-21', teamA:['d8','d5'], teamB:['d1','d10'], scoring:'rally', points:'15', scores:[{a:13,b:15}], ratingChanges:[] },
-    { id:'dm038', date:'2025-03-21', teamA:['d6','d3'], teamB:['d5','d2'], scoring:'rally', points:'15', scores:[{a:9,b:15},{a:13,b:15}], ratingChanges:[] },
-    { id:'dm039', date:'2025-03-21', teamA:['d2','d10'], teamB:['d3','d5'], scoring:'standard', points:'11', scores:[{a:11,b:5},{a:8,b:11},{a:6,b:11}], ratingChanges:[] },
-    { id:'dm040', date:'2025-03-21', teamA:['d1','d5'], teamB:['d6','d7'], scoring:'standard', points:'11', scores:[{a:4,b:11}], ratingChanges:[] },
-    { id:'dm041', date:'2025-03-21', teamA:['d4','d2'], teamB:['d6','d7'], scoring:'rally', points:'21', scores:[{a:15,b:21},{a:14,b:21}], ratingChanges:[] },
-    { id:'dm042', date:'2025-03-21', teamA:['d3','d4'], teamB:['d10','d7'], scoring:'standard', points:'11', scores:[{a:8,b:11}], ratingChanges:[] },
-    { id:'dm043', date:'2025-04-02', teamA:['d4','d5'], teamB:['d3','d7'], scoring:'standard', points:'11', scores:[{a:11,b:6}], ratingChanges:[] },
-    { id:'dm044', date:'2025-04-02', teamA:['d4','d10'], teamB:['d8','d3'], scoring:'standard', points:'11', scores:[{a:8,b:11}], ratingChanges:[] },
-    { id:'dm045', date:'2025-04-02', teamA:['d1','d4'], teamB:['d7','d3'], scoring:'standard', points:'11', scores:[{a:7,b:11},{a:4,b:11}], ratingChanges:[] },
-    { id:'dm046', date:'2025-04-02', teamA:['d9','d7'], teamB:['d6','d1'], scoring:'standard', points:'11', scores:[{a:8,b:11},{a:5,b:11}], ratingChanges:[] },
-    { id:'dm047', date:'2025-04-02', teamA:['d5','d1'], teamB:['d2','d10'], scoring:'rally', points:'15', scores:[{a:15,b:10},{a:15,b:9}], ratingChanges:[] },
-    { id:'dm048', date:'2025-04-10', teamA:['d10','d4'], teamB:['d5','d1'], scoring:'rally', points:'15', scores:[{a:15,b:12},{a:11,b:15},{a:15,b:10}], ratingChanges:[] },
-    { id:'dm049', date:'2025-04-10', teamA:['d6','d10'], teamB:['d2','d9'], scoring:'standard', points:'11', scores:[{a:7,b:11},{a:6,b:11}], ratingChanges:[] },
-    { id:'dm050', date:'2025-04-10', teamA:['d5','d9'], teamB:['d3','d2'], scoring:'rally', points:'15', scores:[{a:8,b:15},{a:8,b:15}], ratingChanges:[] },
-    { id:'dm051', date:'2025-04-10', teamA:['d3','d5'], teamB:['d7','d9'], scoring:'standard', points:'11', scores:[{a:11,b:6}], ratingChanges:[] },
-    { id:'dm052', date:'2025-04-10', teamA:['d10','d6'], teamB:['d8','d4'], scoring:'rally', points:'15', scores:[{a:10,b:15},{a:15,b:12},{a:13,b:15}], ratingChanges:[] },
-    { id:'dm053', date:'2025-04-22', teamA:['d4','d5'], teamB:['d10','d7'], scoring:'standard', points:'11', scores:[{a:11,b:8}], ratingChanges:[] },
-    { id:'dm054', date:'2025-04-22', teamA:['d8','d2'], teamB:['d10','d4'], scoring:'rally', points:'21', scores:[{a:21,b:16},{a:21,b:16}], ratingChanges:[] },
-    { id:'dm055', date:'2025-04-22', teamA:['d4','d3'], teamB:['d1','d7'], scoring:'standard', points:'11', scores:[{a:8,b:11}], ratingChanges:[] },
-    { id:'dm056', date:'2025-04-22', teamA:['d9','d8'], teamB:['d1','d5'], scoring:'standard', points:'11', scores:[{a:6,b:11}], ratingChanges:[] },
-    { id:'dm057', date:'2025-05-01', teamA:['d9','d10'], teamB:['d6','d7'], scoring:'rally', points:'15', scores:[{a:15,b:10},{a:9,b:15},{a:10,b:15}], ratingChanges:[] },
-    { id:'dm058', date:'2025-05-01', teamA:['d8','d10'], teamB:['d5','d7'], scoring:'standard', points:'11', scores:[{a:5,b:11},{a:6,b:11}], ratingChanges:[] },
-    { id:'dm059', date:'2025-05-01', teamA:['d4','d5'], teamB:['d8','d1'], scoring:'standard', points:'11', scores:[{a:11,b:7},{a:11,b:5}], ratingChanges:[] },
-    { id:'dm060', date:'2025-05-01', teamA:['d2','d3'], teamB:['d9','d10'], scoring:'rally', points:'15', scores:[{a:13,b:15}], ratingChanges:[] }
+    // Session 1 — 2025-01-11 (6 matches)
+    { id:'dm001', date:'2025-01-11', teamA:['d1','d5'], teamB:['d2','d3'], scoring:'standard', points:'11', scores:[{a:11,b:6}], ratingChanges:[] },
+    { id:'dm002', date:'2025-01-11', teamA:['d1','d5'], teamB:['d4','d6'], scoring:'rally',    points:'15', scores:[{a:15,b:9}], ratingChanges:[] },
+    { id:'dm003', date:'2025-01-11', teamA:['d2','d3'], teamB:['d6','d7'], scoring:'standard', points:'11', scores:[{a:4,b:11}], ratingChanges:[] },
+    { id:'dm004', date:'2025-01-11', teamA:['d4','d6'], teamB:['d7','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:15},{a:14,b:21}], ratingChanges:[] },
+    { id:'dm005', date:'2025-01-11', teamA:['d10','d2'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:5,b:11}], ratingChanges:[] },
+    { id:'dm006', date:'2025-01-11', teamA:['d2','d4'], teamB:['d3','d6'], scoring:'standard', points:'11', scores:[{a:11,b:8}], ratingChanges:[] },
+    // Session 2 — 2025-01-18 (5 matches)
+    { id:'dm007', date:'2025-01-18', teamA:['d1','d5'], teamB:['d6','d7'], scoring:'rally',    points:'15', scores:[{a:15,b:8},{a:15,b:11}], ratingChanges:[] },
+    { id:'dm008', date:'2025-01-18', teamA:['d1','d5'], teamB:['d2','d8'], scoring:'standard', points:'21', scores:[{a:18,b:21},{a:15,b:21}], ratingChanges:[] },
+    { id:'dm009', date:'2025-01-18', teamA:['d3','d7'], teamB:['d4','d8'], scoring:'standard', points:'11', scores:[{a:11,b:6}], ratingChanges:[] },
+    { id:'dm010', date:'2025-01-18', teamA:['d10','d6'], teamB:['d2','d4'], scoring:'rally',   points:'15', scores:[{a:9,b:15}], ratingChanges:[] },
+    { id:'dm011', date:'2025-01-18', teamA:['d2','d6'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:11,b:7}], ratingChanges:[] },
+    // Session 3 — 2025-01-25 (5 matches)
+    { id:'dm012', date:'2025-01-25', teamA:['d1','d5'], teamB:['d3','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:14}], ratingChanges:[] },
+    { id:'dm013', date:'2025-01-25', teamA:['d1','d5'], teamB:['d4','d7'], scoring:'standard', points:'15', scores:[{a:15,b:8}], ratingChanges:[] },
+    { id:'dm014', date:'2025-01-25', teamA:['d4','d7'], teamB:['d2','d6'], scoring:'rally',    points:'15', scores:[{a:12,b:15},{a:15,b:12}], ratingChanges:[] },
+    { id:'dm015', date:'2025-01-25', teamA:['d10','d4'], teamB:['d2','d3'], scoring:'standard', points:'11', scores:[{a:4,b:11}], ratingChanges:[] },
+    { id:'dm016', date:'2025-01-25', teamA:['d3','d6'], teamB:['d4','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:17}], ratingChanges:[] },
+    // Session 4 — 2025-02-01 (5 matches)
+    { id:'dm017', date:'2025-02-01', teamA:['d1','d5'], teamB:['d2','d4'], scoring:'standard', points:'11', scores:[{a:11,b:5},{a:11,b:7}], ratingChanges:[] },
+    { id:'dm018', date:'2025-02-01', teamA:['d1','d5'], teamB:['d6','d3'], scoring:'rally',    points:'15', scores:[{a:12,b:15},{a:9,b:15}], ratingChanges:[] },
+    { id:'dm019', date:'2025-02-01', teamA:['d2','d7'], teamB:['d3','d4'], scoring:'standard', points:'11', scores:[{a:5,b:11}], ratingChanges:[] },
+    { id:'dm020', date:'2025-02-01', teamA:['d10','d8'], teamB:['d3','d6'], scoring:'standard', points:'11', scores:[{a:7,b:11}], ratingChanges:[] },
+    { id:'dm021', date:'2025-02-01', teamA:['d2','d3'], teamB:['d6','d7'], scoring:'rally',    points:'15', scores:[{a:10,b:15}], ratingChanges:[] },
+    // Session 5 — 2025-02-08 (5 matches)
+    { id:'dm022', date:'2025-02-08', teamA:['d1','d5'], teamB:['d3','d7'], scoring:'standard', points:'11', scores:[{a:11,b:4}], ratingChanges:[] },
+    { id:'dm023', date:'2025-02-08', teamA:['d1','d5'], teamB:['d6','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:16},{a:21,b:13}], ratingChanges:[] },
+    { id:'dm024', date:'2025-02-08', teamA:['d4','d7'], teamB:['d2','d6'], scoring:'standard', points:'11', scores:[{a:11,b:9},{a:6,b:11}], ratingChanges:[] },
+    { id:'dm025', date:'2025-02-08', teamA:['d2','d8'], teamB:['d3','d4'], scoring:'rally',    points:'15', scores:[{a:15,b:11}], ratingChanges:[] },
+    { id:'dm026', date:'2025-02-08', teamA:['d9','d2'], teamB:['d3','d4'], scoring:'standard', points:'11', scores:[{a:6,b:11}], ratingChanges:[] },
+    // Session 6 — 2025-02-15 (5 matches)
+    { id:'dm027', date:'2025-02-15', teamA:['d1','d5'], teamB:['d4','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:15}], ratingChanges:[] },
+    { id:'dm028', date:'2025-02-15', teamA:['d1','d5'], teamB:['d2','d7'], scoring:'standard', points:'11', scores:[{a:11,b:7},{a:7,b:11}], ratingChanges:[] },
+    { id:'dm029', date:'2025-02-15', teamA:['d3','d6'], teamB:['d4','d7'], scoring:'rally',    points:'15', scores:[{a:15,b:9}], ratingChanges:[] },
+    { id:'dm030', date:'2025-02-15', teamA:['d2','d8'], teamB:['d6','d7'], scoring:'standard', points:'11', scores:[{a:7,b:11}], ratingChanges:[] },
+    { id:'dm031', date:'2025-02-15', teamA:['d4','d6'], teamB:['d3','d7'], scoring:'standard', points:'11', scores:[{a:11,b:8}], ratingChanges:[] },
+    // Session 7 — 2025-02-22 (5 matches)
+    { id:'dm032', date:'2025-02-22', teamA:['d1','d5'], teamB:['d3','d6'], scoring:'rally',    points:'15', scores:[{a:15,b:10}], ratingChanges:[] },
+    { id:'dm033', date:'2025-02-22', teamA:['d1','d5'], teamB:['d7','d8'], scoring:'standard', points:'11', scores:[{a:11,b:6},{a:11,b:9}], ratingChanges:[] },
+    { id:'dm034', date:'2025-02-22', teamA:['d2','d4'], teamB:['d3','d6'], scoring:'rally',    points:'15', scores:[{a:15,b:13},{a:12,b:15}], ratingChanges:[] },
+    { id:'dm035', date:'2025-02-22', teamA:['d6','d8'], teamB:['d2','d7'], scoring:'standard', points:'11', scores:[{a:11,b:6}], ratingChanges:[] },
+    { id:'dm036', date:'2025-02-22', teamA:['d2','d3'], teamB:['d4','d7'], scoring:'rally',    points:'21', scores:[{a:16,b:21}], ratingChanges:[] },
+    // Session 8 — 2025-03-01 (5 matches)
+    { id:'dm037', date:'2025-03-01', teamA:['d1','d5'], teamB:['d2','d6'], scoring:'standard', points:'11', scores:[{a:9,b:11},{a:7,b:11}], ratingChanges:[] },
+    { id:'dm038', date:'2025-03-01', teamA:['d1','d5'], teamB:['d4','d3'], scoring:'rally',    points:'15', scores:[{a:15,b:8},{a:15,b:12}], ratingChanges:[] },
+    { id:'dm039', date:'2025-03-01', teamA:['d2','d6'], teamB:['d3','d7'], scoring:'standard', points:'11', scores:[{a:11,b:9}], ratingChanges:[] },
+    { id:'dm040', date:'2025-03-01', teamA:['d4','d8'], teamB:['d6','d7'], scoring:'rally',    points:'21', scores:[{a:21,b:18}], ratingChanges:[] },
+    { id:'dm041', date:'2025-03-01', teamA:['d2','d7'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:6,b:11}], ratingChanges:[] },
+    // Session 9 — 2025-03-15 (5 matches)
+    { id:'dm042', date:'2025-03-15', teamA:['d1','d5'], teamB:['d2','d3'], scoring:'rally',    points:'15', scores:[{a:15,b:11}], ratingChanges:[] },
+    { id:'dm043', date:'2025-03-15', teamA:['d1','d5'], teamB:['d6','d7'], scoring:'standard', points:'21', scores:[{a:21,b:16}], ratingChanges:[] },
+    { id:'dm044', date:'2025-03-15', teamA:['d3','d8'], teamB:['d4','d6'], scoring:'rally',    points:'21', scores:[{a:21,b:17},{a:14,b:21}], ratingChanges:[] },
+    { id:'dm045', date:'2025-03-15', teamA:['d4','d7'], teamB:['d2','d6'], scoring:'standard', points:'11', scores:[{a:11,b:5}], ratingChanges:[] },
+    { id:'dm046', date:'2025-03-15', teamA:['d2','d8'], teamB:['d3','d4'], scoring:'standard', points:'11', scores:[{a:5,b:11}], ratingChanges:[] },
+    // Session 10 — 2025-03-29 (5 matches)
+    { id:'dm047', date:'2025-03-29', teamA:['d1','d5'], teamB:['d4','d8'], scoring:'rally',    points:'15', scores:[{a:15,b:9},{a:15,b:13}], ratingChanges:[] },
+    { id:'dm048', date:'2025-03-29', teamA:['d1','d5'], teamB:['d3','d6'], scoring:'standard', points:'21', scores:[{a:18,b:21},{a:14,b:21}], ratingChanges:[] },
+    { id:'dm049', date:'2025-03-29', teamA:['d2','d7'], teamB:['d4','d6'], scoring:'rally',    points:'15', scores:[{a:15,b:9}], ratingChanges:[] },
+    { id:'dm050', date:'2025-03-29', teamA:['d3','d8'], teamB:['d7','d6'], scoring:'standard', points:'11', scores:[{a:8,b:11}], ratingChanges:[] },
+    { id:'dm051', date:'2025-03-29', teamA:['d2','d6'], teamB:['d3','d7'], scoring:'rally',    points:'21', scores:[{a:21,b:16}], ratingChanges:[] },
+    // Session 11 — 2025-04-12 (5 matches)
+    { id:'dm052', date:'2025-04-12', teamA:['d1','d5'], teamB:['d2','d8'], scoring:'standard', points:'11', scores:[{a:11,b:4}], ratingChanges:[] },
+    { id:'dm053', date:'2025-04-12', teamA:['d1','d5'], teamB:['d7','d3'], scoring:'rally',    points:'15', scores:[{a:15,b:8}], ratingChanges:[] },
+    { id:'dm054', date:'2025-04-12', teamA:['d4','d6'], teamB:['d2','d8'], scoring:'standard', points:'11', scores:[{a:7,b:11}], ratingChanges:[] },
+    { id:'dm055', date:'2025-04-12', teamA:['d3','d7'], teamB:['d4','d6'], scoring:'rally',    points:'21', scores:[{a:21,b:15}], ratingChanges:[] },
+    { id:'dm056', date:'2025-04-12', teamA:['d2','d4'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:11,b:7}], ratingChanges:[] },
+    // Session 12 — 2025-05-01 (4 matches)
+    { id:'dm057', date:'2025-05-01', teamA:['d1','d5'], teamB:['d6','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:12}], ratingChanges:[] },
+    { id:'dm058', date:'2025-05-01', teamA:['d1','d5'], teamB:['d4','d2'], scoring:'standard', points:'11', scores:[{a:11,b:6},{a:11,b:8}], ratingChanges:[] },
+    { id:'dm059', date:'2025-05-01', teamA:['d1','d5'], teamB:['d3','d7'], scoring:'rally',    points:'21', scores:[{a:21,b:9},{a:21,b:15}], ratingChanges:[] },
+    { id:'dm060', date:'2025-05-01', teamA:['d3','d6'], teamB:['d2','d7'], scoring:'rally',    points:'15', scores:[{a:11,b:15}], ratingChanges:[] }
   ];
 
     return { players: players, matches: matches };
@@ -3727,6 +3763,8 @@ let pendingDeleteMatchId = null;
 let mlSelectedIds = [];
 let mlSameTeam = false;
 let matchListFilter = null;
+let apFilterIds  = []; // Analytics Pairs filter
+let apSameTeam   = false;
 let mlFilteredCache = [];
 let mlRenderedCount = 0;
 
@@ -4264,6 +4302,8 @@ async function launchApp() {
   players = [];
   matches = [];
   pairs   = [];
+  matchListFilter = null; mlSelectedIds = []; mlSameTeam = false;
+  apFilterIds = []; apSameTeam = false;
   _clearRenderedScreens();
 
   document.getElementById('appShell').style.display = 'block';
@@ -4457,10 +4497,11 @@ function nativeShareCard() {
   const text = window._shareText || 'Check out Forge — pickleball rating tracker';
   const url  = window._shareUrl  || 'https://forgepickle.github.io/app/';
   if (navigator.share) {
+    // URL is already embedded in text; pass separately for native share sheet
     navigator.share({ title: 'Forge Match Result', text, url })
-      .catch(err => { if (err.name !== 'AbortError') copyShareFallback(text + '\n' + url); });
+      .catch(err => { if (err.name !== 'AbortError') copyShareFallback(text); });
   } else {
-    copyShareFallback(text + '\n' + url);
+    copyShareFallback(text);
   }
 }
 
@@ -4509,20 +4550,39 @@ function showMatchShareCard() {
   }).join('');
 
   const formatLabel = `${lastMatch.scoring === 'rally' ? 'Rally' : 'Standard'} · To ${lastMatch.points}`;
-  const dateStr = lastMatch.date ? new Date(lastMatch.date + 'T00:00:00').toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short', year:'numeric'}) : '';
+  const _parsedDate = parseMatchDate(lastMatch.date);
+  const dateStr = _parsedDate ? _parsedDate.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short', year:'numeric'}) : '';
 
   // Build share text for native share
-  const winnerText = tied ? 'Tied match' : `${(teamAWon?pairA:pairB).join(' & ')} won`;
-  const scoresText = lastMatch.scores.map(s => `${s.a}-${s.b}`).join(', ');
-  const ratingText = (lastMatch.ratingChanges||[]).map(rc => {
-    const d = parseFloat((rc.newRating - rc.oldRating).toFixed(2));
-    return `${rc.name} ${d>=0?'+':''}${d.toFixed(2)}`;
-  }).join(' · ');
+  const winnerText  = tied ? 'Match tied' : `${(teamAWon ? pairA : pairB).join(' & ')} won`;
+  const scoresText  = lastMatch.scores.map(s => `${s.a}-${s.b}`).join(', ');
+  const rChanges    = lastMatch.ratingChanges || [];
+  const teamAIds    = lastMatch.teamA;
+  const teamBIds    = lastMatch.teamB;
+  const winnerIds   = tied ? [] : (teamAWon ? teamAIds : teamBIds);
+  const loserIds    = tied ? [] : (teamAWon ? teamBIds : teamAIds);
+  const fmtDelta    = rc => { const d = parseFloat((rc.newRating - rc.oldRating).toFixed(2)); return `${rc.name} ${d>=0?'+':''}${d.toFixed(2)}`; };
+  const fmtProgress = rc => `${rc.name} ${rc.oldRating.toFixed(2)} > ${rc.newRating.toFixed(2)}`;
+  let ratingDeltaLines;
+  if (tied) {
+    ratingDeltaLines = rChanges.map(fmtDelta).join(' · ');
+  } else {
+    const winLine  = rChanges.filter(rc => winnerIds.includes(rc.id)).map(fmtDelta).join(' · ');
+    const loseLine = rChanges.filter(rc => loserIds.includes(rc.id)).map(fmtDelta).join(' · ');
+    ratingDeltaLines = [winLine, loseLine].filter(Boolean).join('\n');
+  }
+  const ratingProgressLines = rChanges.map(fmtProgress).join('\n');
   window._shareText = `🏓 ${pairA.join(' & ')} vs ${pairB.join(' & ')}
-${winnerText} · ${scoresText}
-${ratingText}
 
-Track your game on Forge 👇`;
+${winnerText}
+${scoresText}
+
+DUPR rating changes
+${ratingDeltaLines}
+
+${ratingProgressLines}
+
+Track your game on Forge 👇 (free forever!)`;
   window._shareUrl  = 'https://forgepickle.github.io/app/';
 
   // White-background card
@@ -4917,7 +4977,7 @@ document.getElementById('reinstateModal').addEventListener('click', function(e) 
 // SCREEN 2: ANALYTICS
 // ==========================================================
 
-function renderAnalytics() { renderPlayerChips(); renderPairCards(); }
+function renderAnalytics() { renderPlayerChips(); renderPairCards(); renderApChips(); updateApFilterDesc(); }
 
 function switchAnalyticsTab(tab) {
   currentAnalyticsTab = tab;
@@ -4925,6 +4985,7 @@ function switchAnalyticsTab(tab) {
   document.getElementById('pillPairs').classList.toggle('active', tab === 'pairs');
   document.getElementById('panelIndividual').classList.toggle('active', tab === 'individual');
   document.getElementById('panelPairs').classList.toggle('active', tab === 'pairs');
+  if (tab === 'pairs') { renderApChips(); updateApFilterDesc(); }
 }
 
 function renderPlayerChips() {
@@ -5088,7 +5149,7 @@ function renderClutchRating(p) {
 }
 
 function renderPairCards() {
-  const sorted = [...pairs].map(pair => {
+  const sorted = getFilteredPairs().map(pair => {
     const total  = pair.wins + pair.losses;
     const winPct = total > 0 ? Math.round((pair.wins / total) * 100) : 0;
     return { ...pair, total, winPct };
@@ -5785,14 +5846,22 @@ function loadMoreMatches() {
   if (wrap) appendMatchPage(wrap);
 }
 
+function parseMatchDate(raw) {
+  if (!raw) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return new Date(raw + 'T00:00:00');
+  if (raw.includes('T')) return new Date(raw);
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function renderMatchCard(m, idx) {
   const getNames = ids => ids.map(id => { const p = players.find(pl => pl.id===id); return p?p.name:'Unknown'; });
   const teamANames = getNames(m.teamA), teamBNames = getNames(m.teamB);
   let aWins=0, bWins=0, tiedGames=0;
   m.scores.forEach(s => { if(s.a>s.b) aWins++; else if(s.b>s.a) bWins++; else tiedGames++; });
   const teamAWon = aWins > bWins, teamBWon = bWins > aWins, matchTied = !teamAWon && !teamBWon;
-  const dateObj = new Date(m.date + 'T00:00:00');
-  const dateStr = dateObj.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  const dateObj = parseMatchDate(m.date);
+  const dateStr = dateObj ? dateObj.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) : 'Invalid date';
   const fmtBadge = (m.scoring?m.scoring.charAt(0).toUpperCase()+m.scoring.slice(1):'Standard') + ' = To ' + (m.points||'11');
   const pairA = truncatePairNames(teamANames[0]||'', teamANames[1]||'', 'tier2');
   const pairB = truncatePairNames(teamBNames[0]||'', teamBNames[1]||'', 'tier2');
@@ -5811,12 +5880,12 @@ function renderMatchCard(m, idx) {
       <div class="match-card-meta"><span class="match-date">${escHtml(dateStr)}</span><span class="match-format-badge">${escHtml(fmtBadge)}</span></div>
       <div class="match-teams-wrap">
         <div class="match-team">
-          <div class="match-team-names ${teamAWon?'winner':teamBWon?'loser':''}">${escHtml(pairA)}</div>
+          <div class="match-team-names ${teamAWon?'winner':teamBWon?'loser':''}" onclick="goToPairAnalytics('${m.teamA[0]}','${m.teamA[1]}')" style="cursor:pointer;">${escHtml(pairA)}</div>
           ${teamAWon?'<div class="match-winner-chip">Winner ✓</div>':matchTied?'<div class="match-tie-chip">Tie =</div>':''}
         </div>
         <div class="match-scores-col">${scoresHtml}</div>
         <div class="match-team" style="text-align:right;">
-          <div class="match-team-names ${teamBWon?'winner':teamAWon?'loser':''}">${escHtml(pairB)}</div>
+          <div class="match-team-names ${teamBWon?'winner':teamAWon?'loser':''}" onclick="goToPairAnalytics('${m.teamB[0]}','${m.teamB[1]}')" style="cursor:pointer;">${escHtml(pairB)}</div>
           ${teamBWon?'<div class="match-winner-chip" style="align-self:flex-end;">Winner ✓</div>':matchTied?'<div class="match-tie-chip" style="align-self:flex-end;">Tie =</div>':''}
         </div>
       </div>
@@ -6020,6 +6089,32 @@ function goToFilteredMatches(type, id1, id2) {
   navigateTo('matches');
 }
 
+function goToPairAnalytics(id1, id2) {
+  // Clear any existing pair filter so the target pair is always visible
+  apFilterIds = []; apSameTeam = false;
+  navigateTo('analytics');
+  switchAnalyticsTab('pairs');
+  setTimeout(() => {
+    renderApChips();
+    updateApFilterDesc();
+    const stRow = document.getElementById('apSameTeamRow');
+    if (stRow) stRow.style.display = 'none';
+    // Find the pair's position in the sorted unfiltered list (mirrors renderPairCards sort)
+    const sorted = [...pairs].sort((a, b) => {
+      const pa = players.find(p => p.id === a.p1);
+      const pb = players.find(p => p.id === b.p1);
+      return (pa ? pa.name : '').localeCompare(pb ? pb.name : '');
+    });
+    const idx = sorted.findIndex(pair =>
+      (pair.p1 === id1 && pair.p2 === id2) || (pair.p1 === id2 && pair.p2 === id1)
+    );
+    if (idx === -1) return;
+    document.querySelectorAll('.pair-card').forEach(c => c.classList.remove('expanded'));
+    const card = document.getElementById('paircard-' + idx);
+    if (card) { card.classList.add('expanded'); card.scrollIntoView({ behavior:'smooth', block:'center' }); }
+  }, 150);
+}
+
 function clearMatchFilter() {
   matchListFilter = null; mlSelectedIds = []; mlSameTeam = false;
   renderMlChips();
@@ -6027,6 +6122,105 @@ function clearMatchFilter() {
   if (sameTeamRow) sameTeamRow.style.display = 'none';
   updateMlFilterDesc();
   _renderMatchList();
+}
+
+// ==========================================================
+// ANALYTICS PAIRS FILTER
+// ==========================================================
+
+function getFilteredPairs() {
+  if (apFilterIds.length === 0) return [...pairs];
+  if (apFilterIds.length === 1) {
+    const id = apFilterIds[0];
+    return pairs.filter(pair => pair.p1 === id || pair.p2 === id);
+  }
+  const [id1, id2] = apFilterIds;
+  if (apSameTeam) {
+    return pairs.filter(pair => (pair.p1===id1&&pair.p2===id2)||(pair.p1===id2&&pair.p2===id1));
+  }
+  return pairs.filter(pair => pair.p1===id1||pair.p2===id1||pair.p1===id2||pair.p2===id2);
+}
+
+function renderApChips() {
+  const all = [...players].sort((a, b) => {
+    if (a.status !== b.status) return a.status==='active'?-1:1;
+    return a.name.localeCompare(b.name);
+  });
+  const row = document.getElementById('apChipsRow');
+  if (!row) return;
+  row.innerHTML = all.map(p => {
+    const selIdx   = apFilterIds.indexOf(p.id);
+    const selClass = selIdx===0?'sel-1':selIdx===1?'sel-2':'';
+    const isInactive = p.status==='inactive';
+    return `<div class="ml-chip ${selClass} ${isInactive?'inactive-chip':''}" id="apchip-${p.id}" onclick="toggleApChip('${p.id}')">
+      <div class="ml-chip-av">${getInitials(p.name)}</div>
+      <span class="ml-chip-name">${escHtml(p.name)}${isInactive?' =':''}</span>
+    </div>`;
+  }).join('');
+}
+
+function toggleApChip(id) {
+  const idx = apFilterIds.indexOf(id);
+  if (idx !== -1) {
+    apFilterIds.splice(idx, 1);
+    if (apFilterIds.length < 2) {
+      apSameTeam = false;
+      const tog = document.getElementById('apSameTeamToggle');
+      const row = document.getElementById('apSameTeamRow');
+      if (tog) tog.classList.remove('on');
+      if (row) row.classList.remove('active');
+    }
+  } else {
+    if (apFilterIds.length >= 2) apFilterIds.shift();
+    apFilterIds.push(id);
+  }
+  const stRow = document.getElementById('apSameTeamRow');
+  if (stRow) stRow.style.display = apFilterIds.length===2?'flex':'none';
+  updateApFilterDesc();
+  renderApChips();
+  renderPairCards();
+}
+
+function toggleApSameTeam() {
+  apSameTeam = !apSameTeam;
+  const btn = document.getElementById('apSameTeamToggle');
+  const row = document.getElementById('apSameTeamRow');
+  if (btn) btn.classList.toggle('on', apSameTeam);
+  if (row) row.classList.toggle('active', apSameTeam);
+  updateApFilterDesc();
+  renderPairCards();
+}
+
+function clearApFilter() {
+  apFilterIds = []; apSameTeam = false;
+  renderApChips();
+  const stRow = document.getElementById('apSameTeamRow');
+  if (stRow) stRow.style.display = 'none';
+  const tog = document.getElementById('apSameTeamToggle');
+  if (tog) tog.classList.remove('on');
+  updateApFilterDesc();
+  renderPairCards();
+}
+
+function updateApFilterDesc() {
+  const el  = document.getElementById('apFilterDesc');
+  const btn = document.getElementById('apResetBtn');
+  const hasFilter = apFilterIds.length > 0;
+  if (btn) btn.style.display = hasFilter ? 'flex' : 'none';
+  if (!el) return;
+  if (apFilterIds.length === 0) {
+    el.textContent = 'Tap a player to filter pairs';
+    el.classList.remove('active');
+    return;
+  }
+  el.classList.add('active');
+  if (apFilterIds.length === 1) {
+    const p = players.find(pl => pl.id === apFilterIds[0]);
+    el.textContent = `Pairs including ${p ? p.name : '?'}`;
+  } else {
+    const names = apFilterIds.map(id => { const p = players.find(pl => pl.id===id); return p?p.name:'?'; });
+    el.textContent = apSameTeam ? `${names[0]} & ${names[1]} as a pair` : `Pairs with ${names[0]} or ${names[1]}`;
+  }
 }
 
 // ==========================================================
