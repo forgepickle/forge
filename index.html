@@ -2,7 +2,7 @@
 <!-- 
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 6.2 — iOS Scroll & Layout Fixes     ║
+  ║  Version: 6.3 — Scroll Focus Fixes            ║
   ║  Date: 2025-04-30                            ║
   ║  Changes: Full backend wiring via fetch()    ║
   ║           sessionStorage auth (session-long) ║
@@ -4746,18 +4746,12 @@ function openEditMode(id) {
   editRow.classList.add('open');
   input.focus(); input.select();
   onEditInput(id);
-  // Scroll the Players screen so the edit row is visible.
-  // iOS Safari does not reliably auto-scroll to focused inputs inside
-  // overflow:auto containers — we do it manually after one paint cycle.
-  const screenEl = document.getElementById('screenPlayers');
-  if (screenEl) {
-    requestAnimationFrame(() => {
-      // card.offsetTop positions the top of the card; scroll so card
-      // plus its expanded edit row are comfortably in view
-      const targetTop = Math.max(0, card.offsetTop - 16);
-      screenEl.scrollTop = targetTop;
-    });
-  }
+  // Scroll so the card + edit row are in view.
+  // Uses shared helper which subtracts screen paddingTop — critical because
+  // #screenPlayers has padding-top ~130-174px (more on iOS with safe area).
+  // Without this subtraction, the scroll overshoots and cuts the edit row
+  // above the visible fold, especially for cards near the top of the list.
+  scrollToCardInScreen(card, document.getElementById('screenPlayers'));
 }
 function closeEditMode(id) {
   const p = players.find(p => p.id === id);
@@ -5239,12 +5233,42 @@ function renderPairCards() {
   }).join('');
 }
 
+// ── Shared scroll helper ──────────────────────────────────────
+// Scrolls a scroll container so the target card's top sits
+// just below the visible fold (8px gap).
+//
+// Why paddingTop subtraction is required:
+//   .screen elements have padding-top: calc(topbar-h + header-h)
+//   which pushes content below the fixed header. card.offsetTop
+//   includes this padding in its measurement. Without subtracting
+//   paddingTop, scrollTop overshoots by ~130-174px (more on iOS
+//   with safe-area-inset-top), cutting the card off above the fold.
+//
+// getComputedStyle resolves the full calc()+env() value to pixels,
+// so this works correctly on both iOS and Android at any screen size.
+//
+// The 300ms delay lets CSS expand transitions finish before
+// measuring offsetTop — without it the card's final height is
+// not yet settled and the scroll lands short.
+function scrollToCardInScreen(card, screenEl) {
+  if (!card || !screenEl) return;
+  setTimeout(() => {
+    const paddingTop = parseInt(getComputedStyle(screenEl).paddingTop) || 0;
+    screenEl.scrollTop = Math.max(0, card.offsetTop - paddingTop - 8);
+  }, 300);
+}
+
 function togglePairCard(i) {
   const card = document.getElementById('paircard-' + i);
   if (!card) return;
   const wasExpanded = card.classList.contains('expanded');
   document.querySelectorAll('.pair-card').forEach(c => c.classList.remove('expanded'));
-  if (!wasExpanded) card.classList.add('expanded');
+  if (!wasExpanded) {
+    card.classList.add('expanded');
+    // Scroll to card after expand — same helper used by goToPairAnalytics.
+    // Only fires on open, not on close (closing needs no scroll adjustment).
+    scrollToCardInScreen(card, document.getElementById('screenAnalytics'));
+  }
 }
 
 // ==========================================================
@@ -6135,18 +6159,9 @@ function goToPairAnalytics(id1, id2) {
     // scrollIntoView() can scroll the window/body on iOS Safari standalone mode,
     // escaping the #screenAnalytics scroll container and making the top
     // of the screen unreachable. Manual scrollTop is fully contained.
-    const screenEl = document.getElementById('screenAnalytics');
-    if (screenEl) {
-      // Wait 300ms for the CSS expand transition to fully complete before
-      // measuring offsetTop. requestAnimationFrame fires after one paint
-      // but the expand animation continues for ~200ms after that, causing
-      // the scroll to land short. setTimeout(300) ensures final card height
-      // is settled on both iOS and Android.
-      setTimeout(() => {
-        const cardTop = card.offsetTop;
-        screenEl.scrollTop = Math.max(0, cardTop - 16);
-      }, 300);
-    }
+    // Use shared helper: subtracts paddingTop so card top aligns
+    // correctly with the visible fold on both iOS and Android.
+    scrollToCardInScreen(card, document.getElementById('screenAnalytics'));
   }, 150);
 }
 
