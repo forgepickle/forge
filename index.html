@@ -2,8 +2,8 @@
 <!-- 
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 6.3 — Scroll Focus Fixes            ║
-  ║  Date: 2025-04-30                            ║
+  ║  Version: 6.4 — Edit Player Modal Fix          ║
+  ║  Date: 2026-05-08                            ║
   ║  Changes: Full backend wiring via fetch()    ║
   ║           sessionStorage auth (session-long) ║
   ║           Background sync every 5 minutes    ║
@@ -844,55 +844,28 @@ body {
 .icon-btn.edit-btn:hover { border-color: var(--accent); color: var(--accent-dim); background: var(--accent-bg); }
 .icon-btn.del-btn:hover  { border-color: var(--error); color: var(--error); background: var(--error-bg); }
 
-/* Inline edit row */
-.edit-row {
-  display: none;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--grey-light);
-}
-.edit-row.open { display: flex; }
-.player-card.editing { border-color: var(--accent); }
-
-.edit-input {
+/* Edit Player Modal — input styles */
+.edit-modal-input {
   width: 100%;
   background: var(--bg);
   border: 2px solid var(--grey-light);
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 12px 14px;
   font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 16px;
   font-weight: 500;
   color: var(--black);
   outline: none;
   transition: border-color 0.2s;
+  margin-bottom: 6px;
 }
-.edit-input:focus { border-color: var(--accent); }
-.edit-input.invalid { border-color: var(--error); }
-
-.edit-meta-row { display: flex; justify-content: space-between; align-items: center; }
-.edit-validation { font-size: 11px; color: var(--error); display: none; }
-.edit-validation.show { display: block; }
-.edit-char-count { font-size: 11px; color: var(--grey-mid); }
-.edit-char-count.warn { color: var(--error); }
-
-.edit-btns { display: flex; gap: 8px; }
-.edit-save, .edit-cancel {
-  flex: 1; padding: 9px 0;
-  border-radius: 10px;
-  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-weight: 700; font-size: 14px;
-  letter-spacing: 1px; text-transform: uppercase;
-  cursor: pointer; border: none; transition: all 0.15s;
-}
-.edit-save { background: var(--accent); color: var(--black); }
-.edit-save:hover { background: var(--accent-dim); }
-.edit-save:disabled { opacity: 0.5; cursor: not-allowed; }
-.edit-cancel { background: var(--bg); color: var(--grey-mid); border: 1.5px solid var(--grey-light); }
-.edit-cancel:hover { color: var(--black); border-color: var(--grey-dark); }
+.edit-modal-input:focus { border-color: var(--accent); }
+.edit-modal-input.invalid { border-color: var(--error); }
+.edit-modal-meta-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.edit-modal-validation { font-size: 11px; color: var(--error); display: none; }
+.edit-modal-validation.show { display: block; }
+.edit-modal-char-count { font-size: 11px; color: var(--grey-mid); }
+.edit-modal-char-count.warn { color: var(--error); }
 
 /* Inactive section */
 .inactive-section { margin: 16px 16px 0; }
@@ -4688,7 +4661,7 @@ function renderCard(p) {
       </div>
     </div>
     <div class="card-actions">
-      <button class="icon-btn edit-btn" onclick="openEditMode('${p.id}')">
+      <button class="icon-btn edit-btn" onclick="openEditModal('${p.id}')">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -4702,19 +4675,6 @@ function renderCard(p) {
           <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
         </svg>
       </button>
-    </div>
-    <div class="edit-row" id="edit-${p.id}">
-      <input class="edit-input" id="editInput-${p.id}" type="text"
-        value="${escHtml(p.name)}" maxlength="10" autocomplete="off" spellcheck="false"
-        oninput="onEditInput('${p.id}')">
-      <div class="edit-meta-row">
-        <span class="edit-validation" id="editVal-${p.id}"></span>
-        <span class="edit-char-count" id="editCount-${p.id}">${p.name.length} / 10</span>
-      </div>
-      <div class="edit-btns">
-        <button class="edit-cancel" onclick="closeEditMode('${p.id}')">Cancel</button>
-        <button class="edit-save" id="editSave-${p.id}" onclick="saveEdit('${p.id}')">Save</button>
-      </div>
     </div>
   </div>`;
 }
@@ -4735,63 +4695,65 @@ function renderInactiveCard(p) {
   </div>`;
 }
 
-// Edit player name
-function openEditMode(id) {
-  if (currentEditId && currentEditId !== id) closeEditMode(currentEditId);
+// Edit player name — modal approach (fixes iOS/Android keyboard scroll bug)
+function openEditModal(id) {
+  const player = players.find(p => p.id === id);
+  if (!player) return;
   currentEditId = id;
-  const card    = document.getElementById('card-' + id);
-  const editRow = document.getElementById('edit-' + id);
-  const input   = document.getElementById('editInput-' + id);
-  card.classList.add('editing');
-  editRow.classList.add('open');
-  input.focus(); input.select();
-  onEditInput(id);
-  // Scroll so the card + edit row are in view.
-  // Uses shared helper which subtracts screen paddingTop — critical because
-  // #screenPlayers has padding-top ~130-174px (more on iOS with safe area).
-  // Without this subtraction, the scroll overshoots and cuts the edit row
-  // above the visible fold, especially for cards near the top of the list.
-  scrollToCardInScreen(card, document.getElementById('screenPlayers'));
+  document.getElementById('editModalTitle').textContent = 'Edit — ' + escHtml(player.name);
+  const input = document.getElementById('editModalInput');
+  input.value = player.name;
+  input.classList.remove('invalid');
+  document.getElementById('editModalVal').textContent = '';
+  document.getElementById('editModalVal').classList.remove('show');
+  document.getElementById('editModalCharCount').textContent = player.name.length + ' / 10';
+  document.getElementById('editModalCharCount').className = 'edit-modal-char-count';
+  document.getElementById('editModalSaveBtn').disabled = false;
+  document.getElementById('editModalContent').style.display = 'block';
+  document.getElementById('editModalSpinner').classList.remove('show');
+  document.getElementById('editPlayerModal').classList.add('show');
+  // Defer focus so the modal slide-up animation completes first.
+  // preventScroll stops the browser's native scroll-to-input —
+  // inside a position:absolute modal this is irrelevant to scroll,
+  // but it prevents any inadvertent body scroll on older Android.
+  setTimeout(() => { input.focus({ preventScroll: true }); input.select(); }, 320);
 }
-function closeEditMode(id) {
-  const p = players.find(p => p.id === id);
-  if (!p) return;
-  const card = document.getElementById('card-' + id);
-  const editRow = document.getElementById('edit-' + id);
-  const input = document.getElementById('editInput-' + id);
-  if (!card || !editRow || !input) return;
-  card.classList.remove('editing');
-  editRow.classList.remove('open');
-  input.value = p.name;
-  clearEditVal(id);
+
+function closeEditModal() {
+  if (document.getElementById('editModalSpinner').classList.contains('show')) return;
+  document.getElementById('editPlayerModal').classList.remove('show');
   currentEditId = null;
 }
-function onEditInput(id) {
-  const input = document.getElementById('editInput-' + id);
-  const countEl = document.getElementById('editCount-' + id);
-  const valEl   = document.getElementById('editVal-'   + id);
-  const saveBtn = document.getElementById('editSave-'  + id);
+
+function _editModalInput() {
+  const input   = document.getElementById('editModalInput');
+  const countEl = document.getElementById('editModalCharCount');
+  const valEl   = document.getElementById('editModalVal');
+  const saveBtn = document.getElementById('editModalSaveBtn');
   if (!input) return;
   const len = input.value.length;
   countEl.textContent = len + ' / 10';
-  countEl.className = 'edit-char-count' + (len >= 9 ? ' warn' : '');
+  countEl.className = 'edit-modal-char-count' + (len >= 9 ? ' warn' : '');
   const err = validateName(input.value);
-  if (err) { valEl.textContent = err; valEl.classList.add('show'); input.classList.add('invalid'); saveBtn.disabled = true; }
-  else { clearEditVal(id); saveBtn.disabled = false; }
-}
-function clearEditVal(id) {
-  const input = document.getElementById('editInput-' + id);
-  const valEl = document.getElementById('editVal-'   + id);
-  if (input) input.classList.remove('invalid');
-  if (valEl) { valEl.textContent = ''; valEl.classList.remove('show'); }
+  if (err) {
+    valEl.textContent = err; valEl.classList.add('show');
+    input.classList.add('invalid'); saveBtn.disabled = true;
+  } else {
+    valEl.textContent = ''; valEl.classList.remove('show');
+    input.classList.remove('invalid'); saveBtn.disabled = false;
+  }
 }
 
-async function saveEdit(id) {
-  const input   = document.getElementById('editInput-' + id);
+async function saveEdit() {
+  if (!currentEditId) return;
+  const id      = currentEditId;
+  const input   = document.getElementById('editModalInput');
   const newName = input.value.trim();
   if (validateName(newName)) return;
   lockUI();
-  document.getElementById('editSave-' + id).disabled = true;
+  document.getElementById('editModalSaveBtn').disabled = true;
+  document.getElementById('editModalContent').style.display = 'none';
+  document.getElementById('editModalSpinner').classList.add('show');
   try {
     if (!isDemoMode) {
       await callBackend(getPayload('editPlayer', {
@@ -4801,13 +4763,16 @@ async function saveEdit(id) {
     // Apply locally (both demo and real — real backend already confirmed)
     const player = players.find(p => p.id === id);
     if (player) player.name = newName;
+    document.getElementById('editPlayerModal').classList.remove('show');
     currentEditId = null;
     renderPlayers();
     renderAnalytics();
     showToast('Name updated ✓');
   } catch(e) {
     showError('Failed to save. Try again.');
-    document.getElementById('editSave-' + id).disabled = false;
+    document.getElementById('editModalSaveBtn').disabled = false;
+    document.getElementById('editModalContent').style.display = 'block';
+    document.getElementById('editModalSpinner').classList.remove('show');
   } finally { unlockUI(); }
 }
 
@@ -6109,7 +6074,7 @@ document.getElementById('deleteMatchModal').addEventListener('click', function(e
 // ==========================================================
 
 function goToPlayerAnalytics(playerId) {
-  if (currentEditId) return;
+  if (currentEditId) closeEditModal();
   navigateTo('analytics');
   switchAnalyticsTab('individual');
   setTimeout(() => {
@@ -6302,6 +6267,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // Tooltip modal close on overlay tap
   const tm = document.getElementById('tooltipModal');
   if (tm) tm.addEventListener('click', function(e) { if (e.target===this) closeTooltipModal(); });
+  // Edit player modal close on overlay tap
+  const em = document.getElementById('editPlayerModal');
+  if (em) em.addEventListener('click', function(e) { if (e.target===this) closeEditModal(); });
 
   // Date input change handler
   const de = document.getElementById('matchDate');
@@ -6320,6 +6288,31 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <!-- Tooltip Info Sheet (inside app-container for correct stacking) -->
+
+<!-- Edit Player Modal -->
+<div class="modal-overlay" id="editPlayerModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div id="editModalContent">
+      <div class="modal-title" id="editModalTitle">Edit Player</div>
+      <input class="edit-modal-input" id="editModalInput" type="text"
+        maxlength="10" autocomplete="off" spellcheck="false"
+        oninput="_editModalInput()">
+      <div class="edit-modal-meta-row">
+        <span class="edit-modal-validation" id="editModalVal"></span>
+        <span class="edit-modal-char-count" id="editModalCharCount">0 / 10</span>
+      </div>
+      <div class="modal-btns">
+        <button class="modal-confirm green" id="editModalSaveBtn" onclick="saveEdit()">Save Name</button>
+        <button class="modal-cancel" onclick="closeEditModal()">Cancel</button>
+      </div>
+    </div>
+    <div class="modal-spinner" id="editModalSpinner">
+      <div class="spinner-ring"></div>
+      <div class="spinner-text">Saving name...</div>
+    </div>
+  </div>
+</div>
 
 <!-- Leave Add Match confirmation modal -->
 <div class="modal-overlay" id="leaveMatchModal">
