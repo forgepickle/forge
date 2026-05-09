@@ -2,8 +2,8 @@
 <!-- 
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 6.4 — Edit Player Modal Fix          ║
-  ║  Date: 2026-05-08                            ║
+  ║  Version: 6.5 — Android Keyboard Modal Fix     ║
+  ║  Date: 2026-05-09                            ║
   ║  Changes: Full backend wiring via fetch()    ║
   ║           sessionStorage auth (session-long) ║
   ║           Background sync every 5 minutes    ║
@@ -3735,6 +3735,7 @@ let selectedPlayer = null;
 let pendingRemoveId = null;
 let pendingReinstateId = null;
 let currentEditId = null;
+let _editModalVVListener = null;
 let currentAnalyticsTab = 'individual';
 let toastTimer = null;
 let currentLbTab = 'individual';
@@ -4712,6 +4713,25 @@ function openEditModal(id) {
   document.getElementById('editModalContent').style.display = 'block';
   document.getElementById('editModalSpinner').classList.remove('show');
   document.getElementById('editPlayerModal').classList.add('show');
+  // Android keyboard fix: on Android, position:fixed elements anchor to the layout
+  // viewport which does NOT shrink when the keyboard opens — the keyboard silently
+  // covers the bottom of the screen. iOS handles this natively (visual viewport pans
+  // upward carrying fixed elements with it). We use visualViewport.resize to detect
+  // the gap and translateY the sheet upward by exactly the uncovered keyboard height.
+  // Formula: innerHeight − vv.height − vv.offsetTop isolates the Android-only gap.
+  // On iOS, vv.offsetTop grows by the same amount vv.height shrinks, so the result
+  // is ~0 — no double-compensation on iOS.
+  if (window.visualViewport) {
+    _editModalVVListener = function() {
+      requestAnimationFrame(function() {
+        const kbH = Math.max(0,
+          window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+        const sheet = document.querySelector('#editPlayerModal .modal-sheet');
+        if (sheet) sheet.style.transform = kbH > 0 ? 'translateY(-' + kbH + 'px)' : '';
+      });
+    };
+    window.visualViewport.addEventListener('resize', _editModalVVListener);
+  }
   // Defer focus so the modal slide-up animation completes first.
   // preventScroll stops the browser's native scroll-to-input —
   // inside a position:absolute modal this is irrelevant to scroll,
@@ -4719,8 +4739,19 @@ function openEditModal(id) {
   setTimeout(() => { input.focus({ preventScroll: true }); input.select(); }, 320);
 }
 
+function _teardownEditVV() {
+  // Reset sheet transform and remove Android keyboard listener.
+  const sheet = document.querySelector('#editPlayerModal .modal-sheet');
+  if (sheet) sheet.style.transform = '';
+  if (window.visualViewport && _editModalVVListener) {
+    window.visualViewport.removeEventListener('resize', _editModalVVListener);
+    _editModalVVListener = null;
+  }
+}
+
 function closeEditModal() {
   if (document.getElementById('editModalSpinner').classList.contains('show')) return;
+  _teardownEditVV();
   document.getElementById('editPlayerModal').classList.remove('show');
   currentEditId = null;
 }
@@ -4763,6 +4794,7 @@ async function saveEdit() {
     // Apply locally (both demo and real — real backend already confirmed)
     const player = players.find(p => p.id === id);
     if (player) player.name = newName;
+    _teardownEditVV();
     document.getElementById('editPlayerModal').classList.remove('show');
     currentEditId = null;
     renderPlayers();
