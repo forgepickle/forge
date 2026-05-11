@@ -2,12 +2,16 @@
 <!-- 
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.2 — Pass 2 Cleanup               ║
+  ║  Version: 7.3 — UX Bug Fixes                 ║
   ║  Date: 2026-05-11                            ║
-  ║  Changes: Removed dead ratingChanges:[]      ║
-  ║           from all 60 DEMO_DATA match entries ║
-  ║           (loadDemoData replay overwrites them)║
+  ║  Changes: Alpha chip scrolls to selected     ║
+  ║           player on "View Alpha" navigation  ║
+  ║           Alpha banner gap from chip row     ║
+  ║           Leaderboard medal badges (1/2/3)   ║
+  ║           Add Player inline spinner + Cancel ║
+  ║           disabled during backend call       ║
   ║                                              ║
+  ║  v7.2 — Pass 2 Cleanup (2026-05-11)          ║
   ║  v7.1 — Alpha UX Polish (2026-05-09)         ║
   ║           Full backend wiring via fetch()    ║
   ║           sessionStorage auth (session-long) ║
@@ -1026,9 +1030,12 @@ body {
   letter-spacing: 1.2px; text-transform: uppercase;
   cursor: pointer; border: none; transition: all 0.15s;
 }
-.add-confirm-btn { background: var(--accent); color: var(--black); box-shadow: 0 4px 12px rgba(170,220,50,0.25); }
+.add-confirm-btn { background: var(--accent); color: var(--black); box-shadow: 0 4px 12px rgba(170,220,50,0.25); display: flex; align-items: center; justify-content: center; gap: 8px; }
 .add-confirm-btn:hover { background: var(--accent-dim); }
 .add-confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.add-confirm-btn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); display: none; }
+.add-confirm-btn.loading .btn-text { display: none; }
+.add-confirm-btn.loading .btn-spinner { display: block; }
 .add-cancel-btn { background: var(--bg); color: var(--grey-mid); border: 1.5px solid var(--grey-light); }
 .add-cancel-btn:hover { color: var(--black); border-color: var(--grey-dark); }
 
@@ -2199,9 +2206,17 @@ body {
   width: 28px; text-align: center; flex-shrink: 0;
   color: var(--grey-light);
 }
-.lb-rank.r1 { color: #DAA520; }
-.lb-rank.r2 { color: #A8A8A8; }
-.lb-rank.r3 { color: #CD7F32; }
+/* Medal circles for top 3 */
+.lb-medal {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 900; font-size: 14px;
+}
+.lb-medal.m1 { background: #DAA520; color: #fff; box-shadow: 0 2px 6px rgba(218,165,32,0.45); }
+.lb-medal.m2 { background: #A8A8A8; color: #fff; box-shadow: 0 2px 6px rgba(168,168,168,0.4); }
+.lb-medal.m3 { background: #CD7F32; color: #fff; box-shadow: 0 2px 6px rgba(205,127,50,0.4); }
 
 .lb-avatar {
   width: clamp(40px, 10.5vw, 48px); height: clamp(40px, 10.5vw, 48px); border-radius: 12px;
@@ -2899,7 +2914,7 @@ body {
 
 /* Access banner — paywall or progress */
 .alpha-banner {
-  padding: 4px 0 12px;
+  padding: 12px 0 12px;
   text-align: center;
 }
 .alpha-banner-title {
@@ -3212,7 +3227,10 @@ body {
       </div>
       <div class="add-form-btns">
         <button class="add-cancel-btn" onclick="closeAddForm()">Cancel</button>
-        <button class="add-confirm-btn" id="addConfirmBtn" onclick="confirmAddPlayer()">Add Player</button>
+        <button class="add-confirm-btn" id="addConfirmBtn" onclick="confirmAddPlayer()">
+          <span class="btn-text">Add Player</span>
+          <div class="btn-spinner"></div>
+        </button>
       </div>
     </div>
   </div>
@@ -5133,8 +5151,12 @@ async function confirmAddPlayer() {
   const startRating  = ri ? Math.max(2.0, Math.min(8.0, parseFloat(ri.value) || STARTING_RATING)) : STARTING_RATING;
   const startRounded = parseFloat(startRating.toFixed(2));
 
+  const confirmBtn = document.getElementById('addConfirmBtn');
+  const cancelBtn  = confirmBtn.closest('.add-form-btns').querySelector('.add-cancel-btn');
   lockUI();
-  document.getElementById('addConfirmBtn').disabled = true;
+  confirmBtn.disabled = true;
+  confirmBtn.classList.add('loading');
+  if (cancelBtn) cancelBtn.disabled = true;
   try {
     let newId;
     if (isDemoMode) {
@@ -5157,7 +5179,9 @@ async function confirmAddPlayer() {
     showToast(newName + ' added ✓');
   } catch(e) {
     showError('Failed to add player. Try again.');
-    document.getElementById('addConfirmBtn').disabled = false;
+    confirmBtn.disabled = false;
+    confirmBtn.classList.remove('loading');
+    if (cancelBtn) cancelBtn.disabled = false;
   } finally { unlockUI(); }
 }
 
@@ -6022,8 +6046,11 @@ function renderLbIndividual() {
       : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
     const rec = wlMap[p.id] || { w:0, l:0, t:0 };
     const tiesHtml = rec.t > 0 ? `<span class="lb-wl-pill t">${rec.t}T</span>` : '';
+    const rankEl = rank <= 3
+      ? `<div class="lb-medal m${rank}">${rank}</div>`
+      : `<div class="lb-rank">${rank}</div>`;
     return `<div class="lb-card ${cardClass} ${isInactive?'inactive-card':''}" style="animation-delay:${i*0.05}s;cursor:pointer;" onclick="goToFilteredMatches('player','${p.id}')">
-      <div class="lb-rank ${rankClass}">${rank}</div>
+      ${rankEl}
       <div class="lb-avatar ${isInactive?'muted':''}">${getInitials(p.name)}</div>
       <div class="lb-info">
         <div class="lb-name">${escHtml(p.name)}${isInactive?'<span class="inactive-indicator">Inactive</span>':''}</div>
@@ -6076,8 +6103,13 @@ function renderLbPairs() {
     const combinedRating = ((p1.rating+p2.rating)/2).toFixed(2);
     const av1 = getInitials(p1.name), av2 = getInitials(p2.name);
     const tiesHtml = pair.ties > 0 ? `<span class="lb-wl-pill t">${pair.ties}T</span>` : '';
+    const pairRankEl = isUnranked
+      ? `<div class="lb-rank unranked-rank">—</div>`
+      : rank <= 3
+        ? `<div class="lb-medal m${rank}">${rank}</div>`
+        : `<div class="lb-rank">${rank}</div>`;
     return `<div class="lb-card ${cardClass} ${pair.hasInactive?'inactive-card':''} ${isUnranked?'unranked':''}" style="cursor:pointer;" onclick="goToFilteredMatches('pair','${pair.p1}','${pair.p2}')">
-      <div class="lb-rank ${rankClass} ${isUnranked?'unranked-rank':''}">${isUnranked?'—':rank}</div>
+      ${pairRankEl}
       <div style="position:relative;width:42px;height:42px;flex-shrink:0;">
         <div class="lb-avatar muted" style="position:absolute;top:0;left:0;width:30px;height:30px;font-size:11px;border-radius:8px;">${av1}</div>
         <div class="lb-avatar" style="position:absolute;bottom:0;right:0;width:30px;height:30px;font-size:11px;border-radius:8px;">${av2}</div>
@@ -6679,6 +6711,14 @@ function openAlphaForPlayer(id) {
   var sa = document.getElementById('screenAnalytics');
   if (sa) sa.scrollTop = 0;
   switchAnalyticsTab('alpha');
+  // Scroll the selected chip into view, mirroring goToPlayerAnalytics() behaviour.
+  setTimeout(() => {
+    const chip = document.getElementById('alphaChip-' + id);
+    if (chip) {
+      try { chip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }
+      catch(e) { chip.scrollIntoView(false); }
+    }
+  }, 50);
 }
 
 // ── Access state dispatcher (States A / B / C / D per spec Section 3) ──
