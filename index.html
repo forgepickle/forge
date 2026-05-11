@@ -5179,10 +5179,12 @@ async function confirmAddPlayer() {
     showToast(newName + ' added ✓');
   } catch(e) {
     showError('Failed to add player. Try again.');
+  } finally {
     confirmBtn.disabled = false;
     confirmBtn.classList.remove('loading');
     if (cancelBtn) cancelBtn.disabled = false;
-  } finally { unlockUI(); }
+    unlockUI();
+  }
 }
 
 // Remove player
