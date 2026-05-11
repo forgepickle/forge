@@ -2,9 +2,14 @@
 <!-- 
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 6.5 — Android Keyboard Modal Fix     ║
-  ║  Date: 2026-05-09                            ║
-  ║  Changes: Full backend wiring via fetch()    ║
+  ║  Version: 7.2 — Pass 2 Cleanup               ║
+  ║  Date: 2026-05-11                            ║
+  ║  Changes: Removed dead ratingChanges:[]      ║
+  ║           from all 60 DEMO_DATA match entries ║
+  ║           (loadDemoData replay overwrites them)║
+  ║                                              ║
+  ║  v7.1 — Alpha UX Polish (2026-05-09)         ║
+  ║           Full backend wiring via fetch()    ║
   ║           sessionStorage auth (session-long) ║
   ║           Background sync every 5 minutes    ║
   ║           Backend computes ratings           ║
@@ -1063,11 +1068,11 @@ body {
 .analytics-panel { display: none; }
 .analytics-panel.active { display: block; }
 
-/* Player chips */
+/* Player chips — horizontal padding matches .toggle-pills for visual alignment */
 .player-chips {
   display: flex;
   gap: 8px;
-  padding: 14px 16px 0;
+  padding: 14px clamp(12px, 4vw, 20px) 0;
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -1077,8 +1082,8 @@ body {
 .player-chip {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 14px 7px 8px;
+  gap: 6px;
+  padding: 6px 12px 6px 7px;
   border-radius: 20px;
   border: 2px solid var(--grey-light);
   background: var(--white);
@@ -1086,6 +1091,7 @@ body {
   transition: all 0.15s;
   white-space: nowrap;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 .player-chip:hover { border-color: var(--accent-dim); }
 .player-chip.active {
@@ -1093,13 +1099,13 @@ body {
   border-color: var(--accent);
 }
 .chip-avatar {
-  width: 24px; height: 24px;
+  width: 22px; height: 22px;
   border-radius: 6px;
   background: var(--grey-xlight);
   border: 1.5px solid var(--grey-light);
   display: flex; align-items: center; justify-content: center;
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-weight: 900; font-size: 10px;
+  font-weight: 900; font-size: 9px;
   color: var(--grey-mid); text-transform: uppercase;
   flex-shrink: 0;
 }
@@ -2795,6 +2801,195 @@ body {
   border-color: var(--accent); color: var(--accent-dim);
   background: var(--accent-bg);
 }
+
+/* ── Forge Alpha ─────────────────────────────────────────── */
+/* Gold palette */
+:root {
+  --alpha-gold:       #D4AF37;
+  --alpha-gold-dim:   #b8962e;
+  --alpha-dark:       #1a1400;
+  --alpha-border:     #6a5000;
+  --alpha-muted:      #4a3800;
+  --alpha-text-dim:   rgba(255,255,255,0.55);
+  --alpha-text-faint: rgba(255,255,255,0.40);
+}
+
+/* Alpha tab pill — active overrides lime with gold */
+#pillAlpha.active { background: var(--alpha-gold); color: #0f0f0f; border-color: var(--alpha-gold); }
+#pillAlpha:not(.active) { border: 1.5px solid var(--alpha-gold); color: var(--alpha-gold); }
+
+/* α glyph — Georgia italic */
+.alpha-glyph {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  color: var(--alpha-gold);
+  font-size: 14px;
+  line-height: 1;
+  text-transform: none; /* prevent toggle-pill's uppercase from converting α → A */
+}
+#pillAlpha.active .alpha-glyph { color: #0f0f0f; }
+
+/* Rival chip row label */
+.alpha-rival-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--grey-mid);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 10px clamp(12px, 4vw, 20px) 4px;
+}
+/* Rival row frozen during computation */
+#alphaRivalRow { transition: opacity 0.25s; }
+#alphaRivalRow.computing { pointer-events: none; opacity: 0.35; }
+
+/* Alpha card shell */
+.alpha-card {
+  background: var(--alpha-dark);
+  border: 1px solid var(--alpha-border);
+  border-radius: 14px;
+  margin: 0 clamp(12px, 4vw, 20px) 14px;
+  overflow: hidden;
+}
+/* Card header — always visible in all four states */
+.alpha-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--alpha-muted);
+}
+.alpha-card-title {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--alpha-gold);
+  flex: 1;
+}
+.alpha-card-body { padding: 16px; min-height: 80px; }
+#alphaCards { padding-top: 12px; }
+
+/* Shimmer skeleton */
+@keyframes alphaShimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.alpha-shimmer-bar {
+  height: 12px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, #2a1e00 25%, #3d2e00 50%, #2a1e00 75%);
+  background-size: 200% 100%;
+  animation: alphaShimmer 1.4s infinite linear;
+}
+.alpha-shimmer-bar.wide  { width: 100%; }
+.alpha-shimmer-bar.mid   { width: 70%; }
+.alpha-shimmer-bar.short { width: 45%; }
+.alpha-shimmer-label {
+  font-size: 11px;
+  color: var(--alpha-border);
+  text-align: center;
+  padding-top: 4px;
+  letter-spacing: 0.3px;
+}
+
+/* Paywall blur — State A */
+.alpha-body-blurred { filter: blur(5px); pointer-events: none; user-select: none; }
+
+/* Access banner — paywall or progress */
+.alpha-banner {
+  padding: 4px 0 12px;
+  text-align: center;
+}
+.alpha-banner-title {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--grey-mid);
+  margin-bottom: 4px;
+}
+.alpha-banner-sub { font-size: 12px; color: var(--grey-mid); }
+
+/* Empty card body — States B / D */
+.alpha-body-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px; gap: 8px; }
+.alpha-body-empty-text { font-size: 12px; color: var(--grey-mid); text-align: center; }
+
+/* Individual tab entry button */
+.alpha-entry-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% - clamp(24px, 8vw, 40px));
+  padding: 13px 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--alpha-gold);
+  background: transparent;
+  cursor: pointer;
+  margin: 4px clamp(12px, 4vw, 20px) 10px;
+  transition: all 0.15s;
+  box-sizing: border-box;
+}
+.alpha-entry-btn:hover,
+.alpha-entry-btn:active { background: var(--alpha-dark); }
+.alpha-entry-btn.insufficient { border-color: var(--alpha-border); }
+.alpha-entry-btn-text {
+  flex: 1;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  color: var(--alpha-gold);
+  text-align: left;
+}
+.alpha-entry-btn.insufficient .alpha-entry-btn-text { color: var(--alpha-gold); opacity: 0.75; }
+.alpha-entry-btn-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #0f0f0f;
+  background: var(--alpha-gold);
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.alpha-entry-btn-hint { font-size: 11px; color: var(--grey-mid); white-space: nowrap; }
+
+/* Insufficient-data Alpha chip (< 15 matches) */
+.player-chip.alpha-chip-insufficient { opacity: 0.4; border-style: dashed !important; cursor: default; }
+.chip-avatar-wrap { position: relative; flex-shrink: 0; }
+.chip-lock-badge {
+  position: absolute; bottom: -3px; right: -3px;
+  width: 11px; height: 11px;
+  background: rgba(0,0,0,0.75);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+
+/* Rival colour chips — faded tint background matching standard active-chip pattern */
+.player-chip.alpha-rival-1                { background: rgba(109,40,217,0.12); border-color: #7c3aed; }
+.player-chip.alpha-rival-1 .chip-avatar   { background: #7c3aed; border-color: #7c3aed; color: #fff; }
+.player-chip.alpha-rival-1 .chip-name     { color: #a78bfa; }
+.player-chip.alpha-rival-2                { background: rgba(22,163,74,0.12); border-color: #16a34a; }
+.player-chip.alpha-rival-2 .chip-avatar   { background: #16a34a; border-color: #16a34a; color: #fff; }
+.player-chip.alpha-rival-2 .chip-name     { color: #4ade80; }
+/* Rival row chips — slightly smaller than primary chips */
+#alphaRivalChips .player-chip {
+  padding: 4px 10px 4px 5px;
+  gap: 5px;
+}
+#alphaRivalChips .player-chip .chip-avatar {
+  width: 18px; height: 18px;
+  font-size: 8px;
+}
+#alphaRivalChips .player-chip .chip-name {
+  font-size: 12px;
+}
 </style>
 </head>
 <body>
@@ -3029,6 +3224,7 @@ body {
     <div class="toggle-pills">
       <button class="toggle-pill active" id="pillIndividual" onclick="switchAnalyticsTab('individual')">Individual</button>
       <button class="toggle-pill" id="pillPairs" onclick="switchAnalyticsTab('pairs')">Pairs</button>
+      <button class="toggle-pill" id="pillAlpha" onclick="switchAnalyticsTab('alpha')"><span class="alpha-glyph">α</span>&nbsp;Alpha</button>
     </div>
 
     <!-- INDIVIDUAL PANEL -->
@@ -3135,6 +3331,70 @@ body {
 
       <div class="pair-cards" id="pairCards"></div>
     </div>
+
+
+    <!-- ALPHA PANEL -->
+    <div class="analytics-panel" id="panelAlpha">
+
+      <!-- Primary player chip row -->
+      <div class="player-chips" id="alphaPlayerChips"></div>
+
+      <!-- Compare with... rival chip row (hidden when no eligible rivals) -->
+      <div id="alphaRivalRow" style="display:none;">
+        <div class="alpha-rival-label" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Compare with...</span>
+          <button class="ml-reset-btn" id="alphaRivalResetBtn" onclick="clearAlphaRivals()" style="display:none;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Clear
+          </button>
+        </div>
+        <div class="player-chips" id="alphaRivalChips"></div>
+      </div>
+
+      <!-- Access banner: paywall (State A) or progress (State B/D) -->
+      <div id="alphaBanner"></div>
+
+      <!-- Three insight cards — headers always visible, bodies change by state -->
+      <div id="alphaCards">
+
+        <!-- Card 1: Individual Attribution -->
+        <div class="alpha-card" id="alphaCardAttribution">
+          <div class="alpha-card-header">
+            <span class="alpha-glyph">α</span>
+            <span class="alpha-card-title">Individual Attribution</span>
+            <button class="tooltip-btn" onclick="showTooltipKey('alphaAttribution')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </button>
+          </div>
+          <div class="alpha-card-body" id="alphaBodyAttribution"></div>
+        </div>
+
+        <!-- Card 2: Player DNA -->
+        <div class="alpha-card" id="alphaCardDna">
+          <div class="alpha-card-header">
+            <span class="alpha-glyph">α</span>
+            <span class="alpha-card-title">Player DNA</span>
+            <button class="tooltip-btn" onclick="showTooltipKey('alphaDna')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </button>
+          </div>
+          <div class="alpha-card-body" id="alphaBodyDna"></div>
+        </div>
+
+        <!-- Card 3: Performance Corridor -->
+        <div class="alpha-card" id="alphaCardCorridor">
+          <div class="alpha-card-header">
+            <span class="alpha-glyph">α</span>
+            <span class="alpha-card-title">Performance Corridor</span>
+            <button class="tooltip-btn" onclick="showTooltipKey('alphaCorridor')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </button>
+          </div>
+          <div class="alpha-card-body" id="alphaBodyCorridor"></div>
+        </div>
+
+      </div><!-- /alphaCards -->
+    </div><!-- /panelAlpha -->
 
   </div><!-- /screenAnalytics -->
 
@@ -3498,7 +3758,7 @@ body {
 <script>
 /* ============================================
    FORGE = Your Pickleball Mettle
-   Version: 6.0 | Backend: Google Apps Script
+   Version: 7.2 | Backend: Google Apps Script
    Frontend: GitHub Pages
 ============================================ */
 
@@ -3531,77 +3791,77 @@ const DEMO_DATA = (function() {
 
   const matches = [
     // Session 1 — 2025-01-11 (6 matches)
-    { id:'dm001', date:'2025-01-11', teamA:['d1','d5'], teamB:['d2','d3'], scoring:'standard', points:'11', scores:[{a:11,b:6}], ratingChanges:[] },
-    { id:'dm002', date:'2025-01-11', teamA:['d1','d5'], teamB:['d4','d6'], scoring:'rally',    points:'15', scores:[{a:15,b:9}], ratingChanges:[] },
-    { id:'dm003', date:'2025-01-11', teamA:['d2','d3'], teamB:['d6','d7'], scoring:'standard', points:'11', scores:[{a:4,b:11}], ratingChanges:[] },
-    { id:'dm004', date:'2025-01-11', teamA:['d4','d6'], teamB:['d7','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:15},{a:14,b:21}], ratingChanges:[] },
-    { id:'dm005', date:'2025-01-11', teamA:['d10','d2'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:5,b:11}], ratingChanges:[] },
-    { id:'dm006', date:'2025-01-11', teamA:['d2','d4'], teamB:['d3','d6'], scoring:'standard', points:'11', scores:[{a:11,b:8}], ratingChanges:[] },
+    { id:'dm001', date:'2025-01-11', teamA:['d1','d5'], teamB:['d2','d3'], scoring:'standard', points:'11', scores:[{a:11,b:6}] },
+    { id:'dm002', date:'2025-01-11', teamA:['d1','d5'], teamB:['d4','d6'], scoring:'rally',    points:'15', scores:[{a:15,b:9}] },
+    { id:'dm003', date:'2025-01-11', teamA:['d2','d3'], teamB:['d6','d7'], scoring:'standard', points:'11', scores:[{a:4,b:11}] },
+    { id:'dm004', date:'2025-01-11', teamA:['d4','d6'], teamB:['d7','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:15},{a:14,b:21}] },
+    { id:'dm005', date:'2025-01-11', teamA:['d10','d2'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:5,b:11}] },
+    { id:'dm006', date:'2025-01-11', teamA:['d2','d4'], teamB:['d3','d6'], scoring:'standard', points:'11', scores:[{a:11,b:8}] },
     // Session 2 — 2025-01-18 (5 matches)
-    { id:'dm007', date:'2025-01-18', teamA:['d1','d5'], teamB:['d6','d7'], scoring:'rally',    points:'15', scores:[{a:15,b:8},{a:15,b:11}], ratingChanges:[] },
-    { id:'dm008', date:'2025-01-18', teamA:['d1','d5'], teamB:['d2','d8'], scoring:'standard', points:'21', scores:[{a:18,b:21},{a:15,b:21}], ratingChanges:[] },
-    { id:'dm009', date:'2025-01-18', teamA:['d3','d7'], teamB:['d4','d8'], scoring:'standard', points:'11', scores:[{a:11,b:6}], ratingChanges:[] },
-    { id:'dm010', date:'2025-01-18', teamA:['d10','d6'], teamB:['d2','d4'], scoring:'rally',   points:'15', scores:[{a:9,b:15}], ratingChanges:[] },
-    { id:'dm011', date:'2025-01-18', teamA:['d2','d6'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:11,b:7}], ratingChanges:[] },
+    { id:'dm007', date:'2025-01-18', teamA:['d1','d5'], teamB:['d6','d7'], scoring:'rally',    points:'15', scores:[{a:15,b:8},{a:15,b:11}] },
+    { id:'dm008', date:'2025-01-18', teamA:['d1','d5'], teamB:['d2','d8'], scoring:'standard', points:'21', scores:[{a:18,b:21},{a:15,b:21}] },
+    { id:'dm009', date:'2025-01-18', teamA:['d3','d7'], teamB:['d4','d8'], scoring:'standard', points:'11', scores:[{a:11,b:6}] },
+    { id:'dm010', date:'2025-01-18', teamA:['d10','d6'], teamB:['d2','d4'], scoring:'rally',   points:'15', scores:[{a:9,b:15}] },
+    { id:'dm011', date:'2025-01-18', teamA:['d2','d6'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:11,b:7}] },
     // Session 3 — 2025-01-25 (5 matches)
-    { id:'dm012', date:'2025-01-25', teamA:['d1','d5'], teamB:['d3','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:14}], ratingChanges:[] },
-    { id:'dm013', date:'2025-01-25', teamA:['d1','d5'], teamB:['d4','d7'], scoring:'standard', points:'15', scores:[{a:15,b:8}], ratingChanges:[] },
-    { id:'dm014', date:'2025-01-25', teamA:['d4','d7'], teamB:['d2','d6'], scoring:'rally',    points:'15', scores:[{a:12,b:15},{a:15,b:12}], ratingChanges:[] },
-    { id:'dm015', date:'2025-01-25', teamA:['d10','d4'], teamB:['d2','d3'], scoring:'standard', points:'11', scores:[{a:4,b:11}], ratingChanges:[] },
-    { id:'dm016', date:'2025-01-25', teamA:['d3','d6'], teamB:['d4','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:17}], ratingChanges:[] },
+    { id:'dm012', date:'2025-01-25', teamA:['d1','d5'], teamB:['d3','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:14}] },
+    { id:'dm013', date:'2025-01-25', teamA:['d1','d5'], teamB:['d4','d7'], scoring:'standard', points:'15', scores:[{a:15,b:8}] },
+    { id:'dm014', date:'2025-01-25', teamA:['d4','d7'], teamB:['d2','d6'], scoring:'rally',    points:'15', scores:[{a:12,b:15},{a:15,b:12}] },
+    { id:'dm015', date:'2025-01-25', teamA:['d10','d4'], teamB:['d2','d3'], scoring:'standard', points:'11', scores:[{a:4,b:11}] },
+    { id:'dm016', date:'2025-01-25', teamA:['d3','d6'], teamB:['d4','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:17}] },
     // Session 4 — 2025-02-01 (5 matches)
-    { id:'dm017', date:'2025-02-01', teamA:['d1','d5'], teamB:['d2','d4'], scoring:'standard', points:'11', scores:[{a:11,b:5},{a:11,b:7}], ratingChanges:[] },
-    { id:'dm018', date:'2025-02-01', teamA:['d1','d5'], teamB:['d6','d3'], scoring:'rally',    points:'15', scores:[{a:12,b:15},{a:9,b:15}], ratingChanges:[] },
-    { id:'dm019', date:'2025-02-01', teamA:['d2','d7'], teamB:['d3','d4'], scoring:'standard', points:'11', scores:[{a:5,b:11}], ratingChanges:[] },
-    { id:'dm020', date:'2025-02-01', teamA:['d10','d8'], teamB:['d3','d6'], scoring:'standard', points:'11', scores:[{a:7,b:11}], ratingChanges:[] },
-    { id:'dm021', date:'2025-02-01', teamA:['d2','d3'], teamB:['d6','d7'], scoring:'rally',    points:'15', scores:[{a:10,b:15}], ratingChanges:[] },
+    { id:'dm017', date:'2025-02-01', teamA:['d1','d5'], teamB:['d2','d4'], scoring:'standard', points:'11', scores:[{a:11,b:5},{a:11,b:7}] },
+    { id:'dm018', date:'2025-02-01', teamA:['d1','d5'], teamB:['d6','d3'], scoring:'rally',    points:'15', scores:[{a:12,b:15},{a:9,b:15}] },
+    { id:'dm019', date:'2025-02-01', teamA:['d2','d7'], teamB:['d3','d4'], scoring:'standard', points:'11', scores:[{a:5,b:11}] },
+    { id:'dm020', date:'2025-02-01', teamA:['d10','d8'], teamB:['d3','d6'], scoring:'standard', points:'11', scores:[{a:7,b:11}] },
+    { id:'dm021', date:'2025-02-01', teamA:['d2','d3'], teamB:['d6','d7'], scoring:'rally',    points:'15', scores:[{a:10,b:15}] },
     // Session 5 — 2025-02-08 (5 matches)
-    { id:'dm022', date:'2025-02-08', teamA:['d1','d5'], teamB:['d3','d7'], scoring:'standard', points:'11', scores:[{a:11,b:4}], ratingChanges:[] },
-    { id:'dm023', date:'2025-02-08', teamA:['d1','d5'], teamB:['d6','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:16},{a:21,b:13}], ratingChanges:[] },
-    { id:'dm024', date:'2025-02-08', teamA:['d4','d7'], teamB:['d2','d6'], scoring:'standard', points:'11', scores:[{a:11,b:9},{a:6,b:11}], ratingChanges:[] },
-    { id:'dm025', date:'2025-02-08', teamA:['d2','d8'], teamB:['d3','d4'], scoring:'rally',    points:'15', scores:[{a:15,b:11}], ratingChanges:[] },
-    { id:'dm026', date:'2025-02-08', teamA:['d9','d2'], teamB:['d3','d4'], scoring:'standard', points:'11', scores:[{a:6,b:11}], ratingChanges:[] },
+    { id:'dm022', date:'2025-02-08', teamA:['d1','d5'], teamB:['d3','d7'], scoring:'standard', points:'11', scores:[{a:11,b:4}] },
+    { id:'dm023', date:'2025-02-08', teamA:['d1','d5'], teamB:['d6','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:16},{a:21,b:13}] },
+    { id:'dm024', date:'2025-02-08', teamA:['d4','d7'], teamB:['d2','d6'], scoring:'standard', points:'11', scores:[{a:11,b:9},{a:6,b:11}] },
+    { id:'dm025', date:'2025-02-08', teamA:['d2','d8'], teamB:['d3','d4'], scoring:'rally',    points:'15', scores:[{a:15,b:11}] },
+    { id:'dm026', date:'2025-02-08', teamA:['d9','d2'], teamB:['d3','d4'], scoring:'standard', points:'11', scores:[{a:6,b:11}] },
     // Session 6 — 2025-02-15 (5 matches)
-    { id:'dm027', date:'2025-02-15', teamA:['d1','d5'], teamB:['d4','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:15}], ratingChanges:[] },
-    { id:'dm028', date:'2025-02-15', teamA:['d1','d5'], teamB:['d2','d7'], scoring:'standard', points:'11', scores:[{a:11,b:7},{a:7,b:11}], ratingChanges:[] },
-    { id:'dm029', date:'2025-02-15', teamA:['d3','d6'], teamB:['d4','d7'], scoring:'rally',    points:'15', scores:[{a:15,b:9}], ratingChanges:[] },
-    { id:'dm030', date:'2025-02-15', teamA:['d2','d8'], teamB:['d6','d7'], scoring:'standard', points:'11', scores:[{a:7,b:11}], ratingChanges:[] },
-    { id:'dm031', date:'2025-02-15', teamA:['d4','d6'], teamB:['d3','d7'], scoring:'standard', points:'11', scores:[{a:11,b:8}], ratingChanges:[] },
+    { id:'dm027', date:'2025-02-15', teamA:['d1','d5'], teamB:['d4','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:15}] },
+    { id:'dm028', date:'2025-02-15', teamA:['d1','d5'], teamB:['d2','d7'], scoring:'standard', points:'11', scores:[{a:11,b:7},{a:7,b:11}] },
+    { id:'dm029', date:'2025-02-15', teamA:['d3','d6'], teamB:['d4','d7'], scoring:'rally',    points:'15', scores:[{a:15,b:9}] },
+    { id:'dm030', date:'2025-02-15', teamA:['d2','d8'], teamB:['d6','d7'], scoring:'standard', points:'11', scores:[{a:7,b:11}] },
+    { id:'dm031', date:'2025-02-15', teamA:['d4','d6'], teamB:['d3','d7'], scoring:'standard', points:'11', scores:[{a:11,b:8}] },
     // Session 7 — 2025-02-22 (5 matches)
-    { id:'dm032', date:'2025-02-22', teamA:['d1','d5'], teamB:['d3','d6'], scoring:'rally',    points:'15', scores:[{a:15,b:10}], ratingChanges:[] },
-    { id:'dm033', date:'2025-02-22', teamA:['d1','d5'], teamB:['d7','d8'], scoring:'standard', points:'11', scores:[{a:11,b:6},{a:11,b:9}], ratingChanges:[] },
-    { id:'dm034', date:'2025-02-22', teamA:['d2','d4'], teamB:['d3','d6'], scoring:'rally',    points:'15', scores:[{a:15,b:13},{a:12,b:15}], ratingChanges:[] },
-    { id:'dm035', date:'2025-02-22', teamA:['d6','d8'], teamB:['d2','d7'], scoring:'standard', points:'11', scores:[{a:11,b:6}], ratingChanges:[] },
-    { id:'dm036', date:'2025-02-22', teamA:['d2','d3'], teamB:['d4','d7'], scoring:'rally',    points:'21', scores:[{a:16,b:21}], ratingChanges:[] },
+    { id:'dm032', date:'2025-02-22', teamA:['d1','d5'], teamB:['d3','d6'], scoring:'rally',    points:'15', scores:[{a:15,b:10}] },
+    { id:'dm033', date:'2025-02-22', teamA:['d1','d5'], teamB:['d7','d8'], scoring:'standard', points:'11', scores:[{a:11,b:6},{a:11,b:9}] },
+    { id:'dm034', date:'2025-02-22', teamA:['d2','d4'], teamB:['d3','d6'], scoring:'rally',    points:'15', scores:[{a:15,b:13},{a:12,b:15}] },
+    { id:'dm035', date:'2025-02-22', teamA:['d6','d8'], teamB:['d2','d7'], scoring:'standard', points:'11', scores:[{a:11,b:6}] },
+    { id:'dm036', date:'2025-02-22', teamA:['d2','d3'], teamB:['d4','d7'], scoring:'rally',    points:'21', scores:[{a:16,b:21}] },
     // Session 8 — 2025-03-01 (5 matches)
-    { id:'dm037', date:'2025-03-01', teamA:['d1','d5'], teamB:['d2','d6'], scoring:'standard', points:'11', scores:[{a:9,b:11},{a:7,b:11}], ratingChanges:[] },
-    { id:'dm038', date:'2025-03-01', teamA:['d1','d5'], teamB:['d4','d3'], scoring:'rally',    points:'15', scores:[{a:15,b:8},{a:15,b:12}], ratingChanges:[] },
-    { id:'dm039', date:'2025-03-01', teamA:['d2','d6'], teamB:['d3','d7'], scoring:'standard', points:'11', scores:[{a:11,b:9}], ratingChanges:[] },
-    { id:'dm040', date:'2025-03-01', teamA:['d4','d8'], teamB:['d6','d7'], scoring:'rally',    points:'21', scores:[{a:21,b:18}], ratingChanges:[] },
-    { id:'dm041', date:'2025-03-01', teamA:['d2','d7'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:6,b:11}], ratingChanges:[] },
+    { id:'dm037', date:'2025-03-01', teamA:['d1','d5'], teamB:['d2','d6'], scoring:'standard', points:'11', scores:[{a:9,b:11},{a:7,b:11}] },
+    { id:'dm038', date:'2025-03-01', teamA:['d1','d5'], teamB:['d4','d3'], scoring:'rally',    points:'15', scores:[{a:15,b:8},{a:15,b:12}] },
+    { id:'dm039', date:'2025-03-01', teamA:['d2','d6'], teamB:['d3','d7'], scoring:'standard', points:'11', scores:[{a:11,b:9}] },
+    { id:'dm040', date:'2025-03-01', teamA:['d4','d8'], teamB:['d6','d7'], scoring:'rally',    points:'21', scores:[{a:21,b:18}] },
+    { id:'dm041', date:'2025-03-01', teamA:['d2','d7'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:6,b:11}] },
     // Session 9 — 2025-03-15 (5 matches)
-    { id:'dm042', date:'2025-03-15', teamA:['d1','d5'], teamB:['d2','d3'], scoring:'rally',    points:'15', scores:[{a:15,b:11}], ratingChanges:[] },
-    { id:'dm043', date:'2025-03-15', teamA:['d1','d5'], teamB:['d6','d7'], scoring:'standard', points:'21', scores:[{a:21,b:16}], ratingChanges:[] },
-    { id:'dm044', date:'2025-03-15', teamA:['d3','d8'], teamB:['d4','d6'], scoring:'rally',    points:'21', scores:[{a:21,b:17},{a:14,b:21}], ratingChanges:[] },
-    { id:'dm045', date:'2025-03-15', teamA:['d4','d7'], teamB:['d2','d6'], scoring:'standard', points:'11', scores:[{a:11,b:5}], ratingChanges:[] },
-    { id:'dm046', date:'2025-03-15', teamA:['d2','d8'], teamB:['d3','d4'], scoring:'standard', points:'11', scores:[{a:5,b:11}], ratingChanges:[] },
+    { id:'dm042', date:'2025-03-15', teamA:['d1','d5'], teamB:['d2','d3'], scoring:'rally',    points:'15', scores:[{a:15,b:11}] },
+    { id:'dm043', date:'2025-03-15', teamA:['d1','d5'], teamB:['d6','d7'], scoring:'standard', points:'21', scores:[{a:21,b:16}] },
+    { id:'dm044', date:'2025-03-15', teamA:['d3','d8'], teamB:['d4','d6'], scoring:'rally',    points:'21', scores:[{a:21,b:17},{a:14,b:21}] },
+    { id:'dm045', date:'2025-03-15', teamA:['d4','d7'], teamB:['d2','d6'], scoring:'standard', points:'11', scores:[{a:11,b:5}] },
+    { id:'dm046', date:'2025-03-15', teamA:['d2','d8'], teamB:['d3','d4'], scoring:'standard', points:'11', scores:[{a:5,b:11}] },
     // Session 10 — 2025-03-29 (5 matches)
-    { id:'dm047', date:'2025-03-29', teamA:['d1','d5'], teamB:['d4','d8'], scoring:'rally',    points:'15', scores:[{a:15,b:9},{a:15,b:13}], ratingChanges:[] },
-    { id:'dm048', date:'2025-03-29', teamA:['d1','d5'], teamB:['d3','d6'], scoring:'standard', points:'21', scores:[{a:18,b:21},{a:14,b:21}], ratingChanges:[] },
-    { id:'dm049', date:'2025-03-29', teamA:['d2','d7'], teamB:['d4','d6'], scoring:'rally',    points:'15', scores:[{a:15,b:9}], ratingChanges:[] },
-    { id:'dm050', date:'2025-03-29', teamA:['d3','d8'], teamB:['d7','d6'], scoring:'standard', points:'11', scores:[{a:8,b:11}], ratingChanges:[] },
-    { id:'dm051', date:'2025-03-29', teamA:['d2','d6'], teamB:['d3','d7'], scoring:'rally',    points:'21', scores:[{a:21,b:16}], ratingChanges:[] },
+    { id:'dm047', date:'2025-03-29', teamA:['d1','d5'], teamB:['d4','d8'], scoring:'rally',    points:'15', scores:[{a:15,b:9},{a:15,b:13}] },
+    { id:'dm048', date:'2025-03-29', teamA:['d1','d5'], teamB:['d3','d6'], scoring:'standard', points:'21', scores:[{a:18,b:21},{a:14,b:21}] },
+    { id:'dm049', date:'2025-03-29', teamA:['d2','d7'], teamB:['d4','d6'], scoring:'rally',    points:'15', scores:[{a:15,b:9}] },
+    { id:'dm050', date:'2025-03-29', teamA:['d3','d8'], teamB:['d7','d6'], scoring:'standard', points:'11', scores:[{a:8,b:11}] },
+    { id:'dm051', date:'2025-03-29', teamA:['d2','d6'], teamB:['d3','d7'], scoring:'rally',    points:'21', scores:[{a:21,b:16}] },
     // Session 11 — 2025-04-12 (5 matches)
-    { id:'dm052', date:'2025-04-12', teamA:['d1','d5'], teamB:['d2','d8'], scoring:'standard', points:'11', scores:[{a:11,b:4}], ratingChanges:[] },
-    { id:'dm053', date:'2025-04-12', teamA:['d1','d5'], teamB:['d7','d3'], scoring:'rally',    points:'15', scores:[{a:15,b:8}], ratingChanges:[] },
-    { id:'dm054', date:'2025-04-12', teamA:['d4','d6'], teamB:['d2','d8'], scoring:'standard', points:'11', scores:[{a:7,b:11}], ratingChanges:[] },
-    { id:'dm055', date:'2025-04-12', teamA:['d3','d7'], teamB:['d4','d6'], scoring:'rally',    points:'21', scores:[{a:21,b:15}], ratingChanges:[] },
-    { id:'dm056', date:'2025-04-12', teamA:['d2','d4'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:11,b:7}], ratingChanges:[] },
+    { id:'dm052', date:'2025-04-12', teamA:['d1','d5'], teamB:['d2','d8'], scoring:'standard', points:'11', scores:[{a:11,b:4}] },
+    { id:'dm053', date:'2025-04-12', teamA:['d1','d5'], teamB:['d7','d3'], scoring:'rally',    points:'15', scores:[{a:15,b:8}] },
+    { id:'dm054', date:'2025-04-12', teamA:['d4','d6'], teamB:['d2','d8'], scoring:'standard', points:'11', scores:[{a:7,b:11}] },
+    { id:'dm055', date:'2025-04-12', teamA:['d3','d7'], teamB:['d4','d6'], scoring:'rally',    points:'21', scores:[{a:21,b:15}] },
+    { id:'dm056', date:'2025-04-12', teamA:['d2','d4'], teamB:['d3','d8'], scoring:'standard', points:'11', scores:[{a:11,b:7}] },
     // Session 12 — 2025-05-01 (4 matches)
-    { id:'dm057', date:'2025-05-01', teamA:['d1','d5'], teamB:['d6','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:12}], ratingChanges:[] },
-    { id:'dm058', date:'2025-05-01', teamA:['d1','d5'], teamB:['d4','d2'], scoring:'standard', points:'11', scores:[{a:11,b:6},{a:11,b:8}], ratingChanges:[] },
-    { id:'dm059', date:'2025-05-01', teamA:['d1','d5'], teamB:['d3','d7'], scoring:'rally',    points:'21', scores:[{a:21,b:9},{a:21,b:15}], ratingChanges:[] },
-    { id:'dm060', date:'2025-05-01', teamA:['d3','d6'], teamB:['d2','d7'], scoring:'rally',    points:'15', scores:[{a:11,b:15}], ratingChanges:[] }
+    { id:'dm057', date:'2025-05-01', teamA:['d1','d5'], teamB:['d6','d8'], scoring:'rally',    points:'21', scores:[{a:21,b:12}] },
+    { id:'dm058', date:'2025-05-01', teamA:['d1','d5'], teamB:['d4','d2'], scoring:'standard', points:'11', scores:[{a:11,b:6},{a:11,b:8}] },
+    { id:'dm059', date:'2025-05-01', teamA:['d1','d5'], teamB:['d3','d7'], scoring:'rally',    points:'21', scores:[{a:21,b:9},{a:21,b:15}] },
+    { id:'dm060', date:'2025-05-01', teamA:['d3','d6'], teamB:['d2','d7'], scoring:'rally',    points:'15', scores:[{a:11,b:15}] }
   ];
 
     return { players: players, matches: matches };
@@ -3747,6 +4007,16 @@ let apFilterIds  = []; // Analytics Pairs filter
 let apSameTeam   = false;
 let mlFilteredCache = [];
 let mlRenderedCount = 0;
+
+// == Forge Alpha state ==
+let premiumMain             = 0;    // from getConfig — production Alpha gate
+let premiumDemo             = 0;    // from getConfig — demo Alpha gate (default 1 via GAS)
+let alphaLambda             = 0.1;  // from getConfig — Attribution decay rate
+let alphaCache              = null; // computed on first Alpha interaction, cleared by refreshAllData
+let alphaGroupAvgDna        = null; // group average DNA for radar shadow, cleared by refreshAllData
+let currentIndividualPlayer = null; // tracks Individual tab selection for Alpha carry-over
+let currentAlphaPlayer      = null; // primary player selected on Alpha tab
+let alphaRivals             = [];   // up to 2 rival player IDs for comparison
 
 // == Add Match wizard state ==
 let am = { step:1, date:'', teamA:[], teamB:[], scoring:'', points:'', scores:[] };
@@ -3968,6 +4238,10 @@ async function startup() {
     K_FACTOR         = cfg.kFactor        || 32;
     K_SCALE          = cfg.kScale         || 30;
     lastKnownVersion = cfg.writeVersion   || 0;
+    // Forge Alpha access flags — use safe defaults if keys absent
+    if (cfg.premiumMain !== undefined) premiumMain = cfg.premiumMain;
+    if (cfg.premiumDemo !== undefined) premiumDemo = cfg.premiumDemo;
+    if (cfg.alphaLambda !== undefined) alphaLambda = cfg.alphaLambda;
   } catch(e) {
     console.warn('Config fetch failed:', e.message);
     const hint = document.getElementById('pwHint');
@@ -4383,6 +4657,8 @@ async function refreshAllData() {
     ]);
     players = playersRes.players || [];
     matches = matchesRes.matches || [];
+    alphaCache = null;       // Invalidate Alpha cache on fresh data
+    alphaGroupAvgDna = null; // Invalidate group avg DNA on fresh data
     buildPairsFromMatches();
     renderPlayers();
     renderAnalytics();
@@ -4986,15 +5262,24 @@ document.getElementById('reinstateModal').addEventListener('click', function(e) 
 // SCREEN 2: ANALYTICS
 // ==========================================================
 
-function renderAnalytics() { renderPlayerChips(); renderPairCards(); renderApChips(); updateApFilterDesc(); }
+function renderAnalytics() {
+  renderPlayerChips();
+  renderPairCards();
+  renderApChips();
+  updateApFilterDesc();
+  if (currentAnalyticsTab === 'alpha') renderAlphaView();
+}
 
 function switchAnalyticsTab(tab) {
   currentAnalyticsTab = tab;
   document.getElementById('pillIndividual').classList.toggle('active', tab === 'individual');
   document.getElementById('pillPairs').classList.toggle('active', tab === 'pairs');
+  document.getElementById('pillAlpha').classList.toggle('active', tab === 'alpha');
   document.getElementById('panelIndividual').classList.toggle('active', tab === 'individual');
   document.getElementById('panelPairs').classList.toggle('active', tab === 'pairs');
+  document.getElementById('panelAlpha').classList.toggle('active', tab === 'alpha');
   if (tab === 'pairs') { renderApChips(); updateApFilterDesc(); }
+  if (tab === 'alpha') { _enterAlphaTab(); }
 }
 
 function renderPlayerChips() {
@@ -5030,6 +5315,7 @@ function renderPlayerChips() {
 
   const firstActive = activePlayers[0];
   selectedPlayer = firstActive.id;
+  currentIndividualPlayer = firstActive.id; // Track for Alpha carry-over
   const chip = document.getElementById('chip-' + firstActive.id);
   if (chip) { document.querySelectorAll('.player-chip').forEach(c => c.classList.remove('active')); chip.classList.add('active'); }
   renderIndividualMetrics(firstActive.id);
@@ -5040,6 +5326,7 @@ function selectPlayerChip(id) {
   const chip = document.getElementById('chip-' + id);
   if (chip) chip.classList.add('active');
   selectedPlayer = id;
+  currentIndividualPlayer = id; // Track for Alpha carry-over
   renderIndividualMetrics(id);
 }
 
@@ -5155,6 +5442,7 @@ function renderClutchRating(p) {
   btn.onclick = () => goToFilteredMatches('player', p.id);
   const clutchCard = document.getElementById('clutchContent').closest('.metric-card');
   if (clutchCard && clutchCard.parentNode) clutchCard.parentNode.insertBefore(btn, clutchCard.nextSibling);
+  renderAlphaEntryButton(p); // Alpha entry button below View Matches
 }
 
 function renderPairCards() {
@@ -6271,6 +6559,776 @@ function updateApFilterDesc() {
 }
 
 // ==========================================================
+
+// ==========================================================
+// FORGE ALPHA — Navigation, access control, chip selection
+// Computation (Group 3) and full rendering (Group 4) added later.
+// ==========================================================
+
+function isPremiumActive() {
+  // In demo mode check premiumDemo flag; in production check premiumMain.
+  return isDemoMode ? premiumDemo === 1 : premiumMain === 1;
+}
+
+function _enterAlphaTab() {
+  // Carry over Individual tab selection on first entry to Alpha.
+  // After entry the two tabs have independent selection state.
+  if (!currentAlphaPlayer && currentIndividualPlayer) {
+    currentAlphaPlayer = currentIndividualPlayer;
+  }
+  // Final fallback: if still no selection, default to first active player alphabetically
+  // so the tab never renders blank on direct navigation.
+  if (!currentAlphaPlayer && players && players.length > 0) {
+    const firstActive = players
+      .filter(p => p.status === 'active')
+      .sort((a, b) => a.name.localeCompare(b.name))[0];
+    if (firstActive) currentAlphaPlayer = firstActive.id;
+  }
+  renderAlphaView();
+}
+
+function renderAlphaView() {
+  renderAlphaChips();
+  renderAlphaRivalChips();
+  _renderAlphaAccessState();
+}
+
+function renderAlphaChips() {
+  const wrap = document.getElementById('alphaPlayerChips');
+  if (!wrap) return;
+  const eligible = players
+    .filter(p => p.status === 'active')
+    .sort((a, b) => a.name.localeCompare(b.name));
+  wrap.innerHTML = eligible.map(p => {
+    const hasData    = p.games >= 15;
+    const isSelected = p.id === currentAlphaPlayer;
+    const lockBadge  = !hasData
+      ? `<span class="chip-lock-badge"><svg width="7" height="8" viewBox="0 0 7 8" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="0.5" y="3.5" width="6" height="4" rx="1" fill="rgba(255,255,255,0.7)"/><path d="M1.5 3.5V2.5a2 2 0 0 1 4 0v1" stroke="rgba(255,255,255,0.7)" stroke-width="1" fill="none"/></svg></span>`
+      : '';
+    return `<div class="player-chip ${isSelected ? 'active' : ''} ${!hasData ? 'alpha-chip-insufficient' : ''}"
+      id="alphaChip-${p.id}" onclick="selectAlphaChip('${p.id}')">
+      <div class="chip-avatar-wrap"><div class="chip-avatar">${getInitials(p.name)}</div>${lockBadge}</div>
+      <span class="chip-name">${escHtml(p.name)}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderAlphaRivalChips() {
+  const rowEl = document.getElementById('alphaRivalRow');
+  const wrap  = document.getElementById('alphaRivalChips');
+  if (!rowEl || !wrap) return;
+  // Rival row only shown when primary player is fully unlocked (State C: subscribed + data).
+  const primaryPlayer   = players.find(p => p.id === currentAlphaPlayer);
+  const primaryUnlocked = primaryPlayer && isPremiumActive() && primaryPlayer.games >= 15;
+  if (!primaryUnlocked) { rowEl.style.display = 'none'; return; }
+  // Eligible rivals: active, not primary, and also fully unlocked
+  const rivals = players
+    .filter(p => p.status === 'active' && p.id !== currentAlphaPlayer && p.games >= 15 && isPremiumActive())
+    .sort((a, b) => a.name.localeCompare(b.name));
+  // Hide row when no unlocked rivals exist (group has only 1 unlocked player)
+  if (rivals.length === 0) { rowEl.style.display = 'none'; return; }
+  rowEl.style.display = 'block';
+  wrap.innerHTML = rivals.map(p => {
+    const isSelected = alphaRivals.includes(p.id);
+    const idx        = alphaRivals.indexOf(p.id);
+    const rivalClass = idx === 0 ? 'alpha-rival-1' : idx === 1 ? 'alpha-rival-2' : '';
+    return `<div class="player-chip ${isSelected ? 'active ' + rivalClass : ''}"
+      id="alphaRivalChip-${p.id}" onclick="toggleAlphaRival('${p.id}','${escHtml(p.name)}',${p.games})">
+      <div class="chip-avatar-wrap"><div class="chip-avatar">${getInitials(p.name)}</div></div>
+      <span class="chip-name">${escHtml(p.name)}</span>
+    </div>`;
+  }).join('');
+  const resetBtn = document.getElementById('alphaRivalResetBtn');
+  if (resetBtn) resetBtn.style.display = alphaRivals.length > 0 ? 'flex' : 'none';
+}
+
+function selectAlphaChip(id) {
+  const player = players.find(p => p.id === id);
+  if (!player) return;
+  currentAlphaPlayer = id;
+  // Remove from rivals if they were in the comparison row
+  alphaRivals = alphaRivals.filter(rid => rid !== id);
+  renderAlphaView();
+}
+
+function toggleAlphaRival(id, name, games) {
+  if (games < 15) {
+    showToast(name + ' has ' + games + ' of 15 matches — not enough for Alpha yet');
+    return;
+  }
+  if (alphaRivals.includes(id)) {
+    alphaRivals = alphaRivals.filter(rid => rid !== id);
+  } else {
+    if (alphaRivals.length >= 2) return; // max 2 rivals
+    alphaRivals.push(id);
+  }
+  renderAlphaRivalChips();
+  _renderAlphaAccessState();
+}
+
+function clearAlphaRivals() {
+  alphaRivals = [];
+  renderAlphaRivalChips();
+  _renderAlphaAccessState();
+}
+
+// Entry point from Individual tab "View Forge Alpha Insights" button
+function openAlphaForPlayer(id) {
+  currentAlphaPlayer = id;
+  alphaRivals = [];
+  var sa = document.getElementById('screenAnalytics');
+  if (sa) sa.scrollTop = 0;
+  switchAnalyticsTab('alpha');
+}
+
+// ── Access state dispatcher (States A / B / C / D per spec Section 3) ──
+function _renderAlphaAccessState() {
+  const premium  = isPremiumActive();
+  const player   = players.find(p => p.id === currentAlphaPlayer);
+  const games    = player ? player.games : 0;
+  const hasData  = games >= 15;
+  const bannerEl = document.getElementById('alphaBanner');
+  if (!bannerEl) return;
+
+  if (!player) {
+    // No player selected — neutral prompt
+    bannerEl.innerHTML = '';
+    _setAlphaCardBodies('empty',
+      '<div class="alpha-body-empty"><div class="alpha-body-empty-text">Select a player above to view their Forge Alpha insights.</div></div>');
+    return;
+  }
+
+  if (!premium && !hasData) {
+    // State B — not subscribed + insufficient matches
+    bannerEl.innerHTML = _alphaBannerHtml(
+      'Matches and Subscription Needed',
+      'Log 15 matches and subscribe to unlock advanced insights.');
+    _setAlphaCardBodies('mock-blur', null);
+
+  } else if (!premium && hasData) {
+    // State A — not subscribed, data available
+    bannerEl.innerHTML = _alphaBannerHtml(
+      'Matches and Subscription Needed',
+      'Log 15 matches and subscribe to unlock advanced insights.');
+    _setAlphaCardBodies('mock-blur', null);
+
+  } else if (premium && !hasData) {
+    // State D — subscribed, insufficient matches
+    bannerEl.innerHTML = _alphaBannerHtml(
+      'More Matches Needed',
+      escHtml(player.name) + ' has ' + games + ' of 15 matches — log more matches to unlock advanced insights.');
+    _setAlphaCardBodies('mock-blur', null);
+
+  } else {
+    // State C — subscribed + sufficient data — full access
+    bannerEl.innerHTML = '';
+    _setAlphaCardBodies('shimmer', null);
+    // Freeze rival chips while computing — visual cue that comparison is not ready yet
+    var rivalRow = document.getElementById('alphaRivalRow');
+    if (rivalRow) rivalRow.classList.add('computing');
+    // Capture pid at queue time; bail if player changes before rAF fires (stale guard)
+    var queuedPid = currentAlphaPlayer;
+    requestAnimationFrame(function() {
+      if (currentAlphaPlayer !== queuedPid) {
+        var rr = document.getElementById('alphaRivalRow');
+        if (rr) rr.classList.remove('computing');
+        return;
+      }
+      computeAndRenderAlpha();
+    });
+  }
+}
+
+function _setAlphaCardBodies(mode, html) {
+  const ids = ['alphaBodyAttribution', 'alphaBodyDna', 'alphaBodyCorridor'];
+  const shimmerHtml =
+    '<div class="alpha-shimmer-bar wide"></div>' +
+    '<div class="alpha-shimmer-bar mid"></div>' +
+    '<div class="alpha-shimmer-bar short"></div>' +
+    '<div class="alpha-shimmer-label">Computing Forge Alpha Insights...</div>';
+  ids.forEach(function(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (mode === 'shimmer') {
+      el.classList.remove('alpha-body-blurred');
+      el.innerHTML = shimmerHtml;
+    } else if (mode === 'blur-shimmer') {
+      // State A: shimmer placeholder behind blur so layout is consistent
+      el.classList.add('alpha-body-blurred');
+      el.innerHTML = shimmerHtml;
+    } else if (mode === 'mock-blur') {
+      // Gated states A / B / D: render static mock card content behind blur
+      // so users see what they will unlock, not a blank shimmer.
+      el.classList.add('alpha-body-blurred');
+      if (id === 'alphaBodyAttribution') el.innerHTML = _renderAttributionHtml(ALPHA_MOCK_DISPLAY.attribution);
+      else if (id === 'alphaBodyDna')      el.innerHTML = _renderDnaHtml(ALPHA_MOCK_DISPLAY.dna);
+      else if (id === 'alphaBodyCorridor') el.innerHTML = _renderCorridorHtml(ALPHA_MOCK_DISPLAY.corridor);
+    } else if (mode === 'empty') {
+      el.classList.remove('alpha-body-blurred');
+      el.innerHTML = html || '';
+    } else if (mode === 'data') {
+      el.classList.remove('alpha-body-blurred');
+      if (id === 'alphaBodyAttribution') el.innerHTML = _renderAttributionHtml(html.attribution);
+      else if (id === 'alphaBodyDna')    el.innerHTML = _renderDnaHtml(html.dna);
+      else if (id === 'alphaBodyCorridor') el.innerHTML = _renderCorridorHtml(html.corridor);
+    }
+  });
+}
+
+// ---------- Group average DNA for radar shadow ----------
+function _getGroupAvgDna() {
+  if (alphaGroupAvgDna) return alphaGroupAvgDna;
+  const allPlayers = players || [];
+  const results = [];
+  allPlayers.forEach(function(p) {
+    if (_matchesForPlayer(p.id).length < 5) return;
+    const d = _computeDna(p.id, allPlayers);
+    if (d) results.push(d);
+  });
+  if (results.length < 2) return null;
+  alphaGroupAvgDna = {
+    dominance:         results.reduce(function(s,d){ return s + d.dominance; }, 0) / results.length,
+    resilience:        results.reduce(function(s,d){ return s + d.resilience; }, 0) / results.length,
+    reliability:       results.reduce(function(s,d){ return s + d.reliability; }, 0) / results.length,
+    eliteCollab:       results.reduce(function(s,d){ return s + d.eliteCollab; }, 0) / results.length,
+    tacticalDisruptor: results.reduce(function(s,d){ return s + d.tacticalDisruptor; }, 0) / results.length,
+  };
+  return alphaGroupAvgDna;
+}
+
+// ---------- Rival colour palette ----------
+var ALPHA_RIVAL_COLORS = {
+  strokes: ['#D4AF37', '#7ec8ff', '#ffaa80'],
+  fills:   ['rgba(212,175,55,0.22)', 'rgba(126,200,255,0.45)', 'rgba(255,170,128,0.45)']
+};
+
+// ---------- Static mock values shown behind blur in all gated states (A, B, D) ----------
+// These are hardcoded plausible values — not computed — so gated users can see
+// what cards look like before unlocking. Update manually if card schemas change.
+var ALPHA_MOCK_DISPLAY = {
+  attribution: 1.85,                    // "Positive impact" qualifier
+  dna: {
+    dominance:         0.72,
+    resilience:        0.61,
+    reliability:       0.68,
+    eliteCollab:       0.55,
+    tacticalDisruptor: 0.43
+  },
+  corridor: { p10: -1.8, p90: 5.4, needle: 2.6 }  // "Solid recent form"
+};
+
+// Legend strip shown at top of card body when rivals are selected
+function _alphaRivalLegendHtml(currentPid) {
+  if (!currentPid || alphaRivals.length === 0) return '';
+  var allP  = players || [];
+  var pids  = [currentPid].concat(alphaRivals.slice(0, 2));
+  var items = pids.map(function(pid, i) {
+    var p     = allP.find(function(x) { return x.id === pid; });
+    var label = p ? escHtml(p.name) : pid;
+    var color = ALPHA_RIVAL_COLORS.strokes[i];
+    return '<span style="display:inline-flex;align-items:center;gap:6px;">' +
+      '<span style="width:10px;height:10px;border-radius:50%;background:' + color + ';flex-shrink:0;"></span>' +
+      '<span style="font-size:13px;font-weight:600;color:' + color + ';">' + label + '</span>' +
+      '</span>';
+  }).join('');
+  return '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:0 0 8px;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:10px;">' + items + '</div>';
+}
+
+// ---------- Radar polygon helpers ----------
+// Axes: 0=Dominance(top), 1=Resilience(top-right), 2=Reliability(bottom-right),
+//       3=EliteCollab(bottom-left), 4=Disruptor(top-left)  — clockwise from top
+function _radarPoints(scores, cx, cy, R) {
+  return scores.map(function(s, i) {
+    var a = i * 72 * Math.PI / 180;
+    return (cx + s * R * Math.sin(a)).toFixed(1) + ',' + (cy - s * R * Math.cos(a)).toFixed(1);
+  }).join(' ');
+}
+
+function _radarSvg(dna) {
+  if (!dna) return '<div class="alpha-body-empty"><div class="alpha-body-empty-text">Insufficient data for DNA profile.</div></div>';
+
+  var cx = 115, cy = 115, R = 72, Rg = 80; // Rg = grid max
+  var scores     = [dna.dominance, dna.resilience, dna.reliability, dna.eliteCollab, dna.tacticalDisruptor];
+  var axisNames  = ['Dominance','Resilience','Reliability','Collaborator','Disruptor'];
+  var axisScores = scores.map(function(s){ return Math.round(s * 100); });
+
+  // Grid pentagons at 25%, 50%, 75%, 100%
+  var gridLevels = [0.25, 0.5, 0.75, 1.0];
+  var gridHtml = gridLevels.map(function(level) {
+    var pts = _radarPoints([level,level,level,level,level], cx, cy, Rg);
+    return '<polygon points="' + pts + '" fill="none" stroke="var(--alpha-border)" stroke-width="' + (level === 1 ? 1.2 : 0.7) + '" opacity="0.5"/>';
+  }).join('');
+
+  // Axis lines from center
+  var axisHtml = [0,1,2,3,4].map(function(i) {
+    var a = i * 72 * Math.PI / 180;
+    var x2 = (cx + Rg * Math.sin(a)).toFixed(1);
+    var y2 = (cy - Rg * Math.cos(a)).toFixed(1);
+    return '<line x1="' + cx + '" y1="' + cy + '" x2="' + x2 + '" y2="' + y2 + '" stroke="var(--alpha-border)" stroke-width="0.7" opacity="0.4"/>';
+  }).join('');
+
+  // Axis labels — dominant axes (score ≥ 0.5) render in gold; others render faint
+  var DOMINANT_THRESHOLD = 0.5;
+  var Rl = Rg + 20;
+  var labelHtml = axisNames.map(function(name, i) {
+    var a          = i * 72 * Math.PI / 180;
+    var lx         = (cx + Rl * Math.sin(a)).toFixed(1);
+    var ly         = (cy - Rl * Math.cos(a)).toFixed(1);
+    var anchor     = i === 0 ? 'middle' : (i <= 2 ? 'start' : 'end');
+    var isDominant = scores[i] >= DOMINANT_THRESHOLD;
+    var nameColor  = isDominant ? 'var(--alpha-gold)'      : 'var(--alpha-text-faint)';
+    var scoreColor = isDominant ? 'var(--alpha-gold)'      : 'rgba(255,255,255,0.35)';
+    var nameFW     = isDominant ? '700'                    : '400';
+    var pct        = axisScores[i];
+    return '<text x="' + lx + '" y="' + ly + '" text-anchor="' + anchor + '" font-size="10" font-family="inherit" dominant-baseline="middle">' +
+      '<tspan font-size="10" font-weight="' + nameFW + '" fill="' + nameColor + '">' + name + '</tspan>' +
+      '<tspan x="' + lx + '" dy="13" font-size="13" font-weight="700" fill="' + scoreColor + '">' + pct + '</tspan>' +
+      '</text>';
+  }).join('');
+
+  // Group avg shadow
+  var groupAvg = _getGroupAvgDna();
+  var shadowHtml = '';
+  if (groupAvg) {
+    var gScores = [groupAvg.dominance, groupAvg.resilience, groupAvg.reliability, groupAvg.eliteCollab, groupAvg.tacticalDisruptor];
+    var gPts = _radarPoints(gScores, cx, cy, Rg);
+    shadowHtml = '<polygon points="' + gPts + '" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.2)" stroke-width="1" stroke-dasharray="3,2"/>';
+  }
+
+  // Rival overlays (up to 2)
+  var rivalHtml = '';
+  var rIdx = 0;
+  alphaRivals.forEach(function(rid) {
+    if (rIdx >= 2) return;
+    var rd = _computeDna(rid, players || []);
+    if (!rd) return;
+    var rScores = [rd.dominance, rd.resilience, rd.reliability, rd.eliteCollab, rd.tacticalDisruptor];
+    var rPts = _radarPoints(rScores, cx, cy, Rg);
+    rivalHtml += '<polygon points="' + rPts + '" fill="' + ALPHA_RIVAL_COLORS.fills[rIdx + 1] + '" stroke="' + ALPHA_RIVAL_COLORS.strokes[rIdx + 1] + '" stroke-width="1.2"/>';
+    rIdx++;
+  });
+
+  // Player polygon
+  var playerPts = _radarPoints(scores, cx, cy, Rg);
+  var playerHtml = '<polygon points="' + playerPts + '" fill="rgba(212,175,55,0.22)" stroke="var(--alpha-gold)" stroke-width="2" stroke-linejoin="round"/>';
+
+  return '<svg viewBox="-40 -15 310 260" width="100%" style="display:block;margin:0 auto">' +
+    gridHtml + axisHtml + shadowHtml + rivalHtml + playerHtml + labelHtml +
+    '</svg>' + _alphaRivalLegendHtml(currentAlphaPlayer);
+}
+
+// ---------- Attribution bar render ----------
+function _renderAttributionHtml(attribution) {
+  if (attribution === null || attribution === undefined) {
+    return '<div class="alpha-body-empty"><div class="alpha-body-empty-text">Not enough sessions to compute attribution.</div></div>';
+  }
+
+  var MAX  = 6;
+  var allP = players || [];
+
+  // Build player list: selected + up to 2 rivals
+  var pids  = [currentAlphaPlayer].concat(alphaRivals.slice(0, 2));
+  var attrs = [attribution];
+  alphaRivals.slice(0, 2).forEach(function(rid) { attrs.push(_computeAttribution(rid)); });
+
+  var qualifier = attribution >= 2   ? 'Strong positive impact' :
+                  attribution >= 0.5  ? 'Positive impact' :
+                  attribution >= -0.5 ? 'Neutral impact' :
+                  attribution >= -2   ? 'Slight drag on partners' :
+                                        'Significant drag on partners';
+
+  // Stacked bar rows (one per player)
+  var rowsHtml = pids.map(function(pid, i) {
+    var val = attrs[i];
+    if (val === null || val === undefined) return '';
+    var color    = ALPHA_RIVAL_COLORS.strokes[i];
+    var clamped  = Math.max(-MAX, Math.min(MAX, val));
+    var pct      = (clamped / MAX) * 50;
+    var positive = val >= 0;
+    var barLeft  = positive ? 50 : (50 + pct);
+    var barWidth = Math.abs(pct);
+    var valLabel = (positive ? '+' : '') + val.toFixed(2);
+    var p        = allP.find(function(x) { return x.id === pid; });
+    var name     = p ? escHtml(p.name) : pid;
+    var nameRow  = pids.length > 1
+      ? '<div style="font-size:13px;font-weight:600;color:' + color + ';margin-bottom:4px;">' + name + '</div>'
+      : '';
+    var bottomGap = i < pids.length - 1 ? '12px' : '2px';
+    return nameRow +
+      '<div style="position:relative;height:18px;background:rgba(255,255,255,0.06);border-radius:9px;overflow:hidden;margin-bottom:4px;">' +
+        '<div style="position:absolute;left:50%;top:0;width:1px;height:100%;background:rgba(255,255,255,0.18);"></div>' +
+        '<div style="position:absolute;top:3px;height:12px;left:' + barLeft.toFixed(1) + '%;width:' + Math.max(barWidth, 1).toFixed(1) + '%;background:' + color + ';border-radius:6px;"></div>' +
+      '</div>' +
+      '<div style="text-align:center;font-size:22px;font-weight:700;color:' + color + ';margin-bottom:' + bottomGap + ';">' + valLabel + '</div>';
+  }).join('');
+
+  return '<div style="padding:4px 8px">' +
+    _alphaRivalLegendHtml(currentAlphaPlayer) +
+    '<div style="font-size:15px;font-weight:600;color:var(--alpha-text-dim);margin-bottom:10px;">' + qualifier + '</div>' +
+    rowsHtml +
+    '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--alpha-text-faint);margin-top:6px;">' +
+      '<span>Drag</span><span>Neutral</span><span>Lift</span>' +
+    '</div>' +
+    '<div style="text-align:center;font-size:12px;color:var(--alpha-text-faint);margin-top:4px;">avg margin contribution per session</div>' +
+  '</div>';
+}
+
+// ---------- DNA radar render ----------
+function _renderDnaHtml(dna) {
+  return _radarSvg(dna);
+}
+
+// ---------- Corridor bullet graph render ----------
+function _renderCorridorHtml(corridor) {
+  if (!corridor) {
+    return '<div class="alpha-body-empty"><div class="alpha-body-empty-text">Not enough matches for corridor analysis.</div></div>';
+  }
+
+  var MIN = -12, MAX = 12, RANGE = MAX - MIN;
+  var W = 240, trackY = 38, trackH = 16;
+
+  function px(val) { return Math.max(0, Math.min(W, ((val - MIN) / RANGE) * W)); }
+
+  // Compute rival needles (placed on the same -12→+12 scale)
+  var rivalNeedles = alphaRivals.slice(0, 2).map(function(rid, i) {
+    var rc = _computeCorridor(rid);
+    return rc ? { needle: rc.needle, color: ALPHA_RIVAL_COLORS.strokes[i + 1] } : null;
+  }).filter(Boolean);
+
+  var p10x    = px(corridor.p10).toFixed(1);
+  var p90x    = px(corridor.p90).toFixed(1);
+  var needleX = px(corridor.needle).toFixed(1);
+  var zeroX   = px(0).toFixed(1);
+  var bandW   = (parseFloat(p90x) - parseFloat(p10x)).toFixed(1);
+
+  var qualifier = corridor.needle >= 4  ? 'Dominant recent form' :
+                  corridor.needle >= 1  ? 'Solid recent form' :
+                  corridor.needle >= -1 ? 'Balanced recent form' :
+                  corridor.needle >= -4 ? 'Tough recent stretch' :
+                                          'Difficult recent form';
+
+  // Rival needle SVG elements
+  var rivalNeedlesSvg = rivalNeedles.map(function(rn) {
+    var nx = px(rn.needle).toFixed(1);
+    return '<line x1="' + nx + '" y1="' + (trackY - 5) + '" x2="' + nx + '" y2="' + (trackY + trackH + 5) + '" stroke="' + rn.color + '" stroke-width="2" stroke-linecap="round"/>' +
+           '<text x="' + nx + '" y="' + (trackY + trackH + 20) + '" text-anchor="middle" font-size="13" font-weight="700" fill="' + rn.color + '">' + (rn.needle >= 0 ? '+' : '') + rn.needle.toFixed(1) + '</text>';
+  }).join('');
+
+  var svgH = 84;
+
+  return '<div style="padding:4px 8px">' +
+    _alphaRivalLegendHtml(currentAlphaPlayer) +
+    '<div style="font-size:15px;font-weight:600;color:var(--alpha-text-dim);margin-bottom:10px;">' + qualifier + '</div>' +
+    '<svg viewBox="0 0 ' + W + ' ' + svgH + '" width="100%" style="display:block;">' +
+      '<rect x="0" y="' + trackY + '" width="' + W + '" height="' + trackH + '" rx="4" fill="rgba(255,255,255,0.05)"/>' +
+      '<rect x="' + p10x + '" y="' + trackY + '" width="' + bandW + '" height="' + trackH + '" rx="3" fill="rgba(212,175,55,0.18)" stroke="rgba(212,175,55,0.35)" stroke-width="1"/>' +
+      '<line x1="' + zeroX + '" y1="' + (trackY - 4) + '" x2="' + zeroX + '" y2="' + (trackY + trackH + 4) + '" stroke="rgba(255,255,255,0.25)" stroke-width="1" stroke-dasharray="2,2"/>' +
+      rivalNeedlesSvg +
+      '<line x1="' + needleX + '" y1="' + (trackY - 6) + '" x2="' + needleX + '" y2="' + (trackY + trackH + 6) + '" stroke="#D4AF37" stroke-width="2.5" stroke-linecap="round"/>' +
+      '<text x="' + needleX + '" y="' + (trackY + trackH + 20) + '" text-anchor="middle" font-size="13" font-weight="700" fill="#D4AF37">' + (corridor.needle >= 0 ? '+' : '') + corridor.needle.toFixed(1) + '</text>' +
+      '<text x="' + p10x + '" y="' + (trackY - 8) + '" text-anchor="middle" font-size="12" fill="var(--alpha-text-faint)">' + corridor.p10.toFixed(1) + '</text>' +
+      '<text x="' + p90x + '" y="' + (trackY - 8) + '" text-anchor="middle" font-size="12" fill="var(--alpha-text-faint)">' + corridor.p90.toFixed(1) + '</text>' +
+      '<text x="0" y="' + svgH + '" font-size="11" fill="var(--alpha-text-faint)" opacity="0.7">-12</text>' +
+      '<text x="' + zeroX + '" y="' + svgH + '" text-anchor="middle" font-size="11" fill="var(--alpha-text-faint)" opacity="0.7">0</text>' +
+      '<text x="' + W + '" y="' + svgH + '" text-anchor="end" font-size="11" fill="var(--alpha-text-faint)" opacity="0.7">+12</text>' +
+    '</svg>' +
+    '<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:var(--alpha-text-faint);margin-top:4px;">' +
+      '<span>10th pct: ' + corridor.p10.toFixed(1) + '</span>' +
+      '<span>Last 5 avg</span>' +
+      '<span>90th pct: ' + corridor.p90.toFixed(1) + '</span>' +
+    '</div>' +
+  '</div>';
+}
+
+function _alphaBannerHtml(title, sub) {
+  return '<div class="alpha-banner">' +
+    '<div class="alpha-banner-title">' + title + '</div>' +
+    '<div class="alpha-banner-sub">' + sub + '</div>' +
+    '</div>';
+}
+
+// "View Forge Alpha Insights" entry button rendered below View Matches on Individual tab
+function renderAlphaEntryButton(player) {
+  const existing = document.getElementById('alphaEntryBtn');
+  if (existing) existing.remove();
+  if (!player) return;
+  const premium = isPremiumActive();
+  const hasData = player.games >= 15;
+  const btn = document.createElement('button');
+  btn.id = 'alphaEntryBtn';
+  // Button state: no-sub=gold+lock | sub+no-data=gold+hint | sub+data=gold+badge
+  // All states navigate to Alpha tab — gating is handled there.
+  if (!premium) {
+    btn.className = 'alpha-entry-btn';
+    btn.innerHTML =
+      '<span class="alpha-glyph">α</span>' +
+      '<span class="alpha-entry-btn-text">View Forge Alpha Insights</span>' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--alpha-gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+    btn.onclick = function() { openAlphaForPlayer(player.id); };
+  } else if (!hasData) {
+    btn.className = 'alpha-entry-btn insufficient';
+    btn.innerHTML =
+      '<span class="alpha-glyph">α</span>' +
+      '<span class="alpha-entry-btn-text">View Forge Alpha Insights</span>' +
+      '<span class="alpha-entry-btn-hint">' + (15 - player.games) + ' more needed</span>';
+    btn.onclick = function() { openAlphaForPlayer(player.id); };
+  } else {
+    btn.className = 'alpha-entry-btn';
+    btn.innerHTML =
+      '<span class="alpha-glyph">α</span>' +
+      '<span class="alpha-entry-btn-text">View Forge Alpha Insights</span>' +
+      '<span class="alpha-entry-btn-badge">ALPHA</span>';
+    btn.onclick = function() { openAlphaForPlayer(player.id); };
+  }
+  // Insert after viewMatchesBtn
+  const vmb = document.getElementById('viewMatchesBtn');
+  if (vmb && vmb.parentNode) vmb.parentNode.insertBefore(btn, vmb.nextSibling);
+}
+
+// ==========================================================
+// ALPHA COMPUTATION ENGINE (Group 3)
+// ==========================================================
+// All functions operate on local matches[] and players[] arrays — no backend calls.
+// alphaCache keyed by player ID; cleared by refreshAllData().
+
+// ---------- helpers ----------
+
+// Parse "YYYY-MM-DD" or Date string → calendar date string "YYYY-MM-DD"
+function _alphaDateKey(dateVal) {
+  if (!dateVal) return null;
+  const d = (dateVal instanceof Date) ? dateVal : new Date(dateVal);
+  if (isNaN(d)) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+// Collect all matches for a given player ID (as p1 or p2 on either team)
+// Match objects use teamA:[id,id] / teamB:[id,id] / scores:[{a,b}]
+function _matchesForPlayer(pid) {
+  return (matches || []).filter(function(m) {
+    return (m.teamA && (m.teamA[0] === pid || m.teamA[1] === pid)) ||
+           (m.teamB && (m.teamB[0] === pid || m.teamB[1] === pid));
+  });
+}
+
+// For a single match return the per-match total point margin for pid's team.
+// Positive = pid's team won by that margin, negative = lost.
+function _matchMarginForPlayer(m, pid) {
+  const onTeamA = m.teamA && (m.teamA[0] === pid || m.teamA[1] === pid);
+  var a = 0, b = 0;
+  (m.scores || []).forEach(function(g) { a += (g.a || 0); b += (g.b || 0); });
+  return onTeamA ? (a - b) : (b - a);
+}
+
+// ---------- Attribution ----------
+// Weighted residual: for each session (distinct calendar date) compute the
+// player's average per-game margin. Weight by w = e^(-lambda * t) where t
+// is the session index (0 = most recent date the player appeared).
+// Attribution = sum(w_t * avgMargin_t) / sum(w_t)
+function _computeAttribution(pid) {
+  const lambda = (typeof alphaLambda === 'number') ? alphaLambda : 0.1;
+  const pMatches = _matchesForPlayer(pid);
+  if (!pMatches.length) return null;
+
+  // Group matches by calendar date
+  const byDate = {};
+  pMatches.forEach(m => {
+    const dk = _alphaDateKey(m.date);
+    if (!dk) return;
+    if (!byDate[dk]) byDate[dk] = [];
+    byDate[dk].push(m);
+  });
+
+  // Sort dates descending so t=0 is most recent
+  const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
+  let sumW = 0, sumWM = 0;
+  dates.forEach((dk, t) => {
+    const w = Math.exp(-lambda * t);
+    const sessionMatches = byDate[dk];
+    // Per-match margin for this session (average across matches on that date)
+    const margins = sessionMatches.map(m => _matchMarginForPlayer(m, pid));
+    const avgM = margins.reduce((a, b) => a + b, 0) / margins.length;
+    sumW += w;
+    sumWM += w * avgM;
+  });
+
+  return sumW > 0 ? (sumWM / sumW) : null;
+}
+
+// ---------- Performance Corridor ----------
+// Returns { p10, p90, needle } where:
+//   p10/p90 = 10th/90th percentile of per-match margins (all matches)
+//   needle  = avg per-match margin over last 5 matches (by date desc)
+function _computeCorridor(pid) {
+  const pMatches = _matchesForPlayer(pid);
+  if (pMatches.length < 2) return null;
+
+  // Sort all matches by date descending
+  const sorted = pMatches.slice().sort((a, b) => {
+    const da = _alphaDateKey(a.date) || '';
+    const db = _alphaDateKey(b.date) || '';
+    return db.localeCompare(da);
+  });
+
+  const allMargins = sorted.map(m => _matchMarginForPlayer(m, pid)).sort((a, b) => a - b);
+
+  function percentile(arr, p) {
+    const idx = (p / 100) * (arr.length - 1);
+    const lo = Math.floor(idx), hi = Math.ceil(idx);
+    if (lo === hi) return arr[lo];
+    return arr[lo] + (arr[hi] - arr[lo]) * (idx - lo);
+  }
+
+  const p10 = percentile(allMargins, 10);
+  const p90 = percentile(allMargins, 90);
+
+  // Needle: last 5 matches by date
+  const last5 = sorted.slice(0, 5);
+  const needleMargins = last5.map(m => _matchMarginForPlayer(m, pid));
+  const needle = needleMargins.reduce((a, b) => a + b, 0) / needleMargins.length;
+
+  return { p10, p90, needle };
+}
+
+// ---------- DNA 5-axis scores ----------
+// Returns { dominance, resilience, reliability, eliteCollab, tacticalDisruptor }
+// each normalised 0-1 for radar chart (raw values stored separately).
+// Match objects use teamA:[id,id] / teamB:[id,id] / scores:[{a,b}] / rating field is p.rating
+function _computeDna(pid, allPlayers) {
+  const pMatches = _matchesForPlayer(pid);
+  if (pMatches.length < 2) return null;
+
+  // --- Dominance: avg margin in wins (normalised, ±11 cap) ---
+  const wins = pMatches.filter(function(m) { return _matchMarginForPlayer(m, pid) > 0; });
+  const dominanceRaw = wins.length > 0
+    ? wins.reduce(function(s, m) { return s + _matchMarginForPlayer(m, pid); }, 0) / wins.length
+    : 0;
+  const dominance = Math.min(1, Math.max(0, (dominanceRaw + 11) / 22));
+
+  // --- Resilience: win rate in close matches (margin abs ≤ 2) ---
+  const closeMatches = pMatches.filter(function(m) { return Math.abs(_matchMarginForPlayer(m, pid)) <= 2; });
+  var resilience = 0.5;
+  if (closeMatches.length >= 2) {
+    resilience = closeMatches.filter(function(m) { return _matchMarginForPlayer(m, pid) > 0; }).length / closeMatches.length;
+  }
+
+  // --- Reliability: 1 - SD/11 of per-match margins ---
+  const margins = pMatches.map(function(m) { return _matchMarginForPlayer(m, pid); });
+  const mean = margins.reduce(function(a, b) { return a + b; }, 0) / margins.length;
+  const variance = margins.reduce(function(s, v) { return s + Math.pow(v - mean, 2); }, 0) / margins.length;
+  const reliability = Math.min(1, Math.max(0, 1 - Math.sqrt(variance) / 11));
+
+  // --- Elite Collaborator: avg uplift pid gives partners vs their baseline ---
+  const partnerIds = new Set();
+  pMatches.forEach(function(m) {
+    const onTeamA = m.teamA && (m.teamA[0] === pid || m.teamA[1] === pid);
+    const teammates = onTeamA ? (m.teamA || []) : (m.teamB || []);
+    teammates.forEach(function(id) { if (id && id !== pid) partnerIds.add(id); });
+  });
+
+  var upliftSum = 0, upliftCount = 0;
+  partnerIds.forEach(function(partnerId) {
+    const togetherMatches = pMatches.filter(function(m) {
+      const onTeamA = m.teamA && (m.teamA[0] === pid || m.teamA[1] === pid);
+      const sameTeam = onTeamA ? (m.teamA || []) : (m.teamB || []);
+      return sameTeam.indexOf(partnerId) !== -1;
+    });
+    if (togetherMatches.length < 2) return;
+
+    const partnerAllMatches = _matchesForPlayer(partnerId);
+    const partnerBaseMatches = partnerAllMatches.filter(function(m) {
+      return !(m.teamA && m.teamA.indexOf(pid) !== -1) &&
+             !(m.teamB && m.teamB.indexOf(pid) !== -1);
+    });
+
+    const wrWith = togetherMatches.filter(function(m) {
+      return _matchMarginForPlayer(m, partnerId) > 0;
+    }).length / togetherMatches.length;
+
+    var baseline = 0.5;
+    if (partnerBaseMatches.length >= 2) {
+      baseline = partnerBaseMatches.filter(function(m) {
+        return _matchMarginForPlayer(m, partnerId) > 0;
+      }).length / partnerBaseMatches.length;
+    }
+    upliftSum += (wrWith - baseline);
+    upliftCount++;
+  });
+
+  const eliteCollabRaw = upliftCount > 0 ? upliftSum / upliftCount : 0;
+  const eliteCollab = Math.min(1, Math.max(0, eliteCollabRaw + 0.5));
+
+  // --- Tactical Disruptor: win rate vs higher-rated opponents (uses p.rating) ---
+  const pidPlayer = (allPlayers || []).find(function(p) { return p.id === pid; });
+  const pidRating = pidPlayer ? (parseFloat(pidPlayer.rating) || 0) : 0;
+
+  var disruptWins = 0, disruptTotal = 0;
+  pMatches.forEach(function(m) {
+    const onTeamA = m.teamA && (m.teamA[0] === pid || m.teamA[1] === pid);
+    const oppIds = onTeamA ? (m.teamB || []) : (m.teamA || []);
+    const oppRatings = oppIds
+      .map(function(id) { return (allPlayers || []).find(function(p) { return p.id === id; }); })
+      .filter(Boolean)
+      .map(function(p) { return parseFloat(p.rating) || 0; });
+    const avgOppRating = oppRatings.length > 0
+      ? oppRatings.reduce(function(a, b) { return a + b; }, 0) / oppRatings.length : 0;
+    if (avgOppRating > pidRating && pidRating > 0) {
+      disruptTotal++;
+      if (_matchMarginForPlayer(m, pid) > 0) disruptWins++;
+    }
+  });
+
+  const tacticalDisruptor = disruptTotal >= 2 ? disruptWins / disruptTotal : 0.5;
+
+  return {
+    dominance, resilience, reliability, eliteCollab, tacticalDisruptor,
+    _raw: {
+      dominanceAvgMargin: dominanceRaw,
+      closeMatchCount:    closeMatches.length,
+      partnerCount:       upliftCount,
+      eliteCollabRaw,
+      disruptTotal,
+    }
+  };
+}
+
+// ---------- Archetype labelling ----------
+// 3-step rule (locked in D2/D3):
+//   Step 1: top axis ≤ 0.5 → null (no label — player has no dominant DNA)
+//   Step 2: gap between top and 2nd axis ≤ 0.10 AND top > 0.5 → hybrid
+//   Step 3: else → single primary axis name
+// ---------- Top-level compute + render ----------
+// Called from _enterAlphaTab and when player chip changes.
+// Checks cache first, computes if missing, then renders.
+function computeAndRenderAlpha() {
+  const pid = currentAlphaPlayer;
+  if (!pid) return;
+  const rivalRow = document.getElementById('alphaRivalRow');
+
+  // Cache hit — unfreeze rivals and render immediately
+  if (alphaCache && alphaCache[pid]) {
+    if (rivalRow) rivalRow.classList.remove('computing');
+    _setAlphaCardBodies('data', alphaCache[pid]);
+    return;
+  }
+
+  // Build cache entry
+  const allPlayers = players || [];
+  const attribution = _computeAttribution(pid);
+  const corridor    = _computeCorridor(pid);
+  const dna         = _computeDna(pid, allPlayers);
+  const pMatches    = _matchesForPlayer(pid);
+
+  const entry = { attribution, corridor, dna, matchCount: pMatches.length };
+
+  if (!alphaCache) alphaCache = {};
+  alphaCache[pid] = entry;
+
+  // Unfreeze rivals now that computation is complete
+  if (rivalRow) rivalRow.classList.remove('computing');
+  _setAlphaCardBodies('data', entry);
+}
+
 // TOOLTIPS
 // ==========================================================
 
@@ -6280,7 +7338,11 @@ const TOOLTIPS = {
   clutchRating:   { title: 'Clutch Rating',         body: "All-time win rate when your team's combined rating was lower than your opponents' going in.\n\n📈 Best: 100% — you thrive under pressure!\n📉 Worst: 0% — tough when outgunned.\n\nNo data = you haven't been the underdog yet." },
   pairWinRate:    { title: 'Partnership Win Rate',  body: 'Win % for this pair (min 2 games to qualify).\n\n📈 Best: 100% — unbeaten as a duo!\n📉 Worst: 0% — yet to find their groove.\n\n⚠ = fewer than 4 games, treat with caution.' },
   synergyScore:   { title: 'Synergy Score',         body: 'How much better (or worse) this pair performs compared to what their individual ratings would predict. Positive = they make each other better. Negative = they underperform together.\n\n⚡ Best: above +0.20 — real chemistry!\n⚠ Worst: below −0.20 — underperforming together.\n〰 Neutral: playing to their ratings.' },
-  dominanceScore: { title: 'Dominance Score',       body: 'Avg point margin per game together. Positive = winning by that margin on average.\n\n📈 Best: large positive (e.g. +6) — dominant!\n📉 Worst: large negative — tough together.\nNear zero = closely contested games.' }
+  dominanceScore:   { title: 'Dominance Score',       body: 'Avg point margin per game together. Positive = winning by that margin on average.\n\n📈 Best: large positive (e.g. +6) — dominant!\n📉 Worst: large negative — tough together.\nNear zero = closely contested games.' },
+  // Alpha tooltips
+  alphaAttribution: { title: 'Attribution Score',     body: 'Measures how much you personally move the scoreboard, regardless of who you partner with. Calculated as your average point margin contribution weighted by match recency — recent matches count more.\n\n📈 Best: High positive — you consistently lift any partnership.\n📉 Worst: Negative — partners tend to score better without you.\n〰 Near zero — your impact is neutral; outcome driven by partners.' },
+  alphaDna:         { title: 'Player DNA',             body: 'Your competitive fingerprint across five axes:\n\n• Dominance — average scoring margin when you win, shows ceiling.\n• Resilience — win rate in close games (margin ≤2), shows mental edge.\n• Reliability — consistency of performance; low variance = high reliability.\n• Elite Collaborator — uplift you give partners versus their baseline.\n• Tactical Disruptor — win rate against opponents rated above you.\n\nThe pentagon shape reveals your playstyle archetype.' },
+  alphaCorridor:    { title: 'Performance Corridor',   body: 'Shows the range between your best and worst performances over all your matches (10th to 90th percentile point margins), with a needle marking your last 5 matches average.\n\n📈 Best: Needle at the top of a tight corridor — consistently dominant.\n📉 Worst: Needle at the bottom — recent form has dipped.\n〰 Wide corridor — high variance; big wins and big losses.' }
 };
 
 function showTooltipKey(key) { const t = TOOLTIPS[key]; if (t) showTooltip(t.title, t.body); }
