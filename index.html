@@ -1,16 +1,17 @@
 <!DOCTYPE html>
-<!-- 
+<!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.3 — UX Bug Fixes                 ║
-  ║  Date: 2026-05-11                            ║
-  ║  Changes: Alpha chip scrolls to selected     ║
-  ║           player on "View Alpha" navigation  ║
-  ║           Alpha banner gap from chip row     ║
-  ║           Leaderboard medal badges (1/2/3)   ║
-  ║           Add Player inline spinner + Cancel ║
-  ║           disabled during backend call       ║
+  ║  Version: 7.4 — Splash + Pre-warm           ║
+  ║  Date: 2026-05-12                            ║
+  ║  Changes: Splash Option A background         ║
+  ║           (off-white #F8F7F4, both phases)   ║
+  ║           FORGE vertically centred (calc)    ║
+  ║           Phase 1 cycling progress messages  ║
+  ║           Session resume shows splash        ║
+  ║           Pre-warm GAS on Add Match + Player ║
   ║                                              ║
+  ║  v7.3 — UX Bug Fixes (2026-05-11)            ║
   ║  v7.2 — Pass 2 Cleanup (2026-05-11)          ║
   ║  v7.1 — Alpha UX Polish (2026-05-09)         ║
   ║           Full backend wiring via fetch()    ║
@@ -610,7 +611,7 @@ body {
 .splash {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: #0f0f0f;
+  background: #F8F7F4;
   z-index: 800;
   display: none;
   flex-direction: column;
@@ -641,7 +642,7 @@ body {
 .splash-shadow {
   width: 56px; height: 10px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.07);
+  background: rgba(0,0,0,0.08);
   margin-top: 6px;
   animation: splashShadow 0.6s cubic-bezier(0.4,0,0.2,1) infinite alternate;
 }
@@ -654,7 +655,7 @@ body {
   font-family: 'Barlow Condensed', -apple-system, sans-serif;
   font-weight: 700; font-size: 12px;
   letter-spacing: 3px; text-transform: uppercase;
-  color: #3a3a3a;
+  color: #5a5a5a;
   margin-top: 92px;
   animation: splashTextPulse 1.4s ease infinite;
 }
@@ -682,7 +683,7 @@ body {
 /* Phase 2: forge reveal */
 .splash-phase2 {
   position: absolute; inset: 0;
-  background: #0f0f0f;
+  background: #F8F7F4;
   opacity: 0; pointer-events: none;
 }
 .splash-phase2.show { opacity: 1; }
@@ -714,21 +715,21 @@ body {
 .splash-bar.run { animation: splashBar 0.35s ease 0.42s forwards; }
 @keyframes splashBar { to { transform: scaleX(1); } }
 
-/* FORGE word */
+/* FORGE word — vertically centred on any phone height */
 .splash-forge {
-  position: absolute; left: 0; right: 0; top: 200px;
+  position: absolute; left: 0; right: 0; top: calc(50% - 46px);
   text-align: center;
   font-family: 'Barlow Condensed', -apple-system, sans-serif;
-  font-weight: 900; font-size: 92px; color: #fff;
+  font-weight: 900; font-size: 92px; color: #0f0f0f;
   letter-spacing: -3px; line-height: 1;
   opacity: 0; transform: scale(0.78);
 }
 .splash-forge.run { animation: splashForge 0.5s cubic-bezier(0.34,1.5,0.64,1) 0.5s forwards; }
 @keyframes splashForge { to { opacity: 1; transform: scale(1); } }
 
-/* underline — strictly below FORGE: 200+92+10 = 302 */
+/* underline — strictly below FORGE: 50% + 46px (half font height) + 10px gap */
 .splash-underline {
-  position: absolute; top: 302px; left: 50%;
+  position: absolute; top: calc(50% + 56px); left: 50%;
   transform: translateX(-50%);
   height: 4px; width: 0;
   background: #AADC32; border-radius: 2px;
@@ -736,17 +737,17 @@ body {
 .splash-underline.run { animation: splashLine 0.4s ease 0.88s forwards; }
 @keyframes splashLine { to { width: 94px; } }
 
-/* tagline — below underline: 302+4+14 = 320 */
+/* tagline — below underline: 50% + 56px (underline top) + 4px (bar) + 14px gap */
 .splash-tagline {
-  position: absolute; left: 0; right: 0; top: 324px;
+  position: absolute; left: 0; right: 0; top: calc(50% + 74px);
   text-align: center;
   font-family: 'Barlow', -apple-system, sans-serif;
-  font-weight: 300; font-size: 14px; color: #666;
+  font-weight: 300; font-size: 14px; color: #7a7a7a;
   letter-spacing: 1.5px;
   opacity: 0;
 }
 .splash-tagline.run { animation: splashTag 0.45s ease 0.98s forwards; }
-.splash-tagline em { color: #AADC32; font-style: normal; font-weight: 500; }
+.splash-tagline em { color: #8db82a; font-style: normal; font-weight: 500; }
 @keyframes splashTag {
   0%   { opacity: 0; transform: translateY(6px); }
   100% { opacity: 1; transform: translateY(0); }
@@ -3073,7 +3074,7 @@ body {
     </div>
     <div class="splash-shadow"></div>
     <div class="splash-loading-text">
-      Loading data
+      <span id="splashLoadingMsg">Loading squad</span>
       <span class="splash-dots"><span></span><span></span><span></span></span>
     </div>
   </div>
@@ -3776,7 +3777,7 @@ body {
 <script>
 /* ============================================
    FORGE = Your Pickleball Mettle
-   Version: 7.2 | Backend: Google Apps Script
+   Version: 7.4 | Backend: Google Apps Script
    Frontend: GitHub Pages
 ============================================ */
 
@@ -4272,8 +4273,10 @@ async function startup() {
     APP_AUTH_TOKEN = savedPassword;
     try {
       await callBackend({ action: 'login', password: savedPassword });
-      // Session valid — go straight to app
-      launchApp();
+      // Session valid — show splash then fetch fresh data.
+      // Backend was just warmed by the login call above, so Phase 1 min is shorter.
+      document.getElementById('splashScreen').classList.add('show');
+      _runSplashThenLaunch(1200);
       return;
     } catch(e) {
       // Session invalid (password changed, or network error) — clear and show login
@@ -4478,9 +4481,18 @@ function showWelcome() {
   _runSplashThenLaunch();
 }
 
-async function _runSplashThenLaunch() {
-  const PHASE1_MIN = 2800; // minimum ms Phase 1 shows (feels intentional)
+async function _runSplashThenLaunch(phase1Min) {
+  const PHASE1_MIN = phase1Min || 2800; // minimum ms Phase 1 shows (feels intentional)
   const fetchStart = Date.now();
+
+  // Cycle loading messages while Phase 1 plays
+  const _msgs = ['Loading squad', 'Syncing matches', 'Almost ready'];
+  let _msgIdx = 0;
+  const _msgEl = document.getElementById('splashLoadingMsg');
+  const _msgTimer = setInterval(function() {
+    _msgIdx = (_msgIdx + 1) % _msgs.length;
+    if (_msgEl) _msgEl.textContent = _msgs[_msgIdx];
+  }, 950);
 
   // Clear stale data immediately
   players = [];
@@ -4521,6 +4533,9 @@ async function _runSplashThenLaunch() {
   const wait = Math.max(0, PHASE1_MIN - elapsed);
 
   setTimeout(() => {
+    // Stop message cycling before Phase 2 transition
+    clearInterval(_msgTimer);
+
     // Transition to Phase 2 (FORGE reveal)
     const phase1 = document.getElementById('splashPhase1');
     const phase2 = document.getElementById('splashPhase2');
@@ -4701,6 +4716,10 @@ const screenMap = {
 
 function navigateTo(screen) {
   if (currentScreen === screen) return;
+
+  // Pre-warm GAS when user opens Add Match — fires while they fill in the form,
+  // giving the runtime time to warm before the submit call hits the backend.
+  if (screen === 'add') callBackendGet('getVersion').catch(function() {});
 
   // ── Guard: warn before leaving Add Match mid-flow ──
   if (currentScreen === 'add' && screen !== 'add') {
@@ -5123,6 +5142,8 @@ function attachAddInputListeners() {
 }
 
 function openAddForm() {
+  // Pre-warm GAS — fires while user types the player name
+  callBackendGet('getVersion').catch(function() {});
   document.getElementById('addBtn').style.display = 'none';
   document.getElementById('addForm').classList.add('open');
   const input = document.getElementById('addInput');
