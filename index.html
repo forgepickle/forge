@@ -2,9 +2,19 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.4 — Splash + Pre-warm           ║
+  ║  Version: 7.5 — Pair & DNA Bug Fixes         ║
   ║  Date: 2026-05-12                            ║
-  ║  Changes: Splash Option A background         ║
+  ║  Changes: Fix pair tie-handling across       ║
+  ║           Leaderboard and Analytics (total,  ║
+  ║           win%, qualification, missing pairs ║
+  ║           gap). Fix DNA Dominance, Resilience║
+  ║           Collaborator, Disruptor tie logic. ║
+  ║           Rename Elite Collaborator and      ║
+  ║           Tactical Disruptor labels.         ║
+  ║                                              ║
+  ║  v7.4.1 — Pre-warm Demo Fix (2026-05-12)     ║
+  ║  v7.4 — Splash + Pre-warm (2026-05-12)       ║
+  ║           Splash Option A background         ║
   ║           (off-white #F8F7F4, both phases)   ║
   ║           FORGE vertically centred (calc)    ║
   ║           Phase 1 cycling progress messages  ║
@@ -3777,7 +3787,7 @@ body {
 <script>
 /* ============================================
    FORGE = Your Pickleball Mettle
-   Version: 7.4 | Backend: Google Apps Script
+   Version: 7.5 | Backend: Google Apps Script
    Frontend: GitHub Pages
 ============================================ */
 
@@ -4719,7 +4729,8 @@ function navigateTo(screen) {
 
   // Pre-warm GAS when user opens Add Match — fires while they fill in the form,
   // giving the runtime time to warm before the submit call hits the backend.
-  if (screen === 'add') callBackendGet('getVersion').catch(function() {});
+  // Guard: callBackendGet throws synchronously in demo mode, so skip it entirely.
+  if (screen === 'add' && !isDemoMode) callBackendGet('getVersion').catch(function() {});
 
   // ── Guard: warn before leaving Add Match mid-flow ──
   if (currentScreen === 'add' && screen !== 'add') {
@@ -5142,8 +5153,9 @@ function attachAddInputListeners() {
 }
 
 function openAddForm() {
-  // Pre-warm GAS — fires while user types the player name
-  callBackendGet('getVersion').catch(function() {});
+  // Pre-warm GAS — fires while user types the player name.
+  // Guard: callBackendGet throws synchronously in demo mode, so skip it entirely.
+  if (!isDemoMode) callBackendGet('getVersion').catch(function() {});
   document.getElementById('addBtn').style.display = 'none';
   document.getElementById('addForm').classList.add('open');
   const input = document.getElementById('addInput');
@@ -5494,7 +5506,7 @@ function renderClutchRating(p) {
 
 function renderPairCards() {
   const sorted = getFilteredPairs().map(pair => {
-    const total  = pair.wins + pair.losses;
+    const total  = pair.wins + pair.losses + pair.ties;
     const winPct = total > 0 ? Math.round((pair.wins / total) * 100) : 0;
     return { ...pair, total, winPct };
   }).sort((a, b) => {
@@ -6095,10 +6107,11 @@ function renderLbIndividual() {
 function renderLbPairs() {
   const skelEl = document.getElementById('lbSkeletonPairs');
   const listEl = document.getElementById('lbListPairs');
-  // Qualified: ≥2 matches (ranked). Unqualified: shown at bottom unranked.
-  const qualified = pairs.filter(pair => (pair.wins+pair.losses) >= 2).map(pair => {
-    const total  = pair.wins + pair.losses;
-    const winPct = Math.round((pair.wins/total)*100);
+  // Qualified: ≥2 total matches including ties (ranked). Unqualified: 1 match — shown at bottom unranked.
+  const qualified = pairs.filter(pair => (pair.wins+pair.losses+pair.ties) >= 2).map(pair => {
+    const total   = pair.wins + pair.losses + pair.ties;
+    const decided = pair.wins + pair.losses;
+    const winPct  = total > 0 ? Math.round((pair.wins/total)*100) : 0;
     const p1 = players.find(p => p.id===pair.p1);
     const p2 = players.find(p => p.id===pair.p2);
     const hasInactive = (p1&&p1.status==='inactive')||(p2&&p2.status==='inactive');
@@ -6112,7 +6125,7 @@ function renderLbPairs() {
     listEl.innerHTML = `<div class="lb-empty"><div class="lb-empty-icon">🤝</div><div class="lb-empty-title">No Pair Data Yet</div><div class="lb-empty-sub">Pair rankings appear after at least 2 matches together.</div></div>`;
     return;
   }
-  // Unqualified pairs: 1 match only — shown at bottom, no rank
+  // Unqualified pairs: exactly 1 total match — shown at bottom, no rank
   const unqualified = pairs.filter(pair => (pair.wins+pair.losses+pair.ties) === 1).map(pair => {
     const p1u = players.find(p=>p.id===pair.p1), p2u = players.find(p=>p.id===pair.p2);
     const hasInactiveU = (p1u&&p1u.status==='inactive')||(p2u&&p2u.status==='inactive');
@@ -7261,27 +7274,45 @@ function _computeDna(pid, allPlayers) {
   const pMatches = _matchesForPlayer(pid);
   if (pMatches.length < 2) return null;
 
-  // --- Dominance: avg margin in wins (normalised, ±11 cap) ---
-  const wins = pMatches.filter(function(m) { return _matchMarginForPlayer(m, pid) > 0; });
+  // Outcome helpers — use actual game-count result, not point-margin proxy.
+  // This correctly handles asymmetric ties (e.g. 15-3, 11-15: margin ≠ 0 but still a tie).
+  const _matchIsTie = function(m) {
+    const aGW = (m.scores||[]).filter(function(s){ return s.a>s.b; }).length;
+    const bGW = (m.scores||[]).filter(function(s){ return s.b>s.a; }).length;
+    return aGW === bGW;
+  };
+  const _matchWon = function(m, id) {
+    const aGW = (m.scores||[]).filter(function(s){ return s.a>s.b; }).length;
+    const bGW = (m.scores||[]).filter(function(s){ return s.b>s.a; }).length;
+    if (aGW === bGW) return false; // tie — not a win
+    const onA = m.teamA && (m.teamA[0]===id || m.teamA[1]===id);
+    return onA ? aGW > bGW : bGW > aGW;
+  };
+
+  // --- Dominance: avg margin in actual wins only (normalised, ±11 cap) ---
+  const wins = pMatches.filter(function(m) { return _matchWon(m, pid); });
   const dominanceRaw = wins.length > 0
     ? wins.reduce(function(s, m) { return s + _matchMarginForPlayer(m, pid); }, 0) / wins.length
     : 0;
   const dominance = Math.min(1, Math.max(0, (dominanceRaw + 11) / 22));
 
-  // --- Resilience: win rate in close matches (margin abs ≤ 2) ---
-  const closeMatches = pMatches.filter(function(m) { return Math.abs(_matchMarginForPlayer(m, pid)) <= 2; });
+  // --- Resilience: win rate in close DECIDED matches only (ties excluded from pool) ---
+  const closeMatches = pMatches.filter(function(m) {
+    if (_matchIsTie(m)) return false; // ties excluded — neither win nor loss
+    return Math.abs(_matchMarginForPlayer(m, pid)) <= 2;
+  });
   var resilience = 0.5;
   if (closeMatches.length >= 2) {
-    resilience = closeMatches.filter(function(m) { return _matchMarginForPlayer(m, pid) > 0; }).length / closeMatches.length;
+    resilience = closeMatches.filter(function(m) { return _matchWon(m, pid); }).length / closeMatches.length;
   }
 
-  // --- Reliability: 1 - SD/11 of per-match margins ---
+  // --- Reliability: 1 - SD/11 of per-match margins (all matches including ties) ---
   const margins = pMatches.map(function(m) { return _matchMarginForPlayer(m, pid); });
   const mean = margins.reduce(function(a, b) { return a + b; }, 0) / margins.length;
   const variance = margins.reduce(function(s, v) { return s + Math.pow(v - mean, 2); }, 0) / margins.length;
   const reliability = Math.min(1, Math.max(0, 1 - Math.sqrt(variance) / 11));
 
-  // --- Elite Collaborator: avg uplift pid gives partners vs their baseline ---
+  // --- Collaborator: avg uplift pid gives partners vs their baseline ---
   const partnerIds = new Set();
   pMatches.forEach(function(m) {
     const onTeamA = m.teamA && (m.teamA[0] === pid || m.teamA[1] === pid);
@@ -7304,14 +7335,15 @@ function _computeDna(pid, allPlayers) {
              !(m.teamB && m.teamB.indexOf(pid) !== -1);
     });
 
+    // Use actual win outcome — not margin proxy — to avoid asymmetric-tie inflation
     const wrWith = togetherMatches.filter(function(m) {
-      return _matchMarginForPlayer(m, partnerId) > 0;
+      return _matchWon(m, partnerId);
     }).length / togetherMatches.length;
 
     var baseline = 0.5;
     if (partnerBaseMatches.length >= 2) {
       baseline = partnerBaseMatches.filter(function(m) {
-        return _matchMarginForPlayer(m, partnerId) > 0;
+        return _matchWon(m, partnerId);
       }).length / partnerBaseMatches.length;
     }
     upliftSum += (wrWith - baseline);
@@ -7321,7 +7353,7 @@ function _computeDna(pid, allPlayers) {
   const eliteCollabRaw = upliftCount > 0 ? upliftSum / upliftCount : 0;
   const eliteCollab = Math.min(1, Math.max(0, eliteCollabRaw + 0.5));
 
-  // --- Tactical Disruptor: win rate vs higher-rated opponents (uses p.rating) ---
+  // --- Disruptor: win rate vs higher-rated opponents (uses actual win outcome) ---
   const pidPlayer = (allPlayers || []).find(function(p) { return p.id === pid; });
   const pidRating = pidPlayer ? (parseFloat(pidPlayer.rating) || 0) : 0;
 
@@ -7337,7 +7369,7 @@ function _computeDna(pid, allPlayers) {
       ? oppRatings.reduce(function(a, b) { return a + b; }, 0) / oppRatings.length : 0;
     if (avgOppRating > pidRating && pidRating > 0) {
       disruptTotal++;
-      if (_matchMarginForPlayer(m, pid) > 0) disruptWins++;
+      if (_matchWon(m, pid)) disruptWins++;
     }
   });
 
@@ -7404,7 +7436,7 @@ const TOOLTIPS = {
   dominanceScore:   { title: 'Dominance Score',       body: 'Avg point margin per game together. Positive = winning by that margin on average.\n\n📈 Best: large positive (e.g. +6) — dominant!\n📉 Worst: large negative — tough together.\nNear zero = closely contested games.' },
   // Alpha tooltips
   alphaAttribution: { title: 'Attribution Score',     body: 'Measures how much you personally move the scoreboard, regardless of who you partner with. Calculated as your average point margin contribution weighted by match recency — recent matches count more.\n\n📈 Best: High positive — you consistently lift any partnership.\n📉 Worst: Negative — partners tend to score better without you.\n〰 Near zero — your impact is neutral; outcome driven by partners.' },
-  alphaDna:         { title: 'Player DNA',             body: 'Your competitive fingerprint across five axes:\n\n• Dominance — average scoring margin when you win, shows ceiling.\n• Resilience — win rate in close games (margin ≤2), shows mental edge.\n• Reliability — consistency of performance; low variance = high reliability.\n• Elite Collaborator — uplift you give partners versus their baseline.\n• Tactical Disruptor — win rate against opponents rated above you.\n\nThe pentagon shape reveals your playstyle archetype.' },
+  alphaDna:         { title: 'Player DNA',             body: 'Your competitive fingerprint across five axes:\n\n• Dominance — average scoring margin when you win, shows ceiling.\n• Resilience — win rate in close games (margin ≤2), shows mental edge.\n• Reliability — consistency of performance; low variance = high reliability.\n• Collaborator — uplift you give partners versus their baseline.\n• Disruptor — win rate against opponents rated above you.\n\nThe pentagon shape reveals your playstyle archetype.' },
   alphaCorridor:    { title: 'Performance Corridor',   body: 'Shows the range between your best and worst performances over all your matches (10th to 90th percentile point margins), with a needle marking your last 5 matches average.\n\n📈 Best: Needle at the top of a tight corridor — consistently dominant.\n📉 Worst: Needle at the bottom — recent form has dipped.\n〰 Wide corridor — high variance; big wins and big losses.' }
 };
 
