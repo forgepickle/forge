@@ -2,9 +2,16 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.5 — Pair & DNA Bug Fixes         ║
+  ║  Version: 7.5.1 — Inactive Chip Fix          ║
   ║  Date: 2026-05-12                            ║
-  ║  Changes: Fix pair tie-handling across       ║
+  ║  Changes: Replace stale = placeholder with   ║
+  ║           · on inactive ml-chips (Match List ║
+  ║           + Analytics Pairs). Add            ║
+  ║           .ml-chip.inactive-chip CSS to      ║
+  ║           match player-chip grey treatment.  ║
+  ║                                              ║
+  ║  v7.5 — Pair & DNA Bug Fixes (2026-05-12)    ║
+  ║           Fix pair tie-handling across       ║
   ║           Leaderboard and Analytics (total,  ║
   ║           win%, qualification, missing pairs ║
   ║           gap). Fix DNA Dominance, Resilience║
@@ -2419,6 +2426,19 @@ body {
 }
 .player-chip.inactive-chip .chip-name { color: var(--grey-mid); }
 
+/* Greyed ml-chip (Match List + Analytics Pairs filter rows) for inactive — mirrors player-chip treatment */
+.ml-chip.inactive-chip {
+  opacity: 0.55;
+  border-color: var(--grey-light);
+  background: var(--grey-xlight);
+}
+.ml-chip.inactive-chip .ml-chip-av {
+  background: var(--grey-xlight);
+  border-color: var(--grey-light);
+  color: var(--grey-mid);
+}
+.ml-chip.inactive-chip .ml-chip-name { color: var(--grey-mid); }
+
 /* Greyed lb-card for inactive */
 .lb-card.inactive-card {
   opacity: 0.55;
@@ -3787,7 +3807,7 @@ body {
 <script>
 /* ============================================
    FORGE = Your Pickleball Mettle
-   Version: 7.5 | Backend: Google Apps Script
+   Version: 7.5.1 | Backend: Google Apps Script
    Frontend: GitHub Pages
 ============================================ */
 
@@ -6308,7 +6328,7 @@ function renderMlChips() {
     const isInactive = p.status==='inactive';
     return `<div class="ml-chip ${selClass} ${isInactive?'inactive-chip':''}" id="mlchip-${p.id}" onclick="toggleMlChip('${p.id}')">
       <div class="ml-chip-av">${getInitials(p.name)}</div>
-      <span class="ml-chip-name">${escHtml(p.name)}${isInactive?' =':''}</span>
+      <span class="ml-chip-name">${escHtml(p.name)}${isInactive?' ·':''}</span>
     </div>`;
   }).join('');
 }
@@ -6557,7 +6577,7 @@ function renderApChips() {
     const isInactive = p.status==='inactive';
     return `<div class="ml-chip ${selClass} ${isInactive?'inactive-chip':''}" id="apchip-${p.id}" onclick="toggleApChip('${p.id}')">
       <div class="ml-chip-av">${getInitials(p.name)}</div>
-      <span class="ml-chip-name">${escHtml(p.name)}${isInactive?' =':''}</span>
+      <span class="ml-chip-name">${escHtml(p.name)}${isInactive?' ·':''}</span>
     </div>`;
   }).join('');
 }
