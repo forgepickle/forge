@@ -2,9 +2,17 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.6.0 — Debrief Snapshot Fix       ║
+  ║  Version: 7.7.0 — Per-Player Starting Rating ║
   ║  Date: 2026-05-15                            ║
-  ║  Changes: Pair Chemistry + K-Factor now read ║
+  ║  Changes: confirmAddPlayer now stores        ║
+  ║           startingRating on in-memory player ║
+  ║           object. loadDemoData and demo      ║
+  ║           delete replay reset each player to ║
+  ║           their own startingRating instead   ║
+  ║           of global STARTING_RATING.         ║
+  ║                                              ║
+  ║  v7.6.0 — Debrief Snapshot Fix               ║
+  ║           Pair Chemistry + K-Factor now read ║
   ║           pre-match values from              ║
   ║           debriefSnapshot (stored in GAS at  ║
   ║           add-match time) instead of live    ║
@@ -3988,7 +3996,7 @@ body {
 <script>
 /* ============================================
    FORGE = Your Pickleball Mettle
-   Version: 7.6.0 | Backend: Google Apps Script
+   Version: 7.7.0 | Backend: Google Apps Script
    Frontend: GitHub Pages
 ============================================ */
 
@@ -4102,11 +4110,12 @@ function loadDemoData() {
   players = JSON.parse(JSON.stringify(DEMO_DATA.players));
   matches = JSON.parse(JSON.stringify(DEMO_DATA.matches));
 
-  // Reset all player stats — we replay from scratch so ratingChanges are accurate
+  // Reset all player stats — use each player's own startingRating as baseline
   players.forEach(p => {
-    p.rating        = STARTING_RATING;
+    const base      = p.startingRating || STARTING_RATING;
+    p.rating        = base;
     p.games         = 0;
-    p.ratingHistory = [STARTING_RATING];
+    p.ratingHistory = [base];
     p.last5         = [];
     p.clutchW       = 0;
     p.clutchL       = 0;
@@ -5760,6 +5769,7 @@ async function confirmAddPlayer() {
     players.push({
       id: newId, name: newName, status: 'active',
       rating: startRounded, games: 0, removedDate: null,
+      startingRating: startRounded,
       ratingHistory: [startRounded], last5: [], clutchW: 0, clutchL: 0
     });
     closeAddForm();
@@ -6973,10 +6983,11 @@ async function confirmDeleteMatch() {
       const idx = matches.findIndex(m => m.id === id);
       if (idx !== -1) matches.splice(idx, 1);
 
-      // Reset all player stats to starting rating
+      // Reset all player stats to their individual starting ratings
       players.forEach(p => {
-        p.rating = STARTING_RATING; p.games = 0;
-        p.ratingHistory = [STARTING_RATING]; p.last5 = [];
+        const base = p.startingRating || STARTING_RATING;
+        p.rating = base; p.games = 0;
+        p.ratingHistory = [base]; p.last5 = [];
         p.clutchW = 0; p.clutchL = 0;
       });
 
