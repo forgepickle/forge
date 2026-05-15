@@ -1290,6 +1290,7 @@ body {
 }
 .wl-pill.w { background: rgba(46,168,74,0.12); color: var(--success); }
 .wl-pill.l { background: var(--error-bg); color: var(--error); }
+.wl-pill.t { background: rgba(122,122,122,0.10); color: var(--grey-mid); }
 
 .clutch-no-data {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -2260,8 +2261,12 @@ body {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 12px; font-weight: 700; text-align: right;
 }
-.debrief-pair-stat.g { color: var(--success); }
 .debrief-pair-stat.n { color: var(--grey-mid); }
+.debrief-pair-stat-pills { display: flex; flex-direction: row; align-items: center; gap: 6px; }
+.debrief-pair-pct {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px; font-weight: 900; color: var(--black); text-align: right;
+}
 .debrief-k-row { display: flex; align-items: center; gap: 8px; }
 .debrief-k-av {
   width: 24px; height: 24px; border-radius: 50%;
@@ -5099,12 +5104,31 @@ function renderDebriefInsights(m, rc, isLegacy, teamANames, teamBNames, teamAWon
       : `<span class="debrief-score-margin" style="color:var(--grey-mid);">Tied</span>`;
     return `<div class="debrief-row"><span class="debrief-score-game">Game ${i+1}</span><span class="debrief-score-val">${s.a} – ${s.b}</span>${marginHtml}</div>`;
   }).join('');
+  // Points won % — actual from scores; expected from pre-match ratings (non-legacy only)
+  const totalPtsA = m.scores.reduce((sum, s) => sum + s.a, 0);
+  const totalPtsB = m.scores.reduce((sum, s) => sum + s.b, 0);
+  const totalPts  = totalPtsA + totalPtsB;
+  const actA = totalPts > 0 ? Math.round(totalPtsA / totalPts * 100) : 0;
+  const actB = totalPts > 0 ? Math.round(totalPtsB / totalPts * 100) : 0;
+  let ptExpA = 0, ptExpB = 0;
+  if (!isLegacy && rc.length) {
+    const ptAvgA = m.teamA.map(id => { const r = rc.find(x => x.id === id); return r ? r.oldRating : 0; }).reduce((s,v)=>s+v,0) / m.teamA.length;
+    const ptAvgB = m.teamB.map(id => { const r = rc.find(x => x.id === id); return r ? r.oldRating : 0; }).reduce((s,v)=>s+v,0) / m.teamB.length;
+    ptExpA = Math.round(100 / (1 + Math.pow(10, (ptAvgB - ptAvgA) / 4)));
+    ptExpB = 100 - ptExpA;
+  }
+  const pointsWonHtml = `
+    <div class="debrief-divider"></div>
+    <div class="debrief-team-sep">Points won %</div>
+    ${!isLegacy && rc.length ? `<div class="debrief-row"><span class="debrief-row-label">Expected</span><span class="debrief-row-value">A: ${ptExpA}%&nbsp;&nbsp;B: ${ptExpB}%</span></div>` : ''}
+    <div class="debrief-row"><span class="debrief-row-label">Actual</span><span class="debrief-row-value">A: ${actA}%&nbsp;&nbsp;B: ${actB}%</span></div>`;
   const insight3 = `<div class="debrief-insight">
     <div class="debrief-insight-hdr">${svgScore}<span class="debrief-insight-lbl">Score dominance</span></div>
     <div class="debrief-desc">Point margin per game. A larger margin signals one-sided play even when the scoreline looks close. Consistent margins across games = control, not luck.</div>
     <div class="debrief-body">
       <div class="debrief-row" style="font-size:11px;color:var(--grey-mid);margin-bottom:1px;"><span class="debrief-score-game">Game</span><span class="debrief-score-val" style="font-size:11px;font-weight:400;">Score</span><span class="debrief-score-margin" style="font-size:11px;font-weight:400;color:var(--grey-mid);">Margin</span></div>
       ${scoreRows}
+      ${pointsWonHtml}
     </div></div>`;
   // INSIGHT 4: Pair Chemistry — reads from pre-match snapshot stored in debrief_snapshot_json
   const snap  = m.debriefSnapshot || null;
@@ -5112,13 +5136,14 @@ function renderDebriefInsights(m, rc, isLegacy, teamANames, teamBNames, teamAWon
   const snapB = snap ? snap.pairB : null;
   const initA = m.teamA.map(id => { const p = players.find(x => x.id === id); return p ? getInitials(p.name) : '?'; }).join('');
   const initB = m.teamB.map(id => { const p = players.find(x => x.id === id); return p ? getInitials(p.name) : '?'; }).join('');
-  function pairStatHtml(rec, cls) {
+  function pairStatHtml(rec) {
     if (!snap) return `<span class="debrief-pair-stat n">Pre-match data N/A</span>`;
     if (!rec)  return `<span class="debrief-pair-stat n">No data</span>`;
     const total = rec.w + rec.l + rec.t;
     if (total < 1) return `<span class="debrief-pair-stat n">New pair</span>`;
     const pct = Math.round(rec.w / (rec.w + rec.l || 1) * 100);
-    return `<span class="debrief-pair-stat ${cls}">${rec.w}W ${rec.l}L · ${pct}%</span>`;
+    const tPill = rec.t > 0 ? `<span class="wl-pill t">${rec.t}T</span>` : '';
+    return `<div class="debrief-pair-stat-pills"><div class="wl-pills"><span class="wl-pill w">${rec.w}W</span><span class="wl-pill l">${rec.l}L</span>${tPill}</div><span class="debrief-pair-pct">${pct}%</span></div>`;
   }
   function pairMatchesText(rec) {
     if (!snap || !rec) return 'First match together';
@@ -5133,13 +5158,13 @@ function renderDebriefInsights(m, rc, isLegacy, teamANames, teamBNames, teamAWon
       <div class="debrief-pair-row">
         <div class="debrief-pair-av a">${escHtml(initA)}</div>
         <div style="flex:1;"><div class="debrief-pair-name">${escHtml(teamANames.join(' & '))}</div><div class="debrief-pair-rec">${pairMatchesText(snapA)}</div></div>
-        ${pairStatHtml(snapA, 'g')}
+        ${pairStatHtml(snapA)}
       </div>
       <div class="debrief-divider"></div>
       <div class="debrief-pair-row">
         <div class="debrief-pair-av b">${escHtml(initB)}</div>
         <div style="flex:1;"><div class="debrief-pair-name">${escHtml(teamBNames.join(' & '))}</div><div class="debrief-pair-rec">${pairMatchesText(snapB)}</div></div>
-        ${pairStatHtml(snapB, 'g')}
+        ${pairStatHtml(snapB)}
       </div>
     </div></div>`;
   // INSIGHT 5: K-Factor Context — reads pre-match game counts from snapshot
@@ -5216,6 +5241,7 @@ function shareDebrief() {
   const pairLines = (pairATotal >= 2 || pairBTotal >= 2)
     ? `Pair record going in:\n${pairATotal >= 2 ? `${teamANames.join(' & ')} — ${pairAObj.wins}W ${pairAObj.losses}L (${Math.round(pairAObj.wins/(pairAObj.wins+pairAObj.losses||1)*100)}%)` : ''}\n${pairBTotal >= 2 ? `${teamBNames.join(' & ')} — ${pairBObj.wins}W ${pairBObj.losses}L (${Math.round(pairBObj.wins/(pairBObj.wins+pairBObj.losses||1)*100)}%)` : ''}`.trim()
     : '';
+  const APP_URL = 'https://forgepickle.github.io/app';
   const parts = [
     `${badge.icon} ${badge.text}`,
     '',
@@ -5229,16 +5255,16 @@ function shareDebrief() {
     '',
     pairLines,
     '',
-    `Smash it on Forge 🏓`,
-    'https://forgepickle.github.io/app'
+    `Smash it on Forge 🏓`
   ].filter((l, i, arr) => !(l === '' && arr[i-1] === '')).join('\n').trim();
   window._shareText = parts;
-  window._shareUrl  = 'https://forgepickle.github.io/app';
+  window._shareUrl  = APP_URL;
   if (navigator.share) {
-    navigator.share({ title: 'Forge Match Debrief', text: parts, url: 'https://forgepickle.github.io/app' })
-      .catch(err => { if (err.name !== 'AbortError') copyShareFallback(parts); });
+    // Pass URL separately — OS appends it once; keeps it out of the text body to avoid duplication
+    navigator.share({ title: 'Forge Match Debrief', text: parts, url: APP_URL })
+      .catch(err => { if (err.name !== 'AbortError') copyShareFallback(parts + '\n' + APP_URL); });
   } else {
-    copyShareFallback(parts);
+    copyShareFallback(parts + '\n' + APP_URL);
   }
 }
 
