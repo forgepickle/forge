@@ -2,10 +2,10 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.7.0 — Per-Player Starting Rating ║
+  ║  Version: 7.7.1 — Debrief UI Scale-Up        ║
   ║  Date: 2026-05-15                            ║
-  ║  Changes: confirmAddPlayer now stores        ║
-  ║           startingRating on in-memory player ║
+  ║  Changes: Increased font sizes across all    ║
+  ║           debrief modal classes (~15-20%).   ║
   ║           object. loadDemoData and demo      ║
   ║           delete replay reset each player to ║
   ║           their own startingRating instead   ║
@@ -2182,22 +2182,22 @@ body {
   -webkit-overflow-scrolling: touch;
   padding: 0 0 24px 0;
 }
-.debrief-header { padding: 0 20px 14px; border-bottom: 1px solid var(--grey-light); }
+.debrief-header { padding: 0 20px 14px; }
 .debrief-modal-label {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
   text-transform: uppercase; color: var(--grey-mid); margin-bottom: 8px;
 }
 .debrief-match-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
 .debrief-team-col { flex: 1; text-align: center; }
 .debrief-team-label {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
   text-transform: uppercase; color: var(--grey-mid); margin-bottom: 4px;
 }
 .debrief-team-names {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 14px; font-weight: 700; color: var(--black); line-height: 1.35;
+  font-size: 16px; font-weight: 700; color: var(--black); line-height: 1.35;
 }
 .debrief-team-names.winner { color: var(--success); }
 .debrief-score-col {
@@ -2207,11 +2207,11 @@ body {
 .debrief-sr { display: flex; align-items: center; gap: 5px; }
 .dscore {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-weight: 900; font-size: 18px; line-height: 1; color: var(--black);
+  font-weight: 900; font-size: 22px; line-height: 1; color: var(--black);
 }
 .dscore.win  { color: var(--accent-dim); }
 .dscore.lose { color: var(--grey-mid); }
-.dscore-sep  { font-size: 12px; font-weight: 700; color: var(--grey-mid); }
+.dscore-sep  { font-size: 14px; font-weight: 700; color: var(--grey-mid); }
 .debrief-notice {
   display: flex; align-items: flex-start; gap: 6px;
   margin: 0 14px 10px;
@@ -2223,8 +2223,8 @@ body {
 .debrief-badge {
   display: flex; align-items: center; gap: 5px;
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
-  padding: 5px 12px; border-radius: 20px;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 6px 14px; border-radius: 20px;
   margin: 10px 20px 0; justify-content: center;
 }
 .debrief-badge.upset { background: #faeeda; color: #633806; }
@@ -2240,15 +2240,15 @@ body {
 }
 .debrief-insight-lbl {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  font-size: 13px; font-weight: 700; letter-spacing: 1px;
   text-transform: uppercase; color: var(--grey-dark);
 }
 .debrief-desc {
-  font-size: 11px; color: var(--grey-mid); line-height: 1.5;
-  padding: 7px 14px; border-bottom: 1px solid var(--grey-light); background: var(--bg);
+  font-size: 13px; color: var(--grey-mid); line-height: 1.5;
+  padding: 8px 14px; border-bottom: 1px solid var(--grey-light); background: var(--bg);
 }
 .debrief-body { padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
-.debrief-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+.debrief-row { display: flex; align-items: center; justify-content: space-between; font-size: 14px; }
 .debrief-row-label { color: var(--grey-mid); flex: 1; }
 .debrief-row-value {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -2259,7 +2259,7 @@ body {
 .debrief-divider { height: 1px; background: var(--grey-xlight); margin: 3px 0; }
 .debrief-team-sep {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
   text-transform: uppercase; color: var(--grey-mid); margin-bottom: 2px;
 }
 .debrief-prob-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--grey-mid); margin-bottom: 4px; }
@@ -2277,9 +2277,9 @@ body {
 .debrief-pair-av.b { background: var(--grey-dark); color: var(--white); }
 .debrief-pair-name {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 13px; font-weight: 700; color: var(--black);
+  font-size: 15px; font-weight: 700; color: var(--black);
 }
-.debrief-pair-rec { font-size: 11px; color: var(--grey-mid); }
+.debrief-pair-rec { font-size: 12px; color: var(--grey-mid); }
 .debrief-pair-stat {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 12px; font-weight: 700; text-align: right;
@@ -2288,7 +2288,7 @@ body {
 .debrief-pair-stat-pills { display: flex; flex-direction: row; align-items: center; gap: 6px; }
 .debrief-pair-pct {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 13px; font-weight: 900; color: var(--black); text-align: right;
+  font-size: 15px; font-weight: 900; color: var(--black); text-align: right;
 }
 .debrief-k-row { display: flex; align-items: center; gap: 8px; }
 .debrief-k-av {
@@ -2298,25 +2298,25 @@ body {
   font-size: 9px; font-weight: 700; flex-shrink: 0;
   background: var(--grey-xlight); color: var(--grey-dark);
 }
-.debrief-k-name { font-size: 12px; color: var(--black); flex: 1; }
-.debrief-k-games { font-size: 11px; color: var(--grey-mid); min-width: 48px; text-align: right; }
+.debrief-k-name { font-size: 14px; color: var(--black); flex: 1; }
+.debrief-k-games { font-size: 13px; color: var(--grey-mid); min-width: 48px; text-align: right; }
 .debrief-k-badge {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 10px; font-weight: 700; padding: 2px 7px;
+  font-size: 11px; font-weight: 700; padding: 2px 7px;
   border-radius: 10px; min-width: 34px; text-align: center; letter-spacing: 0.3px;
 }
 .debrief-k-badge.k100 { background: var(--accent); color: var(--black); }
 .debrief-k-badge.k85  { background: #d4efb0; color: #3a6000; }
 .debrief-k-badge.k70  { background: #faeeda; color: #633806; }
 .debrief-k-badge.k55  { background: var(--grey-xlight); color: var(--grey-dark); }
-.debrief-score-game { min-width: 44px; font-size: 13px; color: var(--grey-mid); }
+.debrief-score-game { min-width: 44px; font-size: 14px; color: var(--grey-mid); }
 .debrief-score-val {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 14px; font-weight: 700; min-width: 60px; text-align: center; color: var(--black);
+  font-size: 16px; font-weight: 700; min-width: 60px; text-align: center; color: var(--black);
 }
 .debrief-score-margin {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 12px; font-weight: 700; min-width: 72px; text-align: right;
+  font-size: 13px; font-weight: 700; min-width: 72px; text-align: right;
 }
 .debrief-score-margin.pos { color: var(--success); }
 .debrief-btn-row {
