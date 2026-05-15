@@ -2,13 +2,14 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.5.1 — Inactive Chip Fix          ║
-  ║  Date: 2026-05-12                            ║
-  ║  Changes: Replace stale = placeholder with   ║
-  ║           · on inactive ml-chips (Match List ║
-  ║           + Analytics Pairs). Add            ║
-  ║           .ml-chip.inactive-chip CSS to      ║
-  ║           match player-chip grey treatment.  ║
+  ║  Version: 7.6.0 — Debrief Snapshot Fix       ║
+  ║  Date: 2026-05-15                            ║
+  ║  Changes: Pair Chemistry + K-Factor now read ║
+  ║           pre-match values from              ║
+  ║           debriefSnapshot (stored in GAS at  ║
+  ║           add-match time) instead of live    ║
+  ║           client-side state. Graceful        ║
+  ║           fallback for legacy matches.       ║
   ║                                              ║
   ║  v7.5 — Pair & DNA Bug Fixes (2026-05-12)    ║
   ║           Fix pair tie-handling across       ║
@@ -444,6 +445,7 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
   width: 100%;
 }
 .screen.active { display: block; }
@@ -2135,7 +2137,7 @@ body {
 
 /* Delete button row */
 .match-card-footer {
-  display: flex; justify-content: flex-end;
+  display: flex; justify-content: space-between; align-items: center;
   padding: 8px 14px;
   border-top: 1px solid var(--grey-xlight);
 }
@@ -2150,6 +2152,180 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 .match-delete-btn:hover { color: var(--error); }
+.match-debrief-btn {
+  display: flex; align-items: center; gap: 5px;
+  background: none; border: none;
+  cursor: pointer; color: var(--grey-mid);
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: 12px;
+  letter-spacing: 0.8px; text-transform: uppercase;
+  padding: 4px 0; transition: color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.match-debrief-btn:hover { color: var(--black); }
+
+/* ════════════════════════════════════════════
+   DEBRIEF MODAL
+════════════════════════════════════════════ */
+#debriefModal .modal-sheet {
+  max-height: calc(100% - 60px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 0 24px 0;
+}
+.debrief-header { padding: 0 20px 14px; border-bottom: 1px solid var(--grey-light); }
+.debrief-modal-label {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--grey-mid); margin-bottom: 8px;
+}
+.debrief-match-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+.debrief-team-col { flex: 1; text-align: center; }
+.debrief-team-label {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--grey-mid); margin-bottom: 4px;
+}
+.debrief-team-names {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px; font-weight: 700; color: var(--black); line-height: 1.35;
+}
+.debrief-team-names.winner { color: var(--success); }
+.debrief-score-col {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 20px; font-weight: 900; color: var(--black);
+  text-align: center; min-width: 52px; letter-spacing: -0.5px; padding-top: 14px;
+}
+.debrief-badge {
+  display: flex; align-items: center; gap: 5px;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 5px 12px; border-radius: 20px;
+  margin: 10px 20px 0; justify-content: center;
+}
+.debrief-badge.upset { background: #faeeda; color: #633806; }
+.debrief-badge.fav   { background: var(--grey-xlight); color: var(--grey-dark); }
+.debrief-badge.even  { background: var(--grey-xlight); color: var(--grey-dark); }
+.debrief-badge.tied  { background: rgba(245,166,35,0.15); color: #7a5000; }
+.debrief-sections { padding: 0 14px; margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.debrief-insight { border: 1px solid var(--grey-light); border-radius: 12px; overflow: hidden; background: var(--white); }
+.debrief-insight-hdr {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 14px; background: var(--grey-xlight);
+  border-bottom: 1px solid var(--grey-light);
+}
+.debrief-insight-lbl {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--grey-dark);
+}
+.debrief-desc {
+  font-size: 11px; color: var(--grey-mid); line-height: 1.5;
+  padding: 7px 14px; border-bottom: 1px solid var(--grey-light); background: var(--bg);
+}
+.debrief-body { padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.debrief-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+.debrief-row-label { color: var(--grey-mid); flex: 1; }
+.debrief-row-value {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; color: var(--black); text-align: right;
+}
+.debrief-row-value.up { color: var(--success); }
+.debrief-row-value.dn { color: var(--error); }
+.debrief-divider { height: 1px; background: var(--grey-xlight); margin: 3px 0; }
+.debrief-team-sep {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--grey-mid); margin-bottom: 2px;
+}
+.debrief-prob-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--grey-mid); margin-bottom: 4px; }
+.debrief-prob-bar { height: 8px; border-radius: 4px; display: flex; overflow: hidden; background: var(--grey-light); }
+.debrief-prob-a { height: 100%; border-radius: 4px 0 0 4px; background: var(--accent); }
+.debrief-prob-b { flex: 1; background: var(--grey-dark); border-radius: 0 4px 4px 0; }
+.debrief-pair-row { display: flex; align-items: center; gap: 8px; }
+.debrief-pair-av {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 9px; font-weight: 700; flex-shrink: 0;
+}
+.debrief-pair-av.a { background: var(--accent); color: var(--black); }
+.debrief-pair-av.b { background: var(--grey-dark); color: var(--white); }
+.debrief-pair-name {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px; font-weight: 700; color: var(--black);
+}
+.debrief-pair-rec { font-size: 11px; color: var(--grey-mid); }
+.debrief-pair-stat {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px; font-weight: 700; text-align: right;
+}
+.debrief-pair-stat.g { color: var(--success); }
+.debrief-pair-stat.n { color: var(--grey-mid); }
+.debrief-k-row { display: flex; align-items: center; gap: 8px; }
+.debrief-k-av {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 9px; font-weight: 700; flex-shrink: 0;
+  background: var(--grey-xlight); color: var(--grey-dark);
+}
+.debrief-k-name { font-size: 12px; color: var(--black); flex: 1; }
+.debrief-k-games { font-size: 11px; color: var(--grey-mid); min-width: 48px; text-align: right; }
+.debrief-k-badge {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 10px; font-weight: 700; padding: 2px 7px;
+  border-radius: 10px; min-width: 34px; text-align: center; letter-spacing: 0.3px;
+}
+.debrief-k-badge.k100 { background: var(--accent); color: var(--black); }
+.debrief-k-badge.k85  { background: #d4efb0; color: #3a6000; }
+.debrief-k-badge.k70  { background: #faeeda; color: #633806; }
+.debrief-k-badge.k55  { background: var(--grey-xlight); color: var(--grey-dark); }
+.debrief-score-game { min-width: 44px; font-size: 13px; color: var(--grey-mid); }
+.debrief-score-val {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px; font-weight: 700; min-width: 60px; text-align: center; color: var(--black);
+}
+.debrief-score-margin {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 12px; font-weight: 700; min-width: 72px; text-align: right;
+}
+.debrief-score-margin.pos { color: var(--success); }
+.debrief-btn-row {
+  display: flex; gap: 8px;
+  margin: 12px 14px 4px;
+}
+.debrief-share-btn {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 16px;
+  border: 1.5px solid var(--grey-light); border-radius: 12px;
+  background: var(--white); cursor: pointer;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--grey-dark);
+  transition: border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.debrief-share-btn:hover { border-color: var(--grey-dark); color: var(--black); }
+.debrief-done-btn {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  padding: 12px 18px;
+  border: 1.5px solid var(--grey-light); border-radius: 12px;
+  background: var(--white); cursor: pointer;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--grey-mid);
+  transition: border-color 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.debrief-done-btn:hover { border-color: var(--grey-dark); color: var(--black); }
+@keyframes ptr-spin { to { transform: rotate(360deg); } }
+.debrief-legacy-msg {
+  font-size: 13px; color: var(--grey-mid);
+  text-align: center; padding: 16px 14px; font-style: italic;
+}
 
 /* Empty state */
 .match-empty {
@@ -3807,7 +3983,7 @@ body {
 <script>
 /* ============================================
    FORGE = Your Pickleball Mettle
-   Version: 7.5.1 | Backend: Google Apps Script
+   Version: 7.6.0 | Backend: Google Apps Script
    Frontend: GitHub Pages
 ============================================ */
 
@@ -4353,7 +4529,7 @@ function _resetAppUI() {
   document.getElementById('ballDeco2').style.display = 'none';
 
   // Close any open modals
-  ['removeModal','deleteMatchModal','reinstateModal','tooltipModal','leaveMatchModal'].forEach(id => {
+  ['removeModal','deleteMatchModal','reinstateModal','tooltipModal','leaveMatchModal','debriefModal'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('show');
   });
@@ -4553,6 +4729,7 @@ async function _runSplashThenLaunch(phase1Min) {
     renderAnalytics();
     renderLeaderboard();
     startBackgroundSync();
+    initPullToRefresh();
   } catch(e) {
     fetchError = e;
     console.error('Fetch error during splash:', e);
@@ -4643,10 +4820,67 @@ async function launchApp() {
     renderAnalytics();
     renderLeaderboard();
     startBackgroundSync();
+    initPullToRefresh();
   } catch(e) {
     showError('Failed to load data. Please refresh.');
     console.error('launchApp error:', e);
   }
+}
+
+function initPullToRefresh() {
+  if (isDemoMode) return;
+  const SCREENS = ['screenPlayers','screenAnalytics','screenLeaderboard','screenMatches'];
+  const THRESHOLD = 60;
+  SCREENS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let startY = 0, pulling = false, indicator = null;
+    function getOrCreateIndicator() {
+      if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.style.cssText = 'position:absolute;top:calc(var(--topbar-h) + var(--header-h) + 4px);left:50%;transform:translateX(-50%);background:var(--black);color:var(--white);font-family:"Barlow Condensed",-apple-system,sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:5px 14px;border-radius:20px;z-index:50;opacity:0;transition:opacity 0.15s;pointer-events:none;';
+        indicator.textContent = 'Pull to refresh';
+        el.parentNode.insertBefore(indicator, el);
+      }
+      return indicator;
+    }
+    el.addEventListener('touchstart', e => {
+      if (el.scrollTop !== 0) return;
+      startY = e.touches[0].clientY;
+      pulling = true;
+    }, { passive: true });
+    el.addEventListener('touchmove', e => {
+      if (!pulling) return;
+      const deltaY = e.touches[0].clientY - startY;
+      if (deltaY > 0 && el.scrollTop === 0) {
+        const ind = getOrCreateIndicator();
+        if (deltaY > THRESHOLD) {
+          ind.textContent = '↑ Release to refresh';
+          ind.style.opacity = '1';
+          e.preventDefault();
+        } else {
+          ind.style.opacity = (deltaY / THRESHOLD).toFixed(2);
+          ind.textContent = 'Pull to refresh';
+        }
+      }
+    }, { passive: false });
+    el.addEventListener('touchend', e => {
+      if (!pulling) return;
+      pulling = false;
+      const deltaY = e.changedTouches[0].clientY - startY;
+      const ind = indicator;
+      if (ind) { ind.style.opacity = '0'; }
+      if (deltaY > THRESHOLD && el.scrollTop === 0) {
+        if (ind) {
+          ind.innerHTML = '<span style="display:inline-block;width:10px;height:10px;border:1.5px solid rgba(255,255,255,0.35);border-top-color:#fff;border-radius:50%;animation:ptr-spin 0.65s linear infinite;vertical-align:middle;margin-right:7px;"></span>Refreshing';
+          ind.style.opacity = '1';
+        }
+        refreshAllData().finally(() => {
+          if (ind) { ind.style.opacity = '0'; }
+        });
+      }
+    }, { passive: true });
+  });
 }
 
 // Wipes all rendered screen content back to blank/skeleton state.
@@ -4729,6 +4963,282 @@ async function refreshAllData() {
     if (currentScreen === 'matches') _renderMatchList();
   } catch(e) {
     console.warn('refreshAllData failed:', e.message);
+  }
+}
+
+// ==========================================================
+// DEBRIEF MODAL
+// ==========================================================
+let _debriefMatchId = null;
+function openDebriefModal(matchId) {
+  const m = matches.find(x => x.id === matchId);
+  if (!m) return;
+  _debriefMatchId = matchId;
+  const getName = id => { const p = players.find(x => x.id === id); return p ? p.name : 'Unknown'; };
+  const getInit = id => { const p = players.find(x => x.id === id); return p ? getInitials(p.name) : '??'; };
+  const teamANames = m.teamA.map(getName);
+  const teamBNames = m.teamB.map(getName);
+  let aWins = 0, bWins = 0;
+  m.scores.forEach(s => { if (s.a > s.b) aWins++; else if (s.b > s.a) bWins++; });
+  const teamAWon = aWins > bWins, teamBWon = bWins > aWins, isTie = !teamAWon && !teamBWon;
+  const firstScore  = m.scores[0] || { a: 0, b: 0 };
+  const secondScore = m.scores[1] || null;
+  // Header: team names + scores
+  document.getElementById('debriefMatchRow').innerHTML = `
+    <div class="debrief-team-col">
+      <div class="debrief-team-label">Team A</div>
+      <div class="debrief-team-names ${teamAWon ? 'winner' : ''}">${escHtml(teamANames[0])}<br>${escHtml(teamANames[1])}</div>
+    </div>
+    <div class="debrief-score-col">
+      ${escHtml(String(firstScore.a))}–${escHtml(String(firstScore.b))}
+      ${secondScore ? `<br><span style="font-size:13px;color:var(--grey-mid);">${escHtml(String(secondScore.a))}–${escHtml(String(secondScore.b))}</span>` : ''}
+      ${m.scores.length > 2 ? `<br><span style="font-size:11px;color:var(--grey-mid);">+${m.scores.length - 2}</span>` : ''}
+    </div>
+    <div class="debrief-team-col">
+      <div class="debrief-team-label">Team B</div>
+      <div class="debrief-team-names ${teamBWon ? 'winner' : ''}">${escHtml(teamBNames[0])}<br>${escHtml(teamBNames[1])}</div>
+    </div>`;
+  // Badge
+  const rc = m.ratingChanges || [];
+  const isLegacy = rc.length === 0;
+  let ratingGap = 0;
+  if (!isLegacy) {
+    const teamARatings = m.teamA.map(id => { const rc2 = rc.find(x => x.id === id); return rc2 ? rc2.oldRating : 0; });
+    const teamBRatings = m.teamB.map(id => { const rc2 = rc.find(x => x.id === id); return rc2 ? rc2.oldRating : 0; });
+    const avgA = teamARatings.reduce((s, v) => s + v, 0) / teamARatings.length;
+    const avgB = teamBRatings.reduce((s, v) => s + v, 0) / teamBRatings.length;
+    ratingGap = Math.abs(avgA - avgB);
+  }
+  const badge = getDebriefBadge(ratingGap, teamAWon, teamBWon, isTie, m, rc);
+  document.getElementById('debriefBadge').innerHTML = `
+    <div class="debrief-badge ${badge.cls}">
+      ${badge.icon}
+      ${escHtml(badge.text)}
+    </div>`;
+  // Insights
+  document.getElementById('debriefInsights').innerHTML = renderDebriefInsights(m, rc, isLegacy, teamANames, teamBNames, teamAWon, teamBWon, isTie, ratingGap);
+  document.getElementById('debriefModal').classList.add('show');
+}
+function closeDebriefModal() {
+  document.getElementById('debriefModal').classList.remove('show');
+  _debriefMatchId = null;
+}
+function getDebriefBadge(gap, teamAWon, teamBWon, isTie, m, rc) {
+  const gapStr = gap.toFixed(2);
+  if (isTie) return { cls: 'tied', icon: '=', text: "It's a tie — no rating winner" };
+  if (gap < 0.10) return { cls: 'even', icon: '≈', text: `Even match — ratings within 0.10` };
+  const avgA = m.teamA.map(id => { const r = rc.find(x => x.id === id); return r ? r.oldRating : 0; }).reduce((s,v)=>s+v,0) / m.teamA.length;
+  const avgB = m.teamB.map(id => { const r = rc.find(x => x.id === id); return r ? r.oldRating : 0; }).reduce((s,v)=>s+v,0) / m.teamB.length;
+  const teamAWasFav = avgA > avgB;
+  const upset = (teamAWon && !teamAWasFav) || (teamBWon && teamAWasFav);
+  if (upset) return { cls: 'upset', icon: '⚡', text: `Upset — underdogs won · ${gapStr} gap` };
+  return { cls: 'fav', icon: '✓', text: `Favourites won as expected · ${gapStr} gap` };
+}
+function renderDebriefInsights(m, rc, isLegacy, teamANames, teamBNames, teamAWon, teamBWon, isTie, ratingGap) {
+  const svgLine   = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--grey-mid)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`;
+  const svgScales = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--grey-mid)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>`;
+  const svgScore  = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--grey-mid)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+  const svgUsers  = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--grey-mid)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+  const svgK      = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--grey-mid)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>`;
+  // INSIGHT 1: Rating Impact
+  let insight1Body;
+  if (isLegacy) {
+    insight1Body = `<div class="debrief-legacy-msg">Oops... this is a legacy record without breakdown data.</div>`;
+  } else {
+    const teamARows = m.teamA.map(id => {
+      const r = rc.find(x => x.id === id); if (!r) return '';
+      const delta = parseFloat((r.newRating - r.oldRating).toFixed(2));
+      const cls = delta > 0.005 ? 'up' : delta < -0.005 ? 'dn' : '';
+      const sign = delta >= 0 ? '▲ +' : '▼ ';
+      return `<div class="debrief-row"><span class="debrief-row-label">${escHtml(r.name)} &nbsp;${r.oldRating.toFixed(2)} → ${r.newRating.toFixed(2)}</span><span class="debrief-row-value ${cls}">${sign}${Math.abs(delta).toFixed(2)}</span></div>`;
+    }).join('');
+    const teamBRows = m.teamB.map(id => {
+      const r = rc.find(x => x.id === id); if (!r) return '';
+      const delta = parseFloat((r.newRating - r.oldRating).toFixed(2));
+      const cls = delta > 0.005 ? 'up' : delta < -0.005 ? 'dn' : '';
+      const sign = delta >= 0 ? '▲ +' : '▼ ';
+      return `<div class="debrief-row"><span class="debrief-row-label">${escHtml(r.name)} &nbsp;${r.oldRating.toFixed(2)} → ${r.newRating.toFixed(2)}</span><span class="debrief-row-value ${cls}">${sign}${Math.abs(delta).toFixed(2)}</span></div>`;
+    }).join('');
+    insight1Body = `<div class="debrief-body"><div class="debrief-team-sep">Team A</div>${teamARows}<div class="debrief-divider"></div><div class="debrief-team-sep">Team B</div>${teamBRows}</div>`;
+  }
+  const insight1 = `<div class="debrief-insight">
+    <div class="debrief-insight-hdr">${svgLine}<span class="debrief-insight-lbl">Rating impact</span></div>
+    <div class="debrief-desc">Each player's DUPR before and after this match. Larger swings mean the result was unexpected — beating a stronger team moves you more than beating an equal one.</div>
+    ${insight1Body}</div>`;
+  // INSIGHT 2: Matchup Balance
+  let insight2 = '';
+  if (!isLegacy) {
+    const avgA = m.teamA.map(id => { const r = rc.find(x => x.id === id); return r ? r.oldRating : 0; }).reduce((s,v)=>s+v,0) / m.teamA.length;
+    const avgB = m.teamB.map(id => { const r = rc.find(x => x.id === id); return r ? r.oldRating : 0; }).reduce((s,v)=>s+v,0) / m.teamB.length;
+    const expA = Math.round(100 / (1 + Math.pow(10, (avgB - avgA) / 4)));
+    const expB = 100 - expA;
+    const favCls = expA >= 50 ? 'color:var(--success);' : 'color:var(--grey-dark);';
+    const undCls = expB > expA ? 'color:var(--success);' : 'color:var(--grey-dark);';
+    insight2 = `<div class="debrief-insight">
+      <div class="debrief-insight-hdr">${svgScales}<span class="debrief-insight-lbl">Matchup balance</span></div>
+      <div class="debrief-desc">Based on pre-match ratings. Higher % = stronger team on paper. Winning as the lower-% side is an upset; losing as the higher-% side costs more rating.</div>
+      <div class="debrief-body">
+        <div class="debrief-row"><span class="debrief-row-label">Team A avg rating</span><span class="debrief-row-value">${avgA.toFixed(2)}</span></div>
+        <div class="debrief-row"><span class="debrief-row-label">Team B avg rating</span><span class="debrief-row-value">${avgB.toFixed(2)}</span></div>
+        <div class="debrief-divider"></div>
+        <div class="debrief-prob-labels"><span>Team A expected</span><span>Team B expected</span></div>
+        <div class="debrief-prob-bar"><div class="debrief-prob-a" style="width:${expA}%;"></div><div class="debrief-prob-b"></div></div>
+        <div class="debrief-prob-labels" style="margin-top:4px;">
+          <span style="font-weight:700;${favCls}">${expA}% favoured</span>
+          <span style="font-weight:700;${undCls}">${expB}% favoured</span>
+        </div>
+      </div></div>`;
+  }
+  // INSIGHT 3: Score Dominance
+  const scoreRows = m.scores.map((s, i) => {
+    const margin = s.b - s.a;
+    const absMargin = Math.abs(margin);
+    const winTeam = margin > 0 ? 'Team B' : margin < 0 ? 'Team A' : null;
+    const marginHtml = winTeam
+      ? `<span class="debrief-score-margin pos">${escHtml(winTeam)} +${absMargin}</span>`
+      : `<span class="debrief-score-margin" style="color:var(--grey-mid);">Tied</span>`;
+    return `<div class="debrief-row"><span class="debrief-score-game">Game ${i+1}</span><span class="debrief-score-val">${s.a} – ${s.b}</span>${marginHtml}</div>`;
+  }).join('');
+  const insight3 = `<div class="debrief-insight">
+    <div class="debrief-insight-hdr">${svgScore}<span class="debrief-insight-lbl">Score dominance</span></div>
+    <div class="debrief-desc">Point margin per game. A larger margin signals one-sided play even when the scoreline looks close. Consistent margins across games = control, not luck.</div>
+    <div class="debrief-body">
+      <div class="debrief-row" style="font-size:11px;color:var(--grey-mid);margin-bottom:1px;"><span class="debrief-score-game">Game</span><span class="debrief-score-val" style="font-size:11px;font-weight:400;">Score</span><span class="debrief-score-margin" style="font-size:11px;font-weight:400;color:var(--grey-mid);">Margin</span></div>
+      ${scoreRows}
+    </div></div>`;
+  // INSIGHT 4: Pair Chemistry — reads from pre-match snapshot stored in debrief_snapshot_json
+  const snap  = m.debriefSnapshot || null;
+  const snapA = snap ? snap.pairA : null;   // { w, l, t } going into this match
+  const snapB = snap ? snap.pairB : null;
+  const initA = m.teamA.map(id => { const p = players.find(x => x.id === id); return p ? getInitials(p.name) : '?'; }).join('');
+  const initB = m.teamB.map(id => { const p = players.find(x => x.id === id); return p ? getInitials(p.name) : '?'; }).join('');
+  function pairStatHtml(rec, cls) {
+    if (!snap) return `<span class="debrief-pair-stat n">Pre-match data N/A</span>`;
+    if (!rec)  return `<span class="debrief-pair-stat n">No data</span>`;
+    const total = rec.w + rec.l + rec.t;
+    if (total < 1) return `<span class="debrief-pair-stat n">New pair</span>`;
+    const pct = Math.round(rec.w / (rec.w + rec.l || 1) * 100);
+    return `<span class="debrief-pair-stat ${cls}">${rec.w}W ${rec.l}L · ${pct}%</span>`;
+  }
+  function pairMatchesText(rec) {
+    if (!snap || !rec) return 'First match together';
+    const total = rec.w + rec.l + rec.t;
+    if (total === 0) return 'First match together';
+    return `${total} match${total === 1 ? '' : 'es'} together`;
+  }
+  const insight4 = `<div class="debrief-insight">
+    <div class="debrief-insight-hdr">${svgUsers}<span class="debrief-insight-lbl">Pair chemistry</span></div>
+    <div class="debrief-desc">All-time record for each team playing together before this match. More matches = more predictable pattern. A high win rate as a pair signals strong chemistry.</div>
+    <div class="debrief-body">
+      <div class="debrief-pair-row">
+        <div class="debrief-pair-av a">${escHtml(initA)}</div>
+        <div style="flex:1;"><div class="debrief-pair-name">${escHtml(teamANames.join(' & '))}</div><div class="debrief-pair-rec">${pairMatchesText(snapA)}</div></div>
+        ${pairStatHtml(snapA, 'g')}
+      </div>
+      <div class="debrief-divider"></div>
+      <div class="debrief-pair-row">
+        <div class="debrief-pair-av b">${escHtml(initB)}</div>
+        <div style="flex:1;"><div class="debrief-pair-name">${escHtml(teamBNames.join(' & '))}</div><div class="debrief-pair-rec">${pairMatchesText(snapB)}</div></div>
+        ${pairStatHtml(snapB, 'g')}
+      </div>
+    </div></div>`;
+  // INSIGHT 5: K-Factor Context — reads pre-match game counts from snapshot
+  function getKBracket(games) {
+    if (games < 5)  return { label: '100% K', cls: 'k100' };
+    if (games < 10) return { label: '85% K',  cls: 'k85' };
+    if (games < 20) return { label: '70% K',  cls: 'k70' };
+    return              { label: '55% K',  cls: 'k55' };
+  }
+  function kRows(ids, teamRc) {
+    return ids.map(id => {
+      const p = players.find(x => x.id === id);
+      if (!p) return '';
+      // Use pre-match game count from snapshot; fall back to current games if absent
+      const preGames = (snap && snap.games && snap.games[id] !== undefined)
+        ? snap.games[id]
+        : (p.games || 0);
+      const bracket = getKBracket(preGames);
+      const init = getInitials(p.name);
+      return `<div class="debrief-k-row">
+        <div class="debrief-k-av">${escHtml(init)}</div>
+        <span class="debrief-k-name">${escHtml(p.name)}</span>
+        <span class="debrief-k-games">${preGames} games</span>
+        <span class="debrief-k-badge ${bracket.cls}">${bracket.label}</span>
+      </div>`;
+    }).join('');
+  }
+  const insight5 = `<div class="debrief-insight">
+    <div class="debrief-insight-hdr">${svgK}<span class="debrief-insight-lbl">K-factor context</span></div>
+    <div class="debrief-desc">K-factor controls how fast your rating moves. New players (100%) swing fast — still calibrating. Veterans (55%) move slowly — rating already well-established. Same delta, different movement.</div>
+    <div class="debrief-body">
+      <div class="debrief-team-sep">Team A</div>
+      ${kRows(m.teamA, rc)}
+      <div class="debrief-divider"></div>
+      <div class="debrief-team-sep">Team B</div>
+      ${kRows(m.teamB, rc)}
+    </div></div>`;
+  return insight1 + insight2 + insight3 + insight4 + insight5;
+}
+function shareDebrief() {
+  const m = _debriefMatchId ? matches.find(x => x.id === _debriefMatchId) : null;
+  if (!m) return;
+  const getName = id => { const p = players.find(x => x.id === id); return p ? p.name : 'Unknown'; };
+  const teamANames = m.teamA.map(getName);
+  const teamBNames = m.teamB.map(getName);
+  const rc = m.ratingChanges || [];
+  let aWins = 0, bWins = 0;
+  m.scores.forEach(s => { if (s.a > s.b) aWins++; else if (s.b > s.a) bWins++; });
+  const teamAWon = aWins > bWins, teamBWon = bWins > aWins, isTie = !teamAWon && !teamBWon;
+  const scoresStr = m.scores.map(s => `${s.a}–${s.b}`).join(', ');
+  let avgA = 0, avgB = 0, expA = 0, expB = 0, gap = 0;
+  if (rc.length) {
+    avgA = m.teamA.map(id => { const r = rc.find(x => x.id === id); return r ? r.oldRating : 0; }).reduce((s,v)=>s+v,0) / m.teamA.length;
+    avgB = m.teamB.map(id => { const r = rc.find(x => x.id === id); return r ? r.oldRating : 0; }).reduce((s,v)=>s+v,0) / m.teamB.length;
+    gap = Math.abs(avgA - avgB);
+    expA = Math.round(100 / (1 + Math.pow(10, (avgB - avgA) / 4)));
+    expB = 100 - expA;
+  }
+  const badge = getDebriefBadge(gap, teamAWon, teamBWon, isTie, m, rc);
+  let firstLine;
+  if (isTie)        firstLine = `No winner`;
+  else if (teamAWon) firstLine = `${teamANames.join(' & ')} won${gap >= 0.10 ? ` ${avgA >= avgB ? 'as expected' : 'as underdogs'} (${gap.toFixed(2)} rating gap)` : ' (evenly matched)'}`;
+  else               firstLine = `${teamBNames.join(' & ')} won${gap >= 0.10 ? ` ${avgB >= avgA ? 'as expected' : 'as underdogs'} (${gap.toFixed(2)} rating gap)` : ' (evenly matched)'}`;
+  const ratingLines = rc.length
+    ? `Rating:\n${m.teamA.map(id => { const r = rc.find(x=>x.id===id); if(!r) return ''; const d=parseFloat((r.newRating-r.oldRating).toFixed(2)); return `${r.name} ${d>=0?'▲+':'▼'}${d.toFixed(2)}`; }).join('  ')}\n${m.teamB.map(id => { const r = rc.find(x=>x.id===id); if(!r) return ''; const d=parseFloat((r.newRating-r.oldRating).toFixed(2)); return `${r.name} ${d>=0?'▲+':'▼'}${d.toFixed(2)}`; }).join('  ')}`
+    : '';
+  const expectedLines = rc.length
+    ? `Expected:\n${teamANames.join(' & ')} ${expA}%\n${teamBNames.join(' & ')} ${expB}%`
+    : '';
+  const pairAObj = pairs.find(p => p.p1 === [...m.teamA].sort()[0] && p.p2 === [...m.teamA].sort()[1]);
+  const pairBObj = pairs.find(p => p.p1 === [...m.teamB].sort()[0] && p.p2 === [...m.teamB].sort()[1]);
+  const pairATotal = pairAObj ? pairAObj.wins + pairAObj.losses + pairAObj.ties : 0;
+  const pairBTotal = pairBObj ? pairBObj.wins + pairBObj.losses + pairBObj.ties : 0;
+  const pairLines = (pairATotal >= 2 || pairBTotal >= 2)
+    ? `Pair record going in:\n${pairATotal >= 2 ? `${teamANames.join(' & ')} — ${pairAObj.wins}W ${pairAObj.losses}L (${Math.round(pairAObj.wins/(pairAObj.wins+pairAObj.losses||1)*100)}%)` : ''}\n${pairBTotal >= 2 ? `${teamBNames.join(' & ')} — ${pairBObj.wins}W ${pairBObj.losses}L (${Math.round(pairBObj.wins/(pairBObj.wins+pairBObj.losses||1)*100)}%)` : ''}`.trim()
+    : '';
+  const parts = [
+    `${badge.icon} ${badge.text}`,
+    '',
+    firstLine,
+    '',
+    `Score: ${scoresStr}`,
+    '',
+    expectedLines,
+    '',
+    ratingLines,
+    '',
+    pairLines,
+    '',
+    `Smash it on Forge 🏓`,
+    'https://forgepickle.github.io/app'
+  ].filter((l, i, arr) => !(l === '' && arr[i-1] === '')).join('\n').trim();
+  window._shareText = parts;
+  window._shareUrl  = 'https://forgepickle.github.io/app';
+  if (navigator.share) {
+    navigator.share({ title: 'Forge Match Debrief', text: parts, url: 'https://forgepickle.github.io/app' })
+      .catch(err => { if (err.name !== 'AbortError') copyShareFallback(parts); });
+  } else {
+    copyShareFallback(parts);
   }
 }
 
@@ -6104,7 +6614,7 @@ function renderLbIndividual() {
     const rankEl = rank <= 3
       ? `<div class="lb-medal m${rank}">${rank}</div>`
       : `<div class="lb-rank">${rank}</div>`;
-    return `<div class="lb-card ${cardClass} ${isInactive?'inactive-card':''}" style="animation-delay:${i*0.05}s;cursor:pointer;" onclick="goToFilteredMatches('player','${p.id}')">
+    return `<div class="lb-card ${cardClass} ${isInactive?'inactive-card':''}" style="animation-delay:${i*0.05}s;cursor:pointer;" onclick="goToPlayerAnalytics('${p.id}')">
       ${rankEl}
       <div class="lb-avatar ${isInactive?'muted':''}">${getInitials(p.name)}</div>
       <div class="lb-info">
@@ -6164,7 +6674,7 @@ function renderLbPairs() {
       : rank <= 3
         ? `<div class="lb-medal m${rank}">${rank}</div>`
         : `<div class="lb-rank">${rank}</div>`;
-    return `<div class="lb-card ${cardClass} ${pair.hasInactive?'inactive-card':''} ${isUnranked?'unranked':''}" style="cursor:pointer;" onclick="goToFilteredMatches('pair','${pair.p1}','${pair.p2}')">
+    return `<div class="lb-card ${cardClass} ${pair.hasInactive?'inactive-card':''} ${isUnranked?'unranked':''}" style="cursor:pointer;" onclick="goToPairAnalytics('${pair.p1}','${pair.p2}')">
       ${pairRankEl}
       <div style="position:relative;width:42px;height:42px;flex-shrink:0;">
         <div class="lb-avatar muted" style="position:absolute;top:0;left:0;width:30px;height:30px;font-size:11px;border-radius:8px;">${av1}</div>
@@ -6307,6 +6817,10 @@ function renderMatchCard(m, idx) {
     </div>
     ${ratingHtml?`<div class="match-rating-row">${ratingHtml}</div>`:''}
     <div class="match-card-footer">
+      <button class="match-debrief-btn" onclick="openDebriefModal('${escHtml(m.id)}')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Debrief
+      </button>
       <button class="match-delete-btn" onclick="openDeleteMatchModal('${escHtml(m.id)}')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         Delete
@@ -7479,6 +7993,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // Edit player modal close on overlay tap
   const em = document.getElementById('editPlayerModal');
   if (em) em.addEventListener('click', function(e) { if (e.target===this) closeEditModal(); });
+  // Debrief modal close on overlay tap
+  const dm = document.getElementById('debriefModal');
+  if (dm) dm.addEventListener('click', function(e) { if (e.target === this) closeDebriefModal(); });
 
   // Date input change handler
   const de = document.getElementById('matchDate');
@@ -7534,6 +8051,26 @@ document.addEventListener('DOMContentLoaded', function() {
         <button class="modal-confirm" id="leaveMatchConfirmBtn" type="button" onclick="confirmLeaveMatch()">Leave Match</button>
         <button class="modal-cancel" type="button" onclick="closeLeaveMatchModal()">Stay</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Debrief Modal -->
+<div class="modal-overlay" id="debriefModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="debrief-header">
+      <div class="debrief-modal-label">Match debrief</div>
+      <div class="debrief-match-row" id="debriefMatchRow"></div>
+      <div id="debriefBadge"></div>
+    </div>
+    <div class="debrief-sections" id="debriefInsights"></div>
+    <div class="debrief-btn-row">
+      <button class="debrief-share-btn" type="button" onclick="shareDebrief()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Share this debrief
+      </button>
+      <button class="debrief-done-btn" type="button" onclick="closeDebriefModal()">Done</button>
     </div>
   </div>
 </div>
