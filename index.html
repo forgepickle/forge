@@ -2201,10 +2201,25 @@ body {
 }
 .debrief-team-names.winner { color: var(--success); }
 .debrief-score-col {
-  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 20px; font-weight: 900; color: var(--black);
-  text-align: center; min-width: 52px; letter-spacing: -0.5px; padding-top: 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding-top: 14px; min-width: 64px;
 }
+.debrief-sr { display: flex; align-items: center; gap: 5px; }
+.dscore {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 900; font-size: 18px; line-height: 1; color: var(--black);
+}
+.dscore.win  { color: var(--accent-dim); }
+.dscore.lose { color: var(--grey-mid); }
+.dscore-sep  { font-size: 12px; font-weight: 700; color: var(--grey-mid); }
+.debrief-notice {
+  display: flex; align-items: flex-start; gap: 6px;
+  margin: 0 14px 10px;
+  background: var(--grey-xlight); border: 0.5px solid var(--grey-light);
+  border-radius: 8px; padding: 7px 10px;
+}
+.debrief-notice svg { flex-shrink: 0; margin-top: 1px; }
+.debrief-notice span { font-size: 11px; color: var(--grey-mid); line-height: 1.45; }
 .debrief-badge {
   display: flex; align-items: center; gap: 5px;
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -4995,19 +5010,17 @@ function openDebriefModal(matchId) {
   let aWins = 0, bWins = 0;
   m.scores.forEach(s => { if (s.a > s.b) aWins++; else if (s.b > s.a) bWins++; });
   const teamAWon = aWins > bWins, teamBWon = bWins > aWins, isTie = !teamAWon && !teamBWon;
-  const firstScore  = m.scores[0] || { a: 0, b: 0 };
-  const secondScore = m.scores[1] || null;
-  // Header: team names + scores
+  // Header: team names + score rows (one row per game, colour-coded like match card)
+  const scoreRowsHtml = m.scores.map(s => {
+    const aW = s.a > s.b, bW = s.b > s.a;
+    return `<div class="debrief-sr"><span class="dscore ${aW?'win':bW?'lose':''}">${s.a}</span><span class="dscore-sep">–</span><span class="dscore ${bW?'win':aW?'lose':''}">${s.b}</span></div>`;
+  }).join('');
   document.getElementById('debriefMatchRow').innerHTML = `
     <div class="debrief-team-col">
       <div class="debrief-team-label">Team A</div>
       <div class="debrief-team-names ${teamAWon ? 'winner' : ''}">${escHtml(teamANames[0])}<br>${escHtml(teamANames[1])}</div>
     </div>
-    <div class="debrief-score-col">
-      ${escHtml(String(firstScore.a))}–${escHtml(String(firstScore.b))}
-      ${secondScore ? `<br><span style="font-size:13px;color:var(--grey-mid);">${escHtml(String(secondScore.a))}–${escHtml(String(secondScore.b))}</span>` : ''}
-      ${m.scores.length > 2 ? `<br><span style="font-size:11px;color:var(--grey-mid);">+${m.scores.length - 2}</span>` : ''}
-    </div>
+    <div class="debrief-score-col">${scoreRowsHtml}</div>
     <div class="debrief-team-col">
       <div class="debrief-team-label">Team B</div>
       <div class="debrief-team-names ${teamBWon ? 'winner' : ''}">${escHtml(teamBNames[0])}<br>${escHtml(teamBNames[1])}</div>
@@ -5031,11 +5044,42 @@ function openDebriefModal(matchId) {
     </div>`;
   // Insights
   document.getElementById('debriefInsights').innerHTML = renderDebriefInsights(m, rc, isLegacy, teamANames, teamBNames, teamAWon, teamBWon, isTie, ratingGap);
+  const _ds = document.querySelector('#debriefModal .modal-sheet');
+  if (_ds) _ds.scrollTop = 0;
   document.getElementById('debriefModal').classList.add('show');
 }
 function closeDebriefModal() {
   document.getElementById('debriefModal').classList.remove('show');
   _debriefMatchId = null;
+}
+
+// Computes a debrief snapshot on the fly for demo mode (no GAS-stored snapshot available).
+// Replays matches[] in date order up to the target match, tracking pair records and game counts.
+function computeDemoDebriefSnapshot(matchId) {
+  function pairKey(id1, id2) { return [id1, id2].sort().join('|'); }
+  const sorted = [...matches].sort((a, b) => a.date.localeCompare(b.date));
+  const pairRec = {}, gameCnt = {};
+  for (const m of sorted) {
+    const keyA = pairKey(m.teamA[0], m.teamA[1]);
+    const keyB = pairKey(m.teamB[0], m.teamB[1]);
+    if (!pairRec[keyA]) pairRec[keyA] = { w: 0, l: 0, t: 0 };
+    if (!pairRec[keyB]) pairRec[keyB] = { w: 0, l: 0, t: 0 };
+    [...m.teamA, ...m.teamB].forEach(id => { if (gameCnt[id] === undefined) gameCnt[id] = 0; });
+    if (m.id === matchId) {
+      // Snapshot BEFORE this match
+      const games = {};
+      [...m.teamA, ...m.teamB].forEach(id => { games[id] = gameCnt[id]; });
+      return { pairA: { ...pairRec[keyA] }, pairB: { ...pairRec[keyB] }, games };
+    }
+    const aW = m.scores.filter(s => s.a > s.b).length;
+    const bW = m.scores.filter(s => s.b > s.a).length;
+    const tied = aW === bW;
+    if (tied)     { pairRec[keyA].t++; pairRec[keyB].t++; }
+    else if (aW > bW) { pairRec[keyA].w++; pairRec[keyB].l++; }
+    else          { pairRec[keyA].l++; pairRec[keyB].w++; }
+    [...m.teamA, ...m.teamB].forEach(id => { gameCnt[id]++; });
+  }
+  return null;
 }
 function getDebriefBadge(gap, teamAWon, teamBWon, isTie, m, rc) {
   const gapStr = gap.toFixed(2);
@@ -5139,8 +5183,9 @@ function renderDebriefInsights(m, rc, isLegacy, teamANames, teamBNames, teamAWon
       ${scoreRows}
       ${pointsWonHtml}
     </div></div>`;
-  // INSIGHT 4: Pair Chemistry — reads from pre-match snapshot stored in debrief_snapshot_json
-  const snap  = m.debriefSnapshot || null;
+  // INSIGHT 4: Pair Chemistry — reads from pre-match snapshot (GAS-stored or demo-computed)
+  let snap = m.debriefSnapshot || null;
+  if (!snap && isDemoMode) snap = computeDemoDebriefSnapshot(m.id);
   const snapA = snap ? snap.pairA : null;   // { w, l, t } going into this match
   const snapB = snap ? snap.pairB : null;
   const initA = m.teamA.map(id => { const p = players.find(x => x.id === id); return p ? getInitials(p.name) : '?'; }).join('');
@@ -8100,6 +8145,10 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="debrief-modal-label">Match debrief</div>
       <div class="debrief-match-row" id="debriefMatchRow"></div>
       <div id="debriefBadge"></div>
+    </div>
+    <div class="debrief-notice">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--grey-mid)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>Values reflect each player's state entering this match and are not updated if matches are later deleted.</span>
     </div>
     <div class="debrief-sections" id="debriefInsights"></div>
     <div class="debrief-btn-row">
