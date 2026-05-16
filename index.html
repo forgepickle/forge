@@ -2,9 +2,14 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.9.1 — Bug Fix Pass                ║
+  ║  Version: 7.9.2 — Shuffle UX Fixes            ║
   ║  Date: 2026-05-16                            ║
-  ║  Changes: Delete Session spinner + footer    ║
+  ║  Changes: Inactive players excluded from     ║
+  ║           shuffle player grid; session date  ║
+  ║           defaults to today on wizard open.  ║
+  ║                                              ║
+  ║  v7.9.1 — Bug Fix Pass                      ║
+  ║           Delete Session spinner + footer    ║
   ║           button lock during delete,         ║
   ║           shuffleEntryArea cleared on reset  ║
   ║           (fixes Add Player / Active Session ║
@@ -9383,9 +9388,10 @@ function openShuffleWizard() {
     const r = document.getElementById('shRound' + i);
     if (r) r.classList.remove('active');
   });
-  // Reset date input — clear value and enforce today as earliest selectable date
+  // Reset date input — default to today; enforce today as earliest selectable date
   const dateEl = document.getElementById('shSessionDate');
-  if (dateEl) { dateEl.value = ''; dateEl.min = getTodayStr(); }
+  if (dateEl) { dateEl.value = getTodayStr(); dateEl.min = getTodayStr(); }
+  setShuffleDate(getTodayStr());
   const countEl = document.getElementById('shPlayerCount');
   if (countEl) countEl.textContent = '0 selected';
   const advEl = document.getElementById('shCourtAdvisory');
@@ -9471,15 +9477,12 @@ function _buildShufflePlayerGrid() {
   const grid = document.getElementById('shufflePlayerGrid');
   if (!grid) return;
   const active = players.filter(p => p.status === 'active');
-  const inactive = players.filter(p => p.status !== 'active');
-  const all = [...active, ...inactive];
-  grid.innerHTML = all.map(p => {
-    const isInactive = p.status !== 'active';
-    return `<div class="player-chip${isInactive ? ' inactive-chip' : ''}" id="shChip-${p.id}" onclick="toggleShufflePlayer('${p.id}')">
+  grid.innerHTML = active.map(p =>
+    `<div class="player-chip" id="shChip-${p.id}" onclick="toggleShufflePlayer('${p.id}')">
       <div class="chip-avatar">${getInitials(p.name)}</div>
-      <span class="chip-name">${escHtml(p.name)}${isInactive ? ' ·' : ''}</span>
-    </div>`;
-  }).join('');
+      <span class="chip-name">${escHtml(p.name)}</span>
+    </div>`
+  ).join('');
 }
 
 // NEXT button: players ≥ 4, courts set, rounds set, date set, and players ≥ courts*4
