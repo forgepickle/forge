@@ -2,9 +2,23 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.8.0 — Forge Shuffle              ║
-  ║  Date: 2026-05-15                            ║
-  ║  Changes: Full Forge Shuffle feature —       ║
+  ║  Version: 7.8.6 — Courts Fix Pass             ║
+  ║  Date: 2026-05-16                            ║
+  ║  Changes: VS text left-aligned grey-mid,     ║
+  ║           Save Session btn-text centered,    ║
+  ║           Mode sub-labels (Balanced/Tiered), ║
+  ║           shuffleBaseJitter from CONFIG,     ║
+  ║           closeShuffleWizard clears swap CSS,║
+  ║           exit-confirm tap-outside dismiss,  ║
+  ║           nav pulsing dot on active session, ║
+  ║           swap touchend fix (stored handler),║
+  ║           Round 1 tab reset before HTML build║
+  ║           End Session solid lime fill,       ║
+  ║           disabled state on secondary btns, ║
+  ║           debrief header prominent (20px).   ║
+  ║                                              ║
+  ║  v7.8.0 — Forge Shuffle                     ║
+  ║           Full Forge Shuffle feature —       ║
   ║           Pathway A wizard (Random/Balanced/ ║
   ║           Tiered, multi-round rotation with  ║
   ║           soft blacklist, swap players),     ║
@@ -212,7 +226,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s, transform 0.25s;
-  z-index: 550;
+  z-index: 800;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -389,6 +403,20 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+/* Active session pulsing dot on Leaderboard nav icon */
+.nav-session-dot {
+  position: absolute;
+  top: -2px; right: -3px;
+  width: 8px; height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: sessionDotPulse 1.6s ease-in-out infinite;
+}
+@keyframes sessionDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.7); }
 }
 .nav-label {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -1099,6 +1127,7 @@ body {
   color: var(--grey-mid);
   text-align: center;
   transition: all 0.2s;
+  touch-action: manipulation;
 }
 .toggle-pill.active {
   background: var(--accent);
@@ -2192,8 +2221,10 @@ body {
 .debrief-header { padding: 0 20px 14px; }
 .debrief-modal-label {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
-  text-transform: uppercase; color: var(--grey-mid); margin-bottom: 8px;
+  font-size: 20px; font-weight: 800; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--black);
+  margin-bottom: 10px; padding-bottom: 10px;
+  border-bottom: 1.5px solid var(--grey-light);
 }
 .debrief-match-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
 .debrief-team-col { flex: 1; text-align: center; }
@@ -3289,6 +3320,19 @@ body {
   background: var(--black);
   color: var(--accent);
 }
+/* Spinner inside session-active entry button */
+.shuffle-entry-btn .shuffle-entry-spinner {
+  display: none;
+  width: 20px; height: 20px;
+  border: 2px solid rgba(170,220,50,0.3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+.shuffle-entry-btn.loading { cursor: wait; }
+.shuffle-entry-btn.loading .btn-text { display: none; }
+.shuffle-entry-btn.loading .shuffle-entry-spinner { display: block; }
 
 /* ── Full-screen Shuffle Overlays ── */
 /* Same pattern as .share-card-overlay: position:fixed, z-index 700 */
@@ -3415,6 +3459,7 @@ body {
   font-weight: 700; font-size: clamp(15px, 4vw, 17px);
   letter-spacing: 1.2px; text-transform: uppercase;
   color: var(--black); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
   transition: background 0.15s;
 }
 .shuffle-footer-primary:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -3428,9 +3473,11 @@ body {
   font-weight: 700; font-size: clamp(13px, 3.5vw, 15px);
   letter-spacing: 1px; text-transform: uppercase;
   color: var(--grey-mid); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
   transition: all 0.15s;
 }
 .shuffle-footer-secondary:hover { color: var(--black); border-color: var(--grey-dark); }
+.shuffle-footer-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
 /* Full-width primary (Save Session) */
 .shuffle-footer-primary.full-width { flex: unset; width: 100%; }
 
@@ -3439,8 +3486,8 @@ body {
 .shuffle-step-panel.active { display: block; }
 .shuffle-step-title {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-weight: 900; font-size: 13px; letter-spacing: 1.5px;
-  text-transform: uppercase; color: var(--grey-mid);
+  font-weight: 900; font-size: clamp(20px, 5.5vw, 24px); letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--black);
   margin-bottom: 14px;
 }
 
@@ -3508,6 +3555,11 @@ body {
   text-transform: uppercase; color: var(--black);
   flex: 1;
 }
+.shuffle-mode-sublabel {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.3px;
+  color: var(--grey-mid); flex-shrink: 0;
+}
 .shuffle-mode-coming-soon {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
@@ -3553,32 +3605,33 @@ body {
   border-radius: 6px; padding: 2px 7px;
 }
 .court-team {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
   margin-bottom: 6px;
 }
 .court-team-players {
   display: flex; align-items: baseline; gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: wrap; flex: 1;
 }
 .court-player-name {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-weight: 700; font-size: 17px; letter-spacing: 0.3px;
+  font-weight: 700; font-size: 19px; letter-spacing: 0.3px;
   text-transform: uppercase; color: var(--black);
   display: inline-block;
 }
 .court-player-rating {
   font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 12px; color: var(--grey-mid);
+  font-size: 14px; color: var(--grey-mid);
 }
 .court-team-avg {
   font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 12px; color: var(--grey-mid);
-  margin-top: 2px;
+  font-size: 13px; color: var(--grey-mid);
+  flex-shrink: 0;
 }
 .court-vs {
-  text-align: center;
+  text-align: left;
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-weight: 900; font-size: 13px; letter-spacing: 2px;
-  color: var(--grey-light); margin: 8px 0;
+  color: var(--grey-mid); margin: 8px 0; padding-left: 4px;
 }
 /* Advisory message */
 .shuffle-advisory {
@@ -3605,6 +3658,10 @@ body {
   flex-shrink: 0;
   padding: 16px 16px 12px;
   border-bottom: 1px solid var(--grey-light);
+}
+.session-view-header-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
 }
 .session-view-title {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -3675,6 +3732,7 @@ body {
   border-radius: 6px;
   padding: 2px 6px;
   cursor: pointer;
+  touch-action: manipulation; /* prevent scroll-gesture capture on second tap (iOS/Android) */
 }
 .swap-mode .court-player-name.selected {
   animation: none;
@@ -3682,11 +3740,87 @@ body {
   color: var(--black);
   border-style: solid;
 }
+/* Logged courts are locked during swap mode — dim players and prevent interaction */
+.swap-mode .court-card[data-court-logged] .court-player-name {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: default;
+  animation: none;
+  border-color: transparent;
+}
+
+/* Save Session button spinner */
+#shSaveBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
+#shSaveBtn.loading .btn-text { display: none; }
+#shSaveBtn.loading .btn-spinner { display: block; }
+/* End Session button spinner */
+#svEndBtn .btn-spinner { border-color: rgba(170,220,50,0.3); border-top-color: var(--accent); }
+#svEndBtn.loading .btn-text { display: none; }
+#svEndBtn.loading .btn-spinner { display: block; }
+
+/* End Session button — solid lime fill */
+.session-end-btn {
+  flex: 1;
+  padding: 12px 10px;
+  border-radius: 12px;
+  border: none;
+  background: var(--accent);
+  color: var(--black);
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: 15px; letter-spacing: 0.5px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.session-end-btn:active { opacity: 0.75; }
 
 /* ── Confirmation modals spawned from inside overlays (z-index > 700) ── */
 #deleteSessionModal,
+#endSessionModal,
 #startOverModal {
   z-index: 750;
+}
+/* Step 3 meta row: rotation notice + swap icon side by side */
+.shuffle-meta-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 28px; margin-bottom: 4px;
+}
+.shuffle-rotation-notice {
+  flex: 1;
+}
+.swap-inline-btn {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1.5px solid var(--grey-light);
+  background: var(--white);
+  color: var(--grey-mid);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.15s, color 0.15s;
+}
+.swap-inline-btn:active {
+  background: var(--grey-xlight);
+  color: var(--black);
+}
+/* Step 1 date + player count */
+.shuffle-date-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--grey-light);
+  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  color: var(--black);
+  background: var(--white);
+  margin-top: 6px;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+}
+.shuffle-player-count {
+  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px; color: var(--grey-mid);
+  font-weight: 500;
 }
 </style>
 </head>
@@ -4253,10 +4387,10 @@ body {
 <!-- ══════════════════════════════════════════
      FORGE SHUFFLE — WIZARD OVERLAY (Pathway A)
      Full-screen fixed overlay, z-index 700.
-     Overlay tap DISABLED — exit via [✕ Exit] only.
+     Overlay tap dismisses exit-confirm if showing; otherwise no-op.
 ══════════════════════════════════════════ -->
-<div class="shuffle-full-overlay" id="shuffleWizardOverlay">
-  <div class="shuffle-card">
+<div class="shuffle-full-overlay" id="shuffleWizardOverlay" onclick="if(shuffle.exitConfirmShowing) _hideShuffleExitConfirm()">
+  <div class="shuffle-card" onclick="event.stopPropagation()">
 
     <!-- Card Header (always visible) -->
     <div class="shuffle-card-header">
@@ -4286,13 +4420,20 @@ body {
 
       <!-- STEP 1: SET UP -->
       <div class="shuffle-step-panel active" id="shStep1">
-        <div class="shuffle-step-title">Step 1 — Set Up Your Session</div>
-        <div class="shuffle-control-label" style="margin-bottom:8px;">Players</div>
+        <div class="shuffle-step-title">Set Up Your Session</div>
+        <div class="shuffle-control-group">
+          <div class="shuffle-control-label">Session Date</div>
+          <input type="date" id="shSessionDate" class="shuffle-date-input" onchange="setShuffleDate(this.value)">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;margin-top:4px;">
+          <div class="shuffle-control-label" style="margin:0;">Players</div>
+          <span class="shuffle-player-count" id="shPlayerCount">0 selected</span>
+        </div>
         <div class="shuffle-player-grid" id="shufflePlayerGrid"></div>
         <div class="shuffle-control-group">
           <div class="shuffle-control-label">Courts</div>
           <div class="toggle-pills">
-            <button class="toggle-pill active" id="shCourt1" type="button" onclick="setShuffleCourts(1)">1</button>
+            <button class="toggle-pill" id="shCourt1" type="button" onclick="setShuffleCourts(1)">1</button>
             <button class="toggle-pill" id="shCourt2" type="button" onclick="setShuffleCourts(2)">2</button>
             <button class="toggle-pill" id="shCourt3" type="button" onclick="setShuffleCourts(3)">3</button>
           </div>
@@ -4300,16 +4441,18 @@ body {
         <div class="shuffle-control-group">
           <div class="shuffle-control-label">Rounds</div>
           <div class="toggle-pills">
-            <button class="toggle-pill active" id="shRound1" type="button" onclick="setShuffleRounds(1)">1</button>
+            <button class="toggle-pill" id="shRound1" type="button" onclick="setShuffleRounds(1)">1</button>
             <button class="toggle-pill" id="shRound2" type="button" onclick="setShuffleRounds(2)">2</button>
             <button class="toggle-pill" id="shRound3" type="button" onclick="setShuffleRounds(3)">3</button>
           </div>
         </div>
+        <!-- Player/court count advisory — shown when selection is invalid -->
+        <div id="shCourtAdvisory" class="shuffle-advisory" style="display:none;"></div>
       </div>
 
       <!-- STEP 2: MODE -->
       <div class="shuffle-step-panel" id="shStep2">
-        <div class="shuffle-step-title">Step 2 — Shuffle Mode</div>
+        <div class="shuffle-step-title">Select Shuffle Mode</div>
         <!-- Free modes -->
         <div class="shuffle-mode-row" id="shModeRandom" onclick="setShuffleMode('random')">
           <div class="shuffle-mode-radio"></div>
@@ -4320,11 +4463,13 @@ body {
           <div class="shuffle-mode-radio"></div>
           <span class="shuffle-mode-icon">⚖️</span>
           <span class="shuffle-mode-name">Balanced</span>
+          <span class="shuffle-mode-sublabel">R1+R4 vs R2+R3 · +jitter</span>
         </div>
         <div class="shuffle-mode-row" id="shModeTiered" onclick="setShuffleMode('tiered')">
           <div class="shuffle-mode-radio"></div>
           <span class="shuffle-mode-icon">🏆</span>
           <span class="shuffle-mode-name">Tiered</span>
+          <span class="shuffle-mode-sublabel">R1+R2 vs R3+R4 · +jitter</span>
         </div>
         <!-- Locked modes -->
         <div class="shuffle-mode-row locked" onclick="showComingSoonToast()">
@@ -4349,15 +4494,21 @@ body {
 
       <!-- STEP 3: LINEUP -->
       <div class="shuffle-step-panel" id="shStep3">
+        <div class="shuffle-step-title" style="margin-bottom:4px;">Your Lineup</div>
         <div class="shuffle-result-meta" id="shuffleResultMeta"></div>
         <!-- Round tab strip (only shown if rounds > 1) -->
         <div class="toggle-pills shuffle-round-tabs" id="shuffleRoundTabs" style="display:none;"></div>
-        <!-- Rotation notice -->
-        <div class="shuffle-rotation-notice" id="shuffleRotationNotice" style="display:none;"></div>
+        <!-- Meta row: rotation notice + swap icon -->
+        <div class="shuffle-meta-row">
+          <div class="shuffle-rotation-notice" id="shuffleRotationNotice" style="visibility:hidden;"></div>
+          <button class="swap-inline-btn" id="shSwapBtn" type="button" onclick="enterShuffleSwapMode()" title="Swap Players">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+          </button>
+        </div>
+        <!-- Advisories — shown above court 1 so they are never off-screen -->
+        <div id="shuffleAdvisories"></div>
         <!-- Court cards -->
         <div id="shuffleCourtCards"></div>
-        <!-- Advisories -->
-        <div id="shuffleAdvisories"></div>
       </div>
 
     </div><!-- /shuffle-card-body -->
@@ -4377,13 +4528,19 @@ body {
       </div>
       <!-- Step 3 footer -->
       <div id="shFooter3" style="display:none;width:100%;">
-        <div style="display:flex;gap:10px;margin-bottom:10px;">
-          <button class="shuffle-footer-secondary" type="button" onclick="shuffleStartOver()">🔀 Start Over</button>
-          <button class="shuffle-footer-secondary" id="shSwapBtn" type="button" onclick="enterShuffleSwapMode()">👥 Swap Players</button>
+        <div id="shF3Normal" style="display:flex;gap:10px;margin-bottom:10px;">
+          <button class="shuffle-footer-secondary" type="button" onclick="showShuffleStep(2)">← BACK</button>
+          <button class="shuffle-footer-secondary" type="button" onclick="shuffleStartOver()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Start Over
+          </button>
         </div>
-        <button class="shuffle-footer-primary full-width" id="shSaveBtn" type="button" onclick="saveShuffleSession()">✅ Save Session</button>
+        <button class="shuffle-footer-primary full-width" id="shSaveBtn" type="button" onclick="saveShuffleSession()">
+          <span class="btn-text" style="display:flex;align-items:center;justify-content:center;width:100%;gap:8px;">Save Session <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <div class="btn-spinner"></div>
+        </button>
         <!-- Swap mode Done button (hidden until swap active) -->
-        <button class="shuffle-footer-primary full-width" id="shSwapDoneBtn" type="button" onclick="exitShuffleSwapMode()" style="display:none;">✓ Done</button>
+        <button class="shuffle-footer-primary full-width" id="shSwapDoneBtn" type="button" onclick="exitShuffleSwapMode()" style="display:none;align-items:center;justify-content:center;gap:8px;">Done <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
       </div>
     </div>
 
@@ -4400,7 +4557,10 @@ body {
   <div class="session-view-card">
 
     <div class="session-view-header">
-      <div class="session-view-title">📌 Active Session</div>
+      <div class="session-view-header-row">
+        <div class="session-view-title">📌 Active Session</div>
+        <button class="shuffle-exit-btn" type="button" onclick="closeSessionView()">✕ EXIT</button>
+      </div>
       <div class="session-view-meta" id="sessionViewMeta"></div>
     </div>
 
@@ -4422,12 +4582,25 @@ body {
     <!-- Fixed footer -->
     <div class="session-view-footer" id="sessionViewFooter">
       <div id="svFooterNormal" style="display:flex;gap:10px;width:100%;">
-        <button class="shuffle-footer-secondary" style="flex:1;" type="button" onclick="enterSessionViewSwapMode()">👥 Swap Players</button>
-        <button class="shuffle-footer-secondary" style="flex:1;color:var(--error);border-color:var(--error);" type="button" onclick="openDeleteSessionModal()">🗑 Delete</button>
+        <button class="shuffle-footer-secondary" id="svSwapBtn" style="flex:1;" type="button" onclick="enterSessionViewSwapMode()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Swap Players
+        </button>
+        <button class="shuffle-footer-secondary" id="svDeleteBtn" style="flex:1;color:var(--error);border-color:var(--error);" type="button" onclick="openDeleteSessionModal()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          Delete
+        </button>
+        <button class="session-end-btn" id="svEndBtn" style="display:none;" type="button" onclick="openEndSessionModal()">
+          <span class="btn-text" style="display:flex;align-items:center;gap:6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            End Session
+          </span>
+          <div class="btn-spinner"></div>
+        </button>
       </div>
       <!-- Swap mode footer -->
       <div id="svFooterSwap" style="display:none;width:100%;">
-        <button class="shuffle-footer-primary full-width" type="button" onclick="exitSessionViewSwapMode()">✓ Done</button>
+        <button class="shuffle-footer-primary full-width" type="button" onclick="exitSessionViewSwapMode()" style="display:flex;align-items:center;justify-content:center;gap:8px;">Done <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
       </div>
       <!-- Post-swap save/discard footer -->
       <div id="svFooterSwapSave" style="display:none;width:100%;">
@@ -4478,7 +4651,10 @@ body {
 
   <!-- Shuffle entry button — always visible at bottom of Leaderboard screen -->
   <div class="shuffle-entry-area" id="shuffleEntryArea">
-    <button class="shuffle-entry-btn" id="shuffleEntryBtn" type="button" onclick="shuffleEntryTap()">🔀 PLAN THE COURTS</button>
+    <button class="shuffle-entry-btn" id="shuffleEntryBtn" type="button" onclick="shuffleEntryTap()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="flex-shrink:0;"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+      PLAN THE COURTS
+    </button>
   </div>
 
   <div class="screen" id="screenMatches">
@@ -4663,6 +4839,19 @@ body {
     <div class="modal-btns">
       <button class="modal-confirm" onclick="confirmDeleteSession()">Delete Session</button>
       <button class="modal-cancel" onclick="closeDeleteSessionModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- End Session confirmation (z-index 750 — all matches logged, session complete) -->
+<div class="modal-overlay" id="endSessionModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Session Complete!</div>
+    <div class="modal-subtitle">All matches have been logged. End this session?</div>
+    <div class="modal-btns">
+      <button class="modal-confirm green" onclick="confirmEndSession()">End Session</button>
+      <button class="modal-cancel" onclick="closeEndSessionModal()">Cancel</button>
     </div>
   </div>
 </div>
@@ -4966,8 +5155,9 @@ let shuffle = {
   swapSelected: null,
   exitConfirmShowing: false
 };
-let activeSession  = null;   // loaded from backend; null if no session
-let demoSession    = null;   // demo mode only — local equivalent of activeSession
+let activeSession      = null;   // loaded from backend; null if no session
+let demoSession        = null;   // demo mode only — local equivalent of activeSession
+let shuffleBaseJitter  = 0.15;   // base jitter magnitude; overridden by CONFIG sheet shuffleJitter
 // Pre-swap snapshot used to support Discard in Session View swap
 let _svPreSwapLineup = null;
 
@@ -5189,9 +5379,10 @@ async function startup() {
     K_SCALE          = cfg.kScale         || 30;
     lastKnownVersion = cfg.writeVersion   || 0;
     // Forge Alpha access flags — use safe defaults if keys absent
-    if (cfg.premiumMain !== undefined) premiumMain = cfg.premiumMain;
-    if (cfg.premiumDemo !== undefined) premiumDemo = cfg.premiumDemo;
-    if (cfg.alphaLambda !== undefined) alphaLambda = cfg.alphaLambda;
+    if (cfg.premiumMain   !== undefined) premiumMain      = cfg.premiumMain;
+    if (cfg.premiumDemo   !== undefined) premiumDemo      = cfg.premiumDemo;
+    if (cfg.alphaLambda   !== undefined) alphaLambda      = cfg.alphaLambda;
+    if (cfg.shuffleJitter !== undefined) shuffleBaseJitter = cfg.shuffleJitter;
   } catch(e) {
     console.warn('Config fetch failed:', e.message);
     const hint = document.getElementById('pwHint');
@@ -5254,7 +5445,7 @@ function _resetAppUI() {
   document.getElementById('ballDeco2').style.display = 'none';
 
   // Close any open modals
-  ['removeModal','deleteMatchModal','reinstateModal','tooltipModal','leaveMatchModal','debriefModal','deleteSessionModal','startOverModal'].forEach(id => {
+  ['removeModal','deleteMatchModal','reinstateModal','tooltipModal','leaveMatchModal','debriefModal','deleteSessionModal','endSessionModal','startOverModal'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('show');
   });
@@ -7289,6 +7480,10 @@ async function submitMatch() {
         scores: am.scores, ratingChanges
       };
       matches.push(matchRecord);
+      // Update session logged state if this match came from a session court
+      if (am.sessionSource) {
+        onSessionMatchLogged(am.sessionSource.round, am.sessionSource.court, matchRecord.id);
+      }
 
     } else {
       // ── REAL PATH: backend computes, returns authoritative state ──
@@ -7307,6 +7502,10 @@ async function submitMatch() {
       });
       matches.push(matchRecord);
       lastKnownVersion = res.writeVersion || lastKnownVersion;
+      // Update session logged state if this match came from a session court
+      if (am.sessionSource) {
+        onSessionMatchLogged(am.sessionSource.round, am.sessionSource.court, matchRecord.id);
+      }
     }
 
     buildPairsFromMatches();
@@ -8850,9 +9049,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function resetShuffle() {
   shuffle = {
-    step: 0, players: [], courts: 1, rounds: 1,
+    step: 0, players: [], courts: null, rounds: null,
     mode: null, lineup: null, activeRoundTab: 0,
-    swapMode: false, swapSelected: null, exitConfirmShowing: false
+    swapMode: false, swapSelected: null, exitConfirmShowing: false,
+    sessionDate: ''
   };
 }
 
@@ -8862,19 +9062,45 @@ function renderShuffleEntryButton() {
   const session = isDemoMode ? demoSession : activeSession;
   const btn = document.getElementById('shuffleEntryBtn');
   if (!btn) return;
+  const shuffleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="flex-shrink:0;"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>`;
   if (session) {
-    btn.textContent = '📌 ACTIVE SESSION · ' + formatShortDate(session.createdAt) + ' →';
+    const dateStr = session.sessionDate ? formatShortDate(session.sessionDate) : '';
+    const label = '📌 ACTIVE SESSION' + (dateStr ? ' · ' + dateStr : '') + ' →';
+    btn.innerHTML = `<span class="btn-text">${label}</span><div class="shuffle-entry-spinner"></div>`;
     btn.className = 'shuffle-entry-btn session-active';
   } else {
-    btn.textContent = '🔀 PLAN THE COURTS';
+    btn.innerHTML = shuffleSvg + ' PLAN THE COURTS';
     btn.className = 'shuffle-entry-btn';
+  }
+  // Pulsing dot on Leaderboard nav icon — shown only when active session exists
+  const navIcon = document.querySelector('#nav-leaderboard .nav-icon');
+  if (navIcon) {
+    const existingDot = navIcon.querySelector('.nav-session-dot');
+    if (session && !existingDot) {
+      const dot = document.createElement('span');
+      dot.className = 'nav-session-dot';
+      navIcon.appendChild(dot);
+    } else if (!session && existingDot) {
+      existingDot.remove();
+    }
   }
 }
 
-function shuffleEntryTap() {
+async function shuffleEntryTap() {
   const session = isDemoMode ? demoSession : activeSession;
-  if (session) openSessionView();
-  else openShuffleWizard();
+  if (session) {
+    // Show spinner on entry button immediately; overlay + skeleton appear on openSessionView
+    if (!isDemoMode) {
+      const btn = document.getElementById('shuffleEntryBtn');
+      if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+    }
+    await openSessionView();
+    // Restore button — view is now open (or error was shown)
+    const btn = document.getElementById('shuffleEntryBtn');
+    if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+  } else {
+    openShuffleWizard();
+  }
 }
 
 // ── Wizard open / close ────────────────────────────────────────────
@@ -8882,6 +9108,28 @@ function shuffleEntryTap() {
 function openShuffleWizard() {
   resetShuffle();
   shuffle.step = 1;
+  // Reset mode row selections
+  ['Random','Balanced','Tiered'].forEach(m => {
+    const row = document.getElementById('shMode' + m);
+    if (row) row.classList.remove('selected');
+  });
+  // Reset generate button
+  const genBtn = document.getElementById('shGenerateBtn');
+  if (genBtn) genBtn.disabled = true;
+  // Clear courts/rounds pills — no default selection
+  [1,2,3].forEach(i => {
+    const c = document.getElementById('shCourt' + i);
+    if (c) c.classList.remove('active');
+    const r = document.getElementById('shRound' + i);
+    if (r) r.classList.remove('active');
+  });
+  // Reset date input — clear value and enforce today as earliest selectable date
+  const dateEl = document.getElementById('shSessionDate');
+  if (dateEl) { dateEl.value = ''; dateEl.min = getTodayStr(); }
+  const countEl = document.getElementById('shPlayerCount');
+  if (countEl) countEl.textContent = '0 selected';
+  const advEl = document.getElementById('shCourtAdvisory');
+  if (advEl) advEl.style.display = 'none';
   _buildShufflePlayerGrid();
   showShuffleStep(1);
   document.getElementById('shuffleWizardOverlay').classList.add('show');
@@ -8890,6 +9138,7 @@ function openShuffleWizard() {
 function closeShuffleWizard() {
   document.getElementById('shuffleWizardOverlay').classList.remove('show');
   _hideShuffleExitConfirm();
+  _removeSwapModeFromCards('shuffleCourtCards'); // clear swap CSS class; innerHTML won't remove parent class
   resetShuffle();
 }
 
@@ -8973,6 +9222,27 @@ function _buildShufflePlayerGrid() {
   }).join('');
 }
 
+// NEXT button: players ≥ 4, courts set, rounds set, date set, and players ≥ courts*4
+function _updateShStep1Next() {
+  const n       = shuffle.players.length;
+  const courts  = shuffle.courts;
+  const needed  = courts !== null ? courts * 4 : 0;
+  const hasDate = shuffle.sessionDate !== '';
+  const ok      = n >= 4 && courts !== null && shuffle.rounds !== null && hasDate && n >= needed;
+  const btn     = document.getElementById('shNextBtn1');
+  if (btn) btn.disabled = !ok;
+  // Court count advisory
+  const adv = document.getElementById('shCourtAdvisory');
+  if (adv) {
+    if (courts !== null && n < needed) {
+      adv.textContent = '⚠ ' + courts + ' court' + (courts > 1 ? 's' : '') + ' need' + (courts === 1 ? 's' : '') + ' at least ' + needed + ' players — add more players or reduce courts';
+      adv.style.display = 'block';
+    } else {
+      adv.style.display = 'none';
+    }
+  }
+}
+
 function toggleShufflePlayer(id) {
   const idx = shuffle.players.indexOf(id);
   if (idx === -1) shuffle.players.push(id);
@@ -8980,9 +9250,10 @@ function toggleShufflePlayer(id) {
   // Update chip visual
   const chip = document.getElementById('shChip-' + id);
   if (chip) chip.classList.toggle('active', shuffle.players.indexOf(id) !== -1);
-  // Enable/disable Next based on minimum 4 players
-  const btn = document.getElementById('shNextBtn1');
-  if (btn) btn.disabled = shuffle.players.length < 4;
+  // Update player count badge
+  const countEl = document.getElementById('shPlayerCount');
+  if (countEl) countEl.textContent = shuffle.players.length + ' selected';
+  _updateShStep1Next();
 }
 
 function setShuffleCourts(n) {
@@ -8991,6 +9262,7 @@ function setShuffleCourts(n) {
     const el = document.getElementById('shCourt' + i);
     if (el) el.classList.toggle('active', i === n);
   });
+  _updateShStep1Next();
 }
 
 function setShuffleRounds(n) {
@@ -8999,10 +9271,11 @@ function setShuffleRounds(n) {
     const el = document.getElementById('shRound' + i);
     if (el) el.classList.toggle('active', i === n);
   });
+  _updateShStep1Next();
 }
 
 function shuffleStep1Next() {
-  if (shuffle.players.length < 4) return;
+  if (shuffle.players.length < 4 || shuffle.courts === null || shuffle.rounds === null) return;
   showShuffleStep(2);
 }
 
@@ -9018,6 +9291,11 @@ function setShuffleMode(mode) {
   if (btn) btn.disabled = false;
 }
 
+function setShuffleDate(val) {
+  shuffle.sessionDate = val;
+  _updateShStep1Next();
+}
+
 function showComingSoonToast() {
   showToast('Coming soon — powered by Forge Alpha');
 }
@@ -9025,19 +9303,21 @@ function showComingSoonToast() {
 async function shuffleGenerate() {
   if (!shuffle.mode) return;
   lockUI();
-  // For round 1 — instant. For rounds 2+ — show spinner with 400ms minimum.
-  const needsSpinner = shuffle.rounds > 1;
-  const spinnerStart = needsSpinner ? Date.now() : 0;
+  const spinnerStart = Date.now(); // always show spinner regardless of round count
 
   const selectedPlayers = shuffle.players.map(id => players.find(p => p.id === id)).filter(Boolean);
-  shuffle.lineup = computeShuffleLineup(selectedPlayers, shuffle.courts, shuffle.rounds, shuffle.mode);
+  try {
+    shuffle.lineup = computeShuffleLineup(selectedPlayers, shuffle.courts, shuffle.rounds, shuffle.mode);
+  } catch(e) {
+    unlockUI();
+    showToast('Could not generate lineup — try fewer players or adjust courts', 'error');
+    return;
+  }
   shuffle.activeRoundTab = 0;
 
-  if (needsSpinner) {
-    const elapsed = Date.now() - spinnerStart;
-    const remaining = Math.max(0, 400 - elapsed);
-    await new Promise(r => setTimeout(r, remaining));
-  }
+  // Always wait a minimum of 600ms — sets user expectation and prevents rapid re-taps
+  const elapsed = Date.now() - spinnerStart;
+  await new Promise(r => setTimeout(r, Math.max(0, 600 - elapsed)));
 
   unlockUI();
   showShuffleStep(3);
@@ -9067,13 +9347,17 @@ function _renderShuffleResult() {
     }
   }
 
-  // Rotation notice
+  // Rotation notice — use visibility so the flex-1 spacer always holds its space,
+  // keeping the swap icon pinned to the right even when there is no notice text.
   const noticeEl = document.getElementById('shuffleRotationNotice');
-  if (noticeEl && shuffle.lineup && shuffle.lineup.notice) {
-    noticeEl.textContent = shuffle.lineup.notice;
-    noticeEl.style.display = 'block';
-  } else if (noticeEl) {
-    noticeEl.style.display = 'none';
+  if (noticeEl) {
+    if (shuffle.lineup && shuffle.lineup.notice) {
+      noticeEl.textContent = shuffle.lineup.notice;
+      noticeEl.style.visibility = 'visible';
+    } else {
+      noticeEl.textContent = '';
+      noticeEl.style.visibility = 'hidden';
+    }
   }
 
   _renderShuffleCourtCards();
@@ -9089,9 +9373,8 @@ function _renderShuffleCourtCards() {
 }
 
 function switchShuffleRoundTab(idx) {
-  if (shuffle.swapMode && shuffle.swapSelected !== null) {
-    shuffle.swapSelected = null;
-  }
+  // Fully exit swap mode when switching rounds — edits on the previous round are kept
+  if (shuffle.swapMode) exitShuffleSwapMode();
   shuffle.activeRoundTab = idx;
   // Update tab active state
   const tabsEl = document.getElementById('shuffleRoundTabs');
@@ -9117,11 +9400,21 @@ function _renderShuffleAdvisories(selectedPlayers) {
 
 // ── Court card renderer (shared by wizard + session view) ──────────
 
-function _buildCourtCardHTML(court, courtIdx, roundIdx, loggedMatchId, isWizard) {
-  const p1A = players.find(p => p.id === court.teamA[0]);
-  const p2A = players.find(p => p.id === court.teamA[1]);
-  const p1B = players.find(p => p.id === court.teamB[0]);
-  const p2B = players.find(p => p.id === court.teamB[1]);
+function _buildCourtCardHTML(court, courtIdx, roundIdx, loggedMatchId, isWizard, ratingSnapshot) {
+  // ratingSnapshot: { playerId: ratingAtSessionCreation } — used in session view
+  // to show stable ratings even after matches are logged. Wizard passes null (live ratings).
+  function resolvePlayer(id) {
+    const p = players.find(x => x.id === id);
+    if (!p) return null;
+    if (ratingSnapshot && ratingSnapshot[id] !== undefined) {
+      return { ...p, rating: ratingSnapshot[id] };
+    }
+    return p;
+  }
+  const p1A = resolvePlayer(court.teamA[0]);
+  const p2A = resolvePlayer(court.teamA[1]);
+  const p1B = resolvePlayer(court.teamB[0]);
+  const p2B = resolvePlayer(court.teamB[1]);
 
   function playerHTML(p) {
     if (!p) return '<span class="court-player-name" data-pid="">?</span>';
@@ -9145,7 +9438,7 @@ function _buildCourtCardHTML(court, courtIdx, roundIdx, loggedMatchId, isWizard)
     }
   }
 
-  return `<div class="court-card">
+  return `<div class="court-card"${isLogged ? ' data-court-logged="true"' : ''}>
     <div class="court-card-title">🏓 COURT ${courtIdx + 1} ${loggedBadge}</div>
     <div class="court-team">
       <div class="court-team-players">${playerHTML(p1A)} <span style="color:var(--grey-mid);font-size:14px;">&amp;</span> ${playerHTML(p2A)}</div>
@@ -9183,11 +9476,18 @@ async function confirmShuffleStartOver() {
 async function _doShuffleStartOver() {
   lockUI();
   const selectedPlayers = shuffle.players.map(id => players.find(p => p.id === id)).filter(Boolean);
-  shuffle.lineup = computeShuffleLineup(selectedPlayers, shuffle.courts, shuffle.rounds, shuffle.mode);
-  shuffle.activeRoundTab = 0;
   const spinnerStart = Date.now();
+  try {
+    shuffle.lineup = computeShuffleLineup(selectedPlayers, shuffle.courts, shuffle.rounds, shuffle.mode);
+  } catch(e) {
+    unlockUI();
+    showToast('Could not regenerate lineup', 'error');
+    return;
+  }
+  shuffle.activeRoundTab = 0;
+  // Always show a minimum 600ms spinner — consistent with Generate Lineup
   const elapsed = Date.now() - spinnerStart;
-  if (shuffle.rounds > 1) await new Promise(r => setTimeout(r, Math.max(0, 400 - elapsed)));
+  await new Promise(r => setTimeout(r, Math.max(0, 600 - elapsed)));
   unlockUI();
   _renderShuffleResult();
 }
@@ -9201,6 +9501,8 @@ async function saveShuffleSession() {
     renderShuffleEntryButton();
     return;
   }
+  const btn = document.getElementById('shSaveBtn');
+  if (btn) { btn.disabled = true; btn.classList.add('loading'); }
   const sessionObj = _buildSessionObject();
   lockUI();
   try {
@@ -9214,6 +9516,7 @@ async function saveShuffleSession() {
   } catch(e) {
     showError('Could not save session: ' + e.message);
   } finally {
+    if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
     unlockUI();
   }
 }
@@ -9222,14 +9525,23 @@ function _buildSessionObject() {
   const now = new Date().toISOString();
   const sessionId = 's' + Date.now();
   const logged = shuffle.lineup.rounds.map(round => round.map(() => null));
+  // Capture ratings at session-creation time so court cards show consistent
+  // ratings even after matches are logged and player ratings change mid-session.
+  const ratingSnapshot = {};
+  shuffle.players.forEach(id => {
+    const p = players.find(x => x.id === id);
+    if (p) ratingSnapshot[id] = p.rating;
+  });
   return {
     sessionId, createdAt: now, createdBy: 'Host',
+    sessionDate: shuffle.sessionDate || '',
     mode: shuffle.mode,
     playerIds: shuffle.players,
     courts: shuffle.courts,
     rounds: shuffle.rounds,
     lineup: shuffle.lineup.rounds,
-    logged
+    logged,
+    ratingSnapshot
   };
 }
 
@@ -9244,17 +9556,19 @@ function enterShuffleSwapMode() {
   shuffle.swapMode = true;
   shuffle.swapSelected = null;
   _applySwapModeToCards('shuffleCourtCards');
-  document.getElementById('shFooter3').querySelector('div').style.display = 'none';
+  document.getElementById('shF3Normal').style.display = 'none';
   document.getElementById('shSaveBtn').style.display = 'none';
-  document.getElementById('shSwapDoneBtn').style.display = 'block';
+  document.getElementById('shSwapBtn').style.display = 'none';
+  document.getElementById('shSwapDoneBtn').style.display = 'flex';
 }
 
 function exitShuffleSwapMode() {
   shuffle.swapMode = false;
   shuffle.swapSelected = null;
   _removeSwapModeFromCards('shuffleCourtCards');
-  document.getElementById('shFooter3').querySelector('div').style.display = 'flex';
+  document.getElementById('shF3Normal').style.display = 'flex';
   document.getElementById('shSaveBtn').style.display = 'block';
+  document.getElementById('shSwapBtn').style.display = 'flex';
   document.getElementById('shSwapDoneBtn').style.display = 'none';
 }
 
@@ -9262,8 +9576,19 @@ function _applySwapModeToCards(containerId) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.classList.add('swap-mode');
-  el.querySelectorAll('.court-player-name[data-pid]').forEach(span => {
-    span.onclick = () => handleSwapTap(span.dataset.pid, containerId);
+  // Only attach tap handlers to players in un-logged courts.
+  // Use touchend (with preventDefault) for reliable iOS tap detection on spans inside
+  // scrollable containers; fall back to click for desktop. Store handler ref on span
+  // so _removeSwapModeFromCards can cleanly remove the exact listener.
+  el.querySelectorAll('.court-card:not([data-court-logged]) .court-player-name[data-pid]').forEach(span => {
+    const handler = (e) => {
+      e.preventDefault();
+      handleSwapTap(span.dataset.pid, containerId);
+    };
+    span._swapTouchHandler = handler;
+    span._swapClickHandler = () => handleSwapTap(span.dataset.pid, containerId);
+    span.addEventListener('touchend', handler, { passive: false });
+    span.addEventListener('click', span._swapClickHandler);
   });
 }
 
@@ -9273,6 +9598,14 @@ function _removeSwapModeFromCards(containerId) {
   el.classList.remove('swap-mode');
   el.querySelectorAll('.court-player-name').forEach(span => {
     span.classList.remove('selected');
+    if (span._swapTouchHandler) {
+      span.removeEventListener('touchend', span._swapTouchHandler);
+      delete span._swapTouchHandler;
+    }
+    if (span._swapClickHandler) {
+      span.removeEventListener('click', span._swapClickHandler);
+      delete span._swapClickHandler;
+    }
     span.onclick = null;
   });
 }
@@ -9288,7 +9621,13 @@ function handleSwapTap(pid, containerId) {
     shuffle.swapSelected = null;
     _markSwapSelected(null, containerId);
   } else {
-    // Second selection — execute swap
+    // Second selection — guard against same player tapped twice via duplicate IDs
+    if (shuffle.swapSelected === pid) {
+      shuffle.swapSelected = null;
+      _markSwapSelected(null, containerId);
+      return;
+    }
+    // Execute swap
     _executeSwap(shuffle.swapSelected, pid);
     shuffle.swapSelected = null;
     // Re-render current round cards maintaining swap mode
@@ -9314,6 +9653,7 @@ function _markSwapSelected(pid, containerId) {
 }
 
 function _executeSwap(pidA, pidB) {
+  if (!pidA || !pidB || pidA === pidB) return; // hard guard: no self-swap
   const lineup = shuffle.lineup.rounds[shuffle.activeRoundTab];
   for (let c = 0; c < lineup.length; c++) {
     const court = lineup[c];
@@ -9336,20 +9676,21 @@ async function openSessionView() {
     // Always fetch fresh on open
     await _fetchAndShowSessionView();
   } else {
+    // Demo path: show overlay first, then populate
+    document.getElementById('sessionViewOverlay').classList.add('show');
     _showSessionView(demoSession);
   }
 }
 
 async function _fetchAndShowSessionView() {
-  document.getElementById('sessionViewOverlay').classList.add('show');
-  document.getElementById('sessionViewSkeleton').style.display = 'flex';
-  document.getElementById('sessionViewCourtCards').innerHTML = '';
+  // Do NOT show overlay until data is ready — the entry button spinner is the
+  // loading indicator. Overlay only appears once content is populated.
   try {
     const res = await callBackend(getPayload('getSession'));
     activeSession = (res.ok && res.session) ? res.session : null;
+    document.getElementById('sessionViewOverlay').classList.add('show');
     _showSessionView(activeSession);
   } catch(e) {
-    document.getElementById('sessionViewOverlay').classList.remove('show');
     showError('Could not load session: ' + e.message);
   }
 }
@@ -9366,6 +9707,9 @@ function _showSessionView(session) {
   const meta = document.getElementById('sessionViewMeta');
   if (meta) meta.textContent = modeLabel + ' · ' + session.playerIds.length + ' Players · ' + session.rounds + ' Round' + (session.rounds > 1 ? 's' : '');
 
+  // Always reset to Round 1 BEFORE building tab HTML so active class is applied correctly
+  shuffle.activeRoundTab = 0;
+
   // Round tabs
   const tabWrap = document.getElementById('sessionViewTabWrap');
   const tabsEl  = document.getElementById('sessionViewRoundTabs');
@@ -9380,11 +9724,9 @@ function _showSessionView(session) {
     }
   }
 
-  // Ensure activeRoundTab is in bounds
-  if (shuffle.activeRoundTab >= session.rounds) shuffle.activeRoundTab = 0;
-
   _renderSessionViewCards();
   _resetSessionViewFooter();
+  _updateSessionViewFooterState();
 }
 
 function _renderSessionViewCards() {
@@ -9392,17 +9734,21 @@ function _renderSessionViewCards() {
   if (!session) return;
   const cardsEl = document.getElementById('sessionViewCourtCards');
   if (!cardsEl) return;
-  const round  = session.lineup[shuffle.activeRoundTab];
-  const logged = session.logged[shuffle.activeRoundTab];
+  const round    = session.lineup[shuffle.activeRoundTab];
+  const logged   = session.logged[shuffle.activeRoundTab];
+  // Use snapshot ratings if available (set at session creation). Falls back to live
+  // ratings for sessions saved before v7.8.5 which have no ratingSnapshot field.
+  const snapshot = session.ratingSnapshot || null;
   if (!round) return;
   cardsEl.innerHTML = round.map((court, ci) => {
     const loggedId = (logged && logged[ci]) ? logged[ci] : null;
-    return _buildCourtCardHTML(court, ci, shuffle.activeRoundTab, loggedId, false);
+    return _buildCourtCardHTML(court, ci, shuffle.activeRoundTab, loggedId, false, snapshot);
   }).join('');
 }
 
 function switchSessionViewRoundTab(idx) {
-  if (shuffle.swapMode && shuffle.swapSelected !== null) shuffle.swapSelected = null;
+  // Fully exit swap mode when switching rounds — edits on the previous round are kept
+  if (shuffle.swapMode) exitSessionViewSwapMode();
   shuffle.activeRoundTab = idx;
   const tabsEl = document.getElementById('sessionViewRoundTabs');
   if (tabsEl) tabsEl.querySelectorAll('.toggle-pill').forEach((b, i) => b.classList.toggle('active', i === idx));
@@ -9411,6 +9757,10 @@ function switchSessionViewRoundTab(idx) {
 
 function closeSessionView() {
   document.getElementById('sessionViewOverlay').classList.remove('show');
+  // Always clean up swap mode — removes the CSS class from the cards container
+  // so players don't wiggle on next open even if closeSessionView is called mid-swap
+  _removeSwapModeFromCards('sessionViewCourtCards');
+  _svPreSwapLineup = null;
   shuffle.swapMode = false;
   shuffle.swapSelected = null;
   _resetSessionViewFooter();
@@ -9427,6 +9777,32 @@ function _resetSessionViewFooter() {
   document.getElementById('svFooterNormal').style.display   = 'flex';
   document.getElementById('svFooterSwap').style.display     = 'none';
   document.getElementById('svFooterSwapSave').style.display = 'none';
+}
+
+// ── Session fully-logged detection ────────────────────────────────
+
+function _isSessionFullyLogged(session) {
+  if (!session || !session.logged) return false;
+  return session.logged.every(roundArr => roundArr.every(id => !!id));
+}
+
+// Updates Swap/Delete/End buttons based on whether all courts are logged.
+// Called from _showSessionView each time the session view opens.
+function _updateSessionViewFooterState() {
+  const session = isDemoMode ? demoSession : activeSession;
+  const swapBtn   = document.getElementById('svSwapBtn');
+  const deleteBtn = document.getElementById('svDeleteBtn');
+  const endBtn    = document.getElementById('svEndBtn');
+  if (!swapBtn || !deleteBtn || !endBtn) return;
+  if (_isSessionFullyLogged(session)) {
+    swapBtn.disabled = true;
+    deleteBtn.style.display = 'none';
+    endBtn.style.display    = 'flex';
+  } else {
+    swapBtn.disabled = false;
+    deleteBtn.style.display = 'flex';
+    endBtn.style.display    = 'none';
+  }
 }
 
 // ── Delete Session ─────────────────────────────────────────────────
@@ -9457,6 +9833,44 @@ async function confirmDeleteSession() {
     showToast('Session deleted');
   } catch(e) {
     showError('Could not delete session: ' + e.message);
+  } finally {
+    unlockUI();
+  }
+}
+
+// ── End Session ────────────────────────────────────────────────────
+
+function openEndSessionModal() {
+  document.getElementById('endSessionModal').classList.add('show');
+}
+
+function closeEndSessionModal() {
+  document.getElementById('endSessionModal').classList.remove('show');
+}
+
+async function confirmEndSession() {
+  closeEndSessionModal();
+  if (isDemoMode) {
+    demoSession = null;
+    closeSessionView();
+    renderShuffleEntryButton();
+    showToast('Session ended ✓');
+    return;
+  }
+  // Show spinner on End Session button in session view footer while GAS responds
+  const endBtn = document.getElementById('svEndBtn');
+  if (endBtn) { endBtn.disabled = true; endBtn.classList.add('loading'); }
+  lockUI();
+  try {
+    const res = await callBackend(getPayload('deleteSession', { requestId: makeRequestId() }));
+    if (!res.ok) throw new Error(res.error || 'End failed');
+    activeSession = null;
+    closeSessionView();
+    renderShuffleEntryButton();
+    showToast('Session ended ✓');
+  } catch(e) {
+    if (endBtn) { endBtn.disabled = false; endBtn.classList.remove('loading'); }
+    showError('Could not end session: ' + e.message);
   } finally {
     unlockUI();
   }
@@ -9598,8 +10012,8 @@ function computeShuffleLineup(selectedPlayers, courts, rounds, mode) {
 
   for (let r = 0; r < rounds; r++) {
     const result = r === 0
-      ? { lineup: _generateRound(selectedPlayers, courts, mode, restedPlayers), notice: null }
-      : _generateRoundWithRotation(selectedPlayers, courts, mode, usedPairs, restedPlayers);
+      ? { lineup: _generateRound(selectedPlayers, courts, mode, restedPlayers, r), notice: null }
+      : _generateRoundWithRotation(selectedPlayers, courts, mode, usedPairs, restedPlayers, r);
 
     if (result.notice) notice = result.notice;
 
@@ -9629,7 +10043,7 @@ function computeShuffleLineup(selectedPlayers, courts, rounds, mode) {
   return { rounds: roundLineups, notice, doubleRestWarning };
 }
 
-function _generateRound(playerPool, courts, mode, restedPlayers) {
+function _generateRound(playerPool, courts, mode, restedPlayers, roundIndex = 0) {
   // Move rested players to front of pool
   const rested = playerPool.filter(p => restedPlayers.some(r => r.id === p.id));
   const others = playerPool.filter(p => !restedPlayers.some(r => r.id === p.id));
@@ -9638,9 +10052,15 @@ function _generateRound(playerPool, courts, mode, restedPlayers) {
   if (mode === 'random') {
     pool = _shuffleArray([...pool]);
   } else {
-    // balanced and tiered: sort by rating descending
-    pool = [...pool].sort((a, b) => b.rating - a.rating);
-    // Move rested back to front after sort only for random (deterministic for b/t)
+    // balanced and tiered: sort by rating descending with pre-computed jitter.
+    // Jitter scales up with round index so later rounds look visibly different
+    // from round 1 — round 0: ±0.15, round 1: ±0.25, round 2: ±0.35, cap at ±0.45.
+    // Players with a rating gap larger than 2×JITTER almost never swap rank;
+    // closely-rated players vary increasingly across rounds.
+    const JITTER = Math.min(shuffleBaseJitter + roundIndex * 0.10, shuffleBaseJitter * 3);
+    const withJitter = pool.map(p => ({ p, j: p.rating + (Math.random() * JITTER * 2 - JITTER) }));
+    withJitter.sort((a, b) => b.j - a.j);
+    pool = withJitter.map(x => x.p);
   }
 
   const lineup = [];
@@ -9649,25 +10069,28 @@ function _generateRound(playerPool, courts, mode, restedPlayers) {
     if (group.length < 2) break;
     const ids = group.map(p => p.id);
     let teamA, teamB;
+    // Use ids[n] directly — never fall back to another player's id.
+    // The Step 1 guard (players ≥ courts*4) prevents underpopulated courts in
+    // normal flow; this null-fill is a last-resort safety net.
     if (mode === 'balanced') {
       // rank1+rank4 vs rank2+rank3
-      teamA = [ids[0], ids[3] || ids[0]];
-      teamB = [ids[1] || ids[0], ids[2] || ids[1] || ids[0]];
+      teamA = [ids[0], ids[3] ?? null];
+      teamB = [ids[1] ?? null, ids[2] ?? null];
     } else if (mode === 'tiered') {
       // rank1+rank2 vs rank3+rank4
-      teamA = [ids[0], ids[1] || ids[0]];
-      teamB = [ids[2] || ids[0], ids[3] || ids[1] || ids[0]];
+      teamA = [ids[0], ids[1] ?? null];
+      teamB = [ids[2] ?? null, ids[3] ?? null];
     } else {
       // random: first 2 vs last 2
-      teamA = [ids[0], ids[1] || ids[0]];
-      teamB = [ids[2] || ids[0], ids[3] || ids[1] || ids[0]];
+      teamA = [ids[0], ids[1] ?? null];
+      teamB = [ids[2] ?? null, ids[3] ?? null];
     }
     lineup.push({ teamA, teamB });
   }
   return lineup;
 }
 
-function _generateRoundWithRotation(playerPool, courts, mode, usedPairs, restedPlayers) {
+function _generateRoundWithRotation(playerPool, courts, mode, usedPairs, restedPlayers, roundIndex = 1) {
   const rested = playerPool.filter(p => restedPlayers.some(r => r.id === p.id));
   const others = playerPool.filter(p => !restedPlayers.some(r => r.id === p.id));
   const basePool = [...rested, ...others];
@@ -9677,7 +10100,7 @@ function _generateRoundWithRotation(playerPool, courts, mode, usedPairs, restedP
 
   for (let attempt = 0; attempt < 20; attempt++) {
     const pool = mode === 'random' ? _shuffleArray([...basePool]) : [...basePool];
-    const candidate = _generateRound(pool, courts, mode, restedPlayers);
+    const candidate = _generateRound(pool, courts, mode, restedPlayers, roundIndex);
     const repeatCount = _countRepeatPairs(candidate, usedPairs);
 
     if (repeatCount === 0) return { lineup: candidate, notice: null };
@@ -9722,6 +10145,12 @@ function _shuffleArray(arr) {
 function formatShortDate(isoStr) {
   if (!isoStr) return '';
   try {
+    // Plain date string (YYYY-MM-DD) — parse without timezone shift
+    if (/^\d{4}-\d{2}-\d{2}$/.test(isoStr)) {
+      const [y, m, d] = isoStr.split('-').map(Number);
+      const date = new Date(y, m - 1, d);
+      return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+    }
     const d = new Date(isoStr);
     return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
   } catch(e) { return ''; }
