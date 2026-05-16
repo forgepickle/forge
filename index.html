@@ -2,9 +2,23 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.9.2 — Shuffle UX Fixes            ║
+  ║  Version: 7.9.5 — UX Governance Pass        ║
   ║  Date: 2026-05-16                            ║
-  ║  Changes: Inactive players excluded from     ║
+  ║  Changes: Rules 7-11. Scroll filter chip     ║
+  ║           into view on contextual nav.       ║
+  ║           Icon position standard. Admin      ║
+  ║           spinner unified. Toast-only        ║
+  ║           feedback. forge-notice/advisory.   ║
+  ║                                              ║
+  ║  v7.9.4 — Bench Swap Fix                    ║
+  ║           Bench players shown below court    ║
+  ║           cards in wizard + session view.    ║
+  ║           Wiggle + tappable in swap mode.    ║
+  ║           Court-bench swap supported in      ║
+  ║           _executeSwap.                      ║
+  ║                                              ║
+  ║  v7.9.2 — Shuffle UX Fixes                  ║
+  ║           Inactive players excluded from     ║
   ║           shuffle player grid; session date  ║
   ║           defaults to today on wizard open.  ║
   ║                                              ║
@@ -248,6 +262,7 @@ body {
 .toast-dot { font-size: 8px; }
 .toast.success .toast-dot { color: var(--accent); }
 .toast.error   .toast-dot { color: var(--error); }
+.toast.info    .toast-dot { color: var(--grey-mid); }
 
 /* ════════════════════════════════════════════
    SHARED: MODAL OVERLAY (BOTTOM SHEET)
@@ -1739,11 +1754,9 @@ body {
 .score-winner-chip.a { background: rgba(74,144,217,0.12); color: #4a90d9; }
 .score-winner-chip.b { background: var(--accent-bg); color: var(--accent-dim); }
 
-.score-gap-warning {
-  font-size: 12px; color: var(--error);
-  margin-bottom: 8px; display: none;
-}
-.score-gap-warning.show { display: block; }
+/* Score gap warning — uses .forge-advisory (Rule 11 Type B). Show/hide via .show class. */
+#scoreGapWarning { display: none; margin-bottom: 8px; }
+#scoreGapWarning.show { display: flex; }
 
 /* Match status live ticker */
 .match-status-bar {
@@ -2262,6 +2275,28 @@ body {
 .dscore.win  { color: var(--accent-dim); }
 .dscore.lose { color: var(--grey-mid); }
 .dscore-sep  { font-size: 14px; font-weight: 700; color: var(--grey-mid); }
+/* ── Governance Rule 11: Two canonical inline message types ─────────────
+   Type A (.forge-notice)   — grey box + ℹ icon. Context, caveats, gate states.
+   Type B (.forge-advisory) — amber box + ⚠ icon. Actionable constraints/warnings.
+   .debrief-notice implements Type A in-place (margin scoped to debrief modal).
+   Use .forge-notice / .forge-advisory for all new and migrated instances.
+──────────────────────────────────────────────────────────────────────── */
+.forge-notice {
+  display: flex; align-items: flex-start; gap: 7px;
+  background: var(--grey-xlight); border: 0.5px solid var(--grey-light);
+  border-radius: 8px; padding: 8px 11px;
+}
+.forge-notice svg { flex-shrink: 0; margin-top: 1px; color: var(--grey-mid); }
+.forge-notice .notice-body { font-size: 12px; color: var(--grey-mid); line-height: 1.45; }
+.forge-notice .notice-title { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--grey-dark); margin-bottom: 2px; }
+.forge-advisory {
+  display: flex; align-items: flex-start; gap: 7px;
+  background: #fff8ec; border: 0.5px solid #f0c060;
+  border-radius: 8px; padding: 8px 11px;
+}
+.forge-advisory svg { flex-shrink: 0; margin-top: 1px; color: #d97706; }
+.forge-advisory .advisory-body { font-size: 12px; color: #92600a; line-height: 1.45; }
+
 .debrief-notice {
   display: flex; align-items: flex-start; gap: 6px;
   margin: 0 14px 10px;
@@ -2909,8 +2944,8 @@ body {
   border-color: var(--grey-light);
   opacity: 0.75;
 }
+/* Pair unqualified — uses .forge-advisory (Rule 11 Type B). Padding for card spacing. */
 .pair-unqualified-notice {
-  font-size: 12px; color: #F5A623;
   padding: 10px 0 4px;
   display: flex; align-items: center; gap: 6px;
 }
@@ -3197,21 +3232,7 @@ body {
 /* Paywall blur — State A */
 .alpha-body-blurred { filter: blur(5px); pointer-events: none; user-select: none; }
 
-/* Access banner — paywall or progress */
-.alpha-banner {
-  padding: 12px 0 12px;
-  text-align: center;
-}
-.alpha-banner-title {
-  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-weight: 600;
-  font-size: 11px;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--grey-mid);
-  margin-bottom: 4px;
-}
-.alpha-banner-sub { font-size: 12px; color: var(--grey-mid); }
+/* Access banner — replaced by forge-notice (Rule 11 Type A). See _alphaBannerHtml(). */
 
 /* Empty card body — States B / D */
 .alpha-body-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px; gap: 8px; }
@@ -3645,15 +3666,8 @@ body {
   font-weight: 900; font-size: 13px; letter-spacing: 2px;
   color: var(--grey-mid); margin: 8px 0; padding-left: 4px;
 }
-/* Advisory message */
-.shuffle-advisory {
-  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 13px; color: var(--grey-mid);
-  margin-top: 4px; margin-bottom: 8px;
-  padding: 8px 10px;
-  background: var(--grey-xlight);
-  border-radius: 8px;
-}
+/* Shuffle advisory — uses .forge-advisory (Rule 11 Type B). Margin spacing only. */
+.shuffle-advisory { margin-top: 4px; margin-bottom: 8px; }
 
 /* ── Session View ── */
 .session-view-card {
@@ -3759,6 +3773,53 @@ body {
   cursor: default;
   animation: none;
   border-color: transparent;
+}
+
+/* ── Bench Section ── */
+.bench-section {
+  border: 1.5px dashed var(--grey-light);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.bench-section-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--grey-mid); margin-bottom: 9px;
+}
+.bench-player-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.bench-player-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--grey-lightest, #f5f5f5);
+  border: 1px solid var(--grey-light); border-radius: 20px;
+  padding: 5px 11px;
+}
+.bench-player-chip .chip-avatar {
+  width: 22px; height: 22px; font-size: 9px;
+}
+.bench-player-chip .chip-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px; font-weight: 700; color: var(--grey-dark);
+}
+/* Swap mode — bench chips wiggle and become tappable */
+.swap-mode ~ .bench-section .bench-player-chip,
+.bench-section.swap-active .bench-player-chip {
+  animation: forgeWiggle 0.4s ease-in-out infinite;
+  border: 1.5px dashed var(--accent);
+  border-radius: 20px;
+  cursor: pointer;
+  touch-action: manipulation;
+  background: var(--white);
+}
+.bench-section.swap-active .bench-player-chip .chip-name { color: var(--black); }
+.bench-section.swap-active .bench-player-chip.selected {
+  animation: none;
+  background: var(--accent);
+  border-style: solid;
+}
+.bench-section.swap-active .bench-player-chip.selected .chip-name { color: var(--black); }
+.bench-section.swap-active .bench-player-chip.selected .chip-avatar {
+  background: rgba(0,0,0,0.12); color: var(--black);
 }
 
 /* Save Session button spinner */
@@ -3956,27 +4017,11 @@ body {
 .admin-push-btn.success { background: #d4edda; color: #1a6b35; box-shadow: none; }
 .admin-push-btn.failure { background: var(--error-bg); color: var(--error); box-shadow: none; }
 
-.admin-push-spinner {
-  width: 16px; height: 16px;
-  border: 2px solid rgba(0,0,0,0.2);
-  border-top-color: var(--black);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
+#adminPushBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
+#adminPushBtn.loading .btn-text    { display: none; }
+#adminPushBtn.loading .btn-spinner { display: block; }
 
-.admin-push-result {
-  font-size: 12px;
-  color: var(--grey-mid);
-  text-align: center;
-  margin-top: 10px;
-}
-
-.admin-push-error {
-  font-size: 12px;
-  color: var(--error);
-  text-align: center;
-  margin-top: 10px;
-}
+/* admin-push-result and admin-push-error retired in Rule 10 — feedback routes to toast */
 
 #adminPwModal,
 #adminPanelModal { z-index: 700; }
@@ -4513,7 +4558,7 @@ body {
         <div id="g3winner"></div>
       </div>
 
-      <div class="score-gap-warning" id="scoreGapWarning">⚠ Please fill games in order</div>
+      <div class="forge-advisory" id="scoreGapWarning"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span class="advisory-body">Please fill games in order</span></div>
       <div class="match-status-bar" id="matchStatusBar">Enter scores above</div>
     </div>
 
@@ -4605,7 +4650,7 @@ body {
           </div>
         </div>
         <!-- Player/court count advisory — shown when selection is invalid -->
-        <div id="shCourtAdvisory" class="shuffle-advisory" style="display:none;"></div>
+        <div id="shCourtAdvisory" class="forge-advisory shuffle-advisory" style="display:none;"></div>
       </div>
 
       <!-- STEP 2: MODE -->
@@ -4667,6 +4712,8 @@ body {
         <div id="shuffleAdvisories"></div>
         <!-- Court cards -->
         <div id="shuffleCourtCards"></div>
+        <!-- Bench section (always visible when bench players exist) -->
+        <div id="shuffleBenchSection"></div>
       </div>
 
     </div><!-- /shuffle-card-body -->
@@ -4741,6 +4788,8 @@ body {
         <div class="skeleton-card"></div>
       </div>
       <div id="sessionViewCourtCards"></div>
+      <!-- Bench section (always visible when bench players exist) -->
+      <div id="sessionViewBenchSection"></div>
     </div>
 
     <!-- Fixed footer -->
@@ -4939,15 +4988,9 @@ body {
 
     <!-- Push button -->
     <button class="admin-push-btn" id="adminPushBtn" type="button" onclick="handlePushData()">
-      <span class="admin-push-text">↑&nbsp; PUSH DATA NOW</span>
-      <span class="admin-push-spinner" style="display:none;"></span>
+      <span class="btn-text">↑&nbsp; PUSH DATA NOW</span>
+      <div class="btn-spinner"></div>
     </button>
-
-    <!-- Export result message -->
-    <div class="admin-push-result" id="adminPushResult" style="display:none;"></div>
-
-    <!-- Error message -->
-    <div class="admin-push-error" id="adminPushError" style="display:none;"></div>
 
   </div>
 </div>
@@ -7267,7 +7310,7 @@ function renderClutchRating(p) {
   const btn = document.createElement('button');
   btn.id = 'viewMatchesBtn';
   btn.className = 'view-matches-btn';
-  btn.innerHTML = `<svg class="vmb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="view-matches-btn-text">View ${escHtml(p.name)}'s Matches</span><svg class="vmb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+  btn.innerHTML = `<svg class="vmb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="view-matches-btn-text">View ${escHtml(p.name)}'s Matches</span>`;
   btn.onclick = () => goToFilteredMatches('player', p.id);
   const clutchCard = document.getElementById('clutchContent').closest('.metric-card');
   if (clutchCard && clutchCard.parentNode) clutchCard.parentNode.insertBefore(btn, clutchCard.nextSibling);
@@ -7311,7 +7354,7 @@ function renderPairCards() {
 
     // Advanced stats only shown for qualified pairs (≥2 matches)
     const advancedStats = isUnqualified
-      ? `<div class="pair-unqualified-notice">⚠ Play 1 more match together to unlock full stats</div>`
+      ? `<div class="pair-unqualified-notice forge-advisory"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span class="advisory-body">Play 1 more match together to unlock full stats</span></div>`
       : `<div class="pair-metric">
           <div class="pair-metric-label">Partnership Win Rate ${lowSample?'<span class="low-sample-tag">⚠ Low sample</span>':''}<button class="tooltip-btn" onclick="showTooltipKey('pairWinRate')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></button></div>
           <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pair.winPct}%"></div></div>
@@ -7340,7 +7383,6 @@ function renderPairCards() {
         <button class="pair-view-matches-btn" onclick="goToFilteredMatches('pair','${pair.p1}','${pair.p2}')">
           <svg class="pvmb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           <span class="pair-view-matches-btn-text">View Their Matches Together</span>
-          <svg class="pvmb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
     </div>`;
@@ -8309,6 +8351,13 @@ function goToFilteredMatches(type, id1, id2) {
   if (type==='player') matchListFilter = { type:'player', id:id1 };
   else if (type==='pair') matchListFilter = { type:'pair', id1:id1, id2:id2 };
   navigateTo('matches');
+  // Rule 7: scroll first filter chip into view after navigation and chip render settle
+  setTimeout(() => {
+    const chip = document.getElementById('mlchip-' + id1);
+    if (chip) {
+      try { chip.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' }); } catch(e) { chip.scrollIntoView(false); }
+    }
+  }, 100);
 }
 
 function goToPairAnalytics(id1, id2) {
@@ -8548,7 +8597,7 @@ function selectAlphaChip(id) {
 
 function toggleAlphaRival(id, name, games) {
   if (games < 15) {
-    showToast(name + ' has ' + games + ' of 15 matches — not enough for Alpha yet');
+    showToast(name + ' has ' + games + ' of 15 matches — not enough for Alpha yet', 'info');
     return;
   }
   if (alphaRivals.includes(id)) {
@@ -8944,9 +8993,10 @@ function _renderCorridorHtml(corridor) {
 }
 
 function _alphaBannerHtml(title, sub) {
-  return '<div class="alpha-banner">' +
-    '<div class="alpha-banner-title">' + title + '</div>' +
-    '<div class="alpha-banner-sub">' + sub + '</div>' +
+  // Rule 11 Type A: forge-notice box with optional bold title + body text
+  return '<div class="forge-notice" style="margin:8px clamp(12px,4vw,20px) 12px; background:#ffffff;">' +
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+    '<div><strong class="notice-title">' + title + '</strong><span class="notice-body">' + sub + '</span></div>' +
     '</div>';
 }
 
@@ -9498,8 +9548,9 @@ function _updateShStep1Next() {
   const adv = document.getElementById('shCourtAdvisory');
   if (adv) {
     if (courts !== null && n < needed) {
-      adv.textContent = '⚠ ' + courts + ' court' + (courts > 1 ? 's' : '') + ' need' + (courts === 1 ? 's' : '') + ' at least ' + needed + ' players — add more players or reduce courts';
-      adv.style.display = 'block';
+      const msg = courts + ' court' + (courts > 1 ? 's' : '') + ' need' + (courts === 1 ? 's' : '') + ' at least ' + needed + ' players — add more players or reduce courts';
+      adv.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span class="advisory-body">' + escHtml(msg) + '</span>';
+      adv.style.display = 'flex';
     } else {
       adv.style.display = 'none';
     }
@@ -9642,6 +9693,45 @@ function _renderShuffleCourtCards() {
   const round = shuffle.lineup.rounds[shuffle.activeRoundTab];
   if (!round) return;
   cardsEl.innerHTML = round.map((court, ci) => _buildCourtCardHTML(court, ci, null, null, true)).join('');
+  _renderBenchSection(shuffle.players, round, 'shuffleBenchSection', 'shuffleCourtCards');
+}
+
+// ── Bench Section ──────────────────────────────────────────────────
+// Derives bench players (selected but not in any court slot this round),
+// renders the bench card. When swap mode is active the section gets
+// .swap-active so chips wiggle and become tappable via stored handler refs.
+function _renderBenchSection(allPlayerIds, round, sectionId, containerId) {
+  const sectionEl = document.getElementById(sectionId);
+  if (!sectionEl) return;
+  // Collect all court-assigned IDs for this round
+  const courtIds = new Set(round.flatMap(c => [...(c.teamA || []), ...(c.teamB || [])]).filter(Boolean));
+  const benchIds = allPlayerIds.filter(id => !courtIds.has(id));
+  if (benchIds.length === 0) { sectionEl.innerHTML = ''; return; }
+  const isSwap = shuffle.swapMode;
+  sectionEl.innerHTML = `
+    <div class="bench-section${isSwap ? ' swap-active' : ''}" id="${sectionId}-card">
+      <div class="bench-section-label">BENCH</div>
+      <div class="bench-player-chips">
+        ${benchIds.map(id => {
+          const p = players.find(x => x.id === id);
+          if (!p) return '';
+          return `<div class="bench-player-chip" data-pid="${p.id}" id="bchip-${sectionId}-${p.id}">
+            <div class="chip-avatar">${getInitials(p.name)}</div>
+            <span class="chip-name">${escHtml(p.name.toUpperCase())}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  // In swap mode, attach touchend+click handlers (same pattern as court cards)
+  if (isSwap) {
+    sectionEl.querySelectorAll('.bench-player-chip[data-pid]').forEach(chip => {
+      const handler = (e) => { e.preventDefault(); handleSwapTap(chip.dataset.pid, containerId); };
+      chip._swapTouchHandler = handler;
+      chip._swapClickHandler = () => handleSwapTap(chip.dataset.pid, containerId);
+      chip.addEventListener('touchend', handler, { passive: false });
+      chip.addEventListener('click', chip._swapClickHandler);
+    });
+  }
 }
 
 function switchShuffleRoundTab(idx) {
@@ -9667,7 +9757,8 @@ function _renderShuffleAdvisories(selectedPlayers) {
   if (shuffle.lineup && shuffle.lineup.doubleRestWarning) {
     msgs.push(shuffle.lineup.doubleRestWarning);
   }
-  el.innerHTML = msgs.map(m => `<div class="shuffle-advisory">${escHtml(m)}</div>`).join('');
+  const warnSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  el.innerHTML = msgs.map(m => `<div class="forge-advisory shuffle-advisory">${warnSvg}<span class="advisory-body">${escHtml(m)}</span></div>`).join('');
 }
 
 // ── Court card renderer (shared by wizard + session view) ──────────
@@ -9837,6 +9928,9 @@ function enterShuffleSwapMode() {
   shuffle.swapMode = true;
   shuffle.swapSelected = null;
   _applySwapModeToCards('shuffleCourtCards');
+  // Re-render bench section now that swapMode is true so chips wiggle and get handlers
+  const round = shuffle.lineup && shuffle.lineup.rounds[shuffle.activeRoundTab];
+  if (round) _renderBenchSection(shuffle.players, round, 'shuffleBenchSection', 'shuffleCourtCards');
   document.getElementById('shF3Normal').style.display = 'none';
   document.getElementById('shSaveBtn').style.display = 'none';
   document.getElementById('shSwapBtn').style.display = 'none';
@@ -9889,6 +9983,24 @@ function _removeSwapModeFromCards(containerId) {
     }
     span.onclick = null;
   });
+  // Clean up bench chip handlers and reset bench section state
+  const benchId = containerId === 'shuffleCourtCards' ? 'shuffleBenchSection' : 'sessionViewBenchSection';
+  const benchEl = document.getElementById(benchId);
+  if (benchEl) {
+    benchEl.querySelectorAll('.bench-player-chip').forEach(chip => {
+      chip.classList.remove('selected');
+      if (chip._swapTouchHandler) {
+        chip.removeEventListener('touchend', chip._swapTouchHandler);
+        delete chip._swapTouchHandler;
+      }
+      if (chip._swapClickHandler) {
+        chip.removeEventListener('click', chip._swapClickHandler);
+        delete chip._swapClickHandler;
+      }
+    });
+    const card = benchEl.querySelector('.bench-section');
+    if (card) card.classList.remove('swap-active');
+  }
 }
 
 function handleSwapTap(pid, containerId) {
@@ -9931,16 +10043,39 @@ function _markSwapSelected(pid, containerId) {
   el.querySelectorAll('.court-player-name[data-pid]').forEach(span => {
     span.classList.toggle('selected', span.dataset.pid === pid && pid !== null);
   });
+  // Also mark bench chips so selection highlight works across court + bench
+  const benchId = containerId === 'shuffleCourtCards' ? 'shuffleBenchSection' : 'sessionViewBenchSection';
+  const benchEl = document.getElementById(benchId);
+  if (benchEl) {
+    benchEl.querySelectorAll('.bench-player-chip[data-pid]').forEach(chip => {
+      chip.classList.toggle('selected', chip.dataset.pid === pid && pid !== null);
+    });
+  }
 }
 
 function _executeSwap(pidA, pidB) {
   if (!pidA || !pidB || pidA === pidB) return; // hard guard: no self-swap
   const lineup = shuffle.lineup.rounds[shuffle.activeRoundTab];
-  for (let c = 0; c < lineup.length; c++) {
-    const court = lineup[c];
-    ['teamA','teamB'].forEach(team => {
-      court[team] = court[team].map(id => id === pidA ? pidB : id === pidB ? pidA : id);
-    });
+  const inCourt = (pid) => lineup.some(c => [...(c.teamA || []), ...(c.teamB || [])].includes(pid));
+  const aOnCourt = inCourt(pidA);
+  const bOnCourt = inCourt(pidB);
+  if (aOnCourt && bOnCourt) {
+    // Both on court — standard two-way swap
+    for (let c = 0; c < lineup.length; c++) {
+      ['teamA','teamB'].forEach(team => {
+        lineup[c][team] = lineup[c][team].map(id => id === pidA ? pidB : id === pidB ? pidA : id);
+      });
+    }
+  } else {
+    // One player is on bench — replace the court slot player with the bench player.
+    // The displaced player implicitly moves to bench (bench is derived, not stored).
+    const courtPid = aOnCourt ? pidA : pidB;
+    const benchPid = aOnCourt ? pidB : pidA;
+    for (let c = 0; c < lineup.length; c++) {
+      ['teamA','teamB'].forEach(team => {
+        lineup[c][team] = lineup[c][team].map(id => id === courtPid ? benchPid : id);
+      });
+    }
   }
 }
 
@@ -10025,6 +10160,7 @@ function _renderSessionViewCards() {
     const loggedId = (logged && logged[ci]) ? logged[ci] : null;
     return _buildCourtCardHTML(court, ci, shuffle.activeRoundTab, loggedId, false, snapshot);
   }).join('');
+  _renderBenchSection(session.playerIds, round, 'sessionViewBenchSection', 'sessionViewCourtCards');
 }
 
 function switchSessionViewRoundTab(idx) {
@@ -10231,6 +10367,9 @@ function enterSessionViewSwapMode() {
   const session = isDemoMode ? demoSession : activeSession;
   _svPreSwapLineup = JSON.parse(JSON.stringify(session.lineup));
   _applySwapModeToCards('sessionViewCourtCards');
+  // Re-render bench section now that swapMode is true so chips wiggle and get handlers
+  const round = session && session.lineup[shuffle.activeRoundTab];
+  if (round) _renderBenchSection(session.playerIds, round, 'sessionViewBenchSection', 'sessionViewCourtCards');
   document.getElementById('svFooterNormal').style.display   = 'none';
   document.getElementById('svFooterSwap').style.display     = 'block';
 }
@@ -10596,12 +10735,8 @@ function showAdminPanel() {
   const btn = document.getElementById('adminPushBtn');
   btn.disabled = false;
   btn.className = 'admin-push-btn';
-  btn.querySelector('.admin-push-text').textContent   = '↑  PUSH DATA NOW';
-  btn.querySelector('.admin-push-text').style.display = 'inline';
-  btn.querySelector('.admin-push-spinner').style.display = 'none';
-
-  document.getElementById('adminPushResult').style.display = 'none';
-  document.getElementById('adminPushError').style.display  = 'none';
+  btn.classList.remove('loading');
+  btn.querySelector('.btn-text').textContent = '↑  PUSH DATA NOW';
 
   document.getElementById('adminPanelModal').classList.add('show');
 }
@@ -10626,17 +10761,12 @@ async function handlePushData() {
 
   adminIsExporting = true;
 
-  const btn      = document.getElementById('adminPushBtn');
-  const resultEl = document.getElementById('adminPushResult');
-  const errorEl  = document.getElementById('adminPushError');
+  const btn = document.getElementById('adminPushBtn');
 
   // Loading state
   btn.disabled = true;
   btn.className = 'admin-push-btn';
-  btn.querySelector('.admin-push-text').style.display    = 'none';
-  btn.querySelector('.admin-push-spinner').style.display = 'inline-block';
-  resultEl.style.display = 'none';
-  errorEl.style.display  = 'none';
+  btn.classList.add('loading');
 
   try {
     const res = await callBackend(getPayload('exportData', {
@@ -10647,28 +10777,24 @@ async function handlePushData() {
     // Success state
     btn.disabled = false;
     btn.className = 'admin-push-btn success';
-    btn.querySelector('.admin-push-text').textContent    = '✓  PUSHED SUCCESSFULLY';
-    btn.querySelector('.admin-push-text').style.display  = 'inline';
-    btn.querySelector('.admin-push-spinner').style.display = 'none';
+    btn.classList.remove('loading');
+    btn.querySelector('.btn-text').textContent = '✓  PUSHED SUCCESSFULLY';
 
     // Update last export display
     adminLastExport = res.exportedAt || '';
     document.getElementById('adminLastExportLabel').textContent =
       'Last export: ' + (adminLastExport || 'Never');
 
-    resultEl.textContent   = (res.playersCount || 0) + ' players · ' + (res.matchesCount || 0) + ' matches exported';
-    resultEl.style.display = 'block';
+    showToast((res.playersCount || 0) + ' players · ' + (res.matchesCount || 0) + ' matches exported ✓');
 
   } catch(e) {
     // Failure/retry state — re-enable button for retry
     btn.disabled = false;
     btn.className = 'admin-push-btn failure';
-    btn.querySelector('.admin-push-text').textContent    = '✕  PUSH FAILED — tap to retry';
-    btn.querySelector('.admin-push-text').style.display  = 'inline';
-    btn.querySelector('.admin-push-spinner').style.display = 'none';
+    btn.classList.remove('loading');
+    btn.querySelector('.btn-text').textContent = '✕  PUSH FAILED — tap to retry';
 
-    errorEl.textContent   = e.message || 'Export failed. Please try again.';
-    errorEl.style.display = 'block';
+    showError(e.message || 'Export failed. Please try again.');
   } finally {
     adminIsExporting = false;
   }
