@@ -2,14 +2,42 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.7.1 — Debrief UI Scale-Up        ║
-  ║  Date: 2026-05-15                            ║
-  ║  Changes: Increased font sizes across all    ║
+  ║  Version: 7.9.1 — Bug Fix Pass                ║
+  ║  Date: 2026-05-16                            ║
+  ║  Changes: Delete Session spinner + footer    ║
+  ║           button lock during delete,         ║
+  ║           shuffleEntryArea cleared on reset  ║
+  ║           (fixes Add Player / Active Session ║
+  ║           collision on login), GENERATE      ║
+  ║           LINEUP + Start Over + Save Changes ║
+  ║           spinners (label-replaced pattern), ║
+  ║           exit-confirm tap-outside extended  ║
+  ║           to card body and footer.           ║
+  ║                                              ║
+  ║  v7.9.0 — Admin Screen                      ║
+  ║           Admin entry via 7-tap MATCHES      ║
+  ║           header trigger, admin password     ║
+  ║           modal with keyboard-lift fix,      ║
+  ║           admin panel with Push Data action, ║
+  ║           GAS adminLogin + exportData        ║
+  ║           actions, ADMIN_LOG audit trail,    ║
+  ║           lastExportAt in getConfig,         ║
+  ║           session-scoped admin unlock.       ║
+  ║                                              ║
+  ║  v7.8.0 — Forge Shuffle                     ║
+  ║           Full Forge Shuffle feature —       ║
+  ║           Pathway A wizard (Random/Balanced/ ║
+  ║           Tiered, multi-round rotation with  ║
+  ║           soft blacklist, swap players),     ║
+  ║           Pathway B session view (log/view   ║
+  ║           matches, swap, delete session),    ║
+  ║           SESSIONS tab backend wiring,       ║
+  ║           background sync integration,       ║
+  ║           Part B locked mode placeholders.   ║
+  ║                                              ║
+  ║  v7.7.1 — Debrief UI Scale-Up               ║
+  ║           Increased font sizes across all    ║
   ║           debrief modal classes (~15-20%).   ║
-  ║           object. loadDemoData and demo      ║
-  ║           delete replay reset each player to ║
-  ║           their own startingRating instead   ║
-  ║           of global STARTING_RATING.         ║
   ║                                              ║
   ║  v7.6.0 — Debrief Snapshot Fix               ║
   ║           Pair Chemistry + K-Factor now read ║
@@ -205,7 +233,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s, transform 0.25s;
-  z-index: 550;
+  z-index: 800;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -382,6 +410,20 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+/* Active session pulsing dot on Leaderboard nav icon */
+.nav-session-dot {
+  position: absolute;
+  top: -2px; right: -3px;
+  width: 8px; height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: sessionDotPulse 1.6s ease-in-out infinite;
+}
+@keyframes sessionDotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.7); }
 }
 .nav-label {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -1092,6 +1134,7 @@ body {
   color: var(--grey-mid);
   text-align: center;
   transition: all 0.2s;
+  touch-action: manipulation;
 }
 .toggle-pill.active {
   background: var(--accent);
@@ -2185,8 +2228,10 @@ body {
 .debrief-header { padding: 0 20px 14px; }
 .debrief-modal-label {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
-  text-transform: uppercase; color: var(--grey-mid); margin-bottom: 8px;
+  font-size: 20px; font-weight: 800; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--black);
+  margin-bottom: 10px; padding-bottom: 10px;
+  border-bottom: 1.5px solid var(--grey-light);
 }
 .debrief-match-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
 .debrief-team-col { flex: 1; text-align: center; }
@@ -3240,6 +3285,696 @@ body {
 #alphaRivalChips .player-chip .chip-name {
   font-size: 12px;
 }
+
+/* ════════════════════════════════════════════
+   FORGE SHUFFLE
+════════════════════════════════════════════ */
+
+/* Leaderboard extra padding for shuffle entry button */
+#screenLeaderboard {
+  padding-bottom: calc(var(--nav-h) + var(--addbar-h) + env(safe-area-inset-bottom, 0px) + 12px);
+}
+
+/* ── Shuffle Entry Button Area ── */
+.shuffle-entry-area {
+  position: absolute;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  right: 0;
+  padding: 10px 16px;
+  background: rgba(247,247,245,0.97);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--grey-light);
+  z-index: 350;
+  display: none;
+}
+.shuffle-entry-area.visible { display: block; }
+.shuffle-entry-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--accent);
+  border: none; border-radius: 14px;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: clamp(16px, 4.5vw, 19px);
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--black);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background 0.15s, color 0.15s;
+}
+.shuffle-entry-btn.session-active {
+  background: var(--black);
+  color: var(--accent);
+}
+/* Spinner inside session-active entry button */
+.shuffle-entry-btn .shuffle-entry-spinner {
+  display: none;
+  width: 20px; height: 20px;
+  border: 2px solid rgba(170,220,50,0.3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+.shuffle-entry-btn.loading { cursor: wait; }
+.shuffle-entry-btn.loading .btn-text { display: none; }
+.shuffle-entry-btn.loading .shuffle-entry-spinner { display: block; }
+
+/* ── Full-screen Shuffle Overlays ── */
+/* Same pattern as .share-card-overlay: position:fixed, z-index 700 */
+.shuffle-full-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.shuffle-full-overlay.show { opacity: 1; pointer-events: all; }
+
+/* ── Shuffle Wizard Card ── */
+.shuffle-card {
+  width: 100%;
+  max-width: 480px;
+  height: calc(100% - env(safe-area-inset-top, 0px));
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.shuffle-card-header {
+  flex-shrink: 0;
+  padding: 16px 16px 0;
+  background: var(--bg);
+}
+.shuffle-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.shuffle-header-title {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 900;
+  font-size: 20px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--black);
+}
+.shuffle-exit-btn {
+  background: none;
+  border: 1.5px solid var(--grey-light);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--grey-mid);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.shuffle-exit-btn:hover { color: var(--black); border-color: var(--grey-dark); }
+/* Exit confirmation state — replaces header row */
+.shuffle-exit-confirm {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.shuffle-exit-confirm.show { display: flex; }
+.shuffle-exit-confirm-msg {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--black);
+  flex: 1;
+}
+.shuffle-exit-confirm-keep {
+  background: var(--grey-xlight);
+  border: none; border-radius: 8px;
+  padding: 7px 12px;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;
+  color: var(--black); cursor: pointer;
+}
+.shuffle-exit-confirm-yes {
+  background: var(--error);
+  border: none; border-radius: 8px;
+  padding: 7px 12px;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase;
+  color: var(--white); cursor: pointer;
+}
+/* Step progress bar inside shuffle card */
+.shuffle-step-progress {
+  display: flex;
+  align-items: center;
+  padding: 0 4px 14px;
+}
+/* Scrollable body */
+.shuffle-card-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px clamp(12px, 4vw, 20px) 24px;
+}
+/* Fixed footer */
+.shuffle-card-footer {
+  flex-shrink: 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
+  border-top: 1px solid var(--grey-light);
+  display: flex;
+  gap: 10px;
+}
+.shuffle-footer-primary {
+  flex: 1;
+  padding: 14px;
+  background: var(--accent);
+  border: none; border-radius: 12px;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: clamp(15px, 4vw, 17px);
+  letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--black); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: background 0.15s;
+}
+.shuffle-footer-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.shuffle-footer-secondary {
+  flex: 1;
+  padding: 13px;
+  background: transparent;
+  border: 1.5px solid var(--grey-light);
+  border-radius: 12px;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: clamp(13px, 3.5vw, 15px);
+  letter-spacing: 1px; text-transform: uppercase;
+  color: var(--grey-mid); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: all 0.15s;
+}
+.shuffle-footer-secondary:hover { color: var(--black); border-color: var(--grey-dark); }
+.shuffle-footer-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
+/* Full-width primary (Save Session) */
+.shuffle-footer-primary.full-width { flex: unset; width: 100%; }
+
+/* ── Shuffle Step Panels ── */
+.shuffle-step-panel { display: none; animation: fadeIn 0.2s ease; }
+.shuffle-step-panel.active { display: block; }
+.shuffle-step-title {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 900; font-size: clamp(20px, 5.5vw, 24px); letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--black);
+  margin-bottom: 14px;
+}
+
+/* ── Step 1: Player grid + controls ── */
+.shuffle-player-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+/* Reuse .player-chip inside .shuffle-player-grid */
+.shuffle-player-grid .player-chip { width: 100%; }
+/* Courts / Rounds selectors */
+.shuffle-control-group { margin-bottom: 18px; }
+.shuffle-control-label {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: 13px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--grey-mid);
+  margin-bottom: 8px;
+}
+
+/* ── Step 2: Mode rows ── */
+.shuffle-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--grey-light);
+  background: var(--white);
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.shuffle-mode-row.selected {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.shuffle-mode-row.locked {
+  opacity: 0.55;
+  cursor: default;
+}
+.shuffle-mode-radio {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--grey-light);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.15s;
+}
+.shuffle-mode-row.selected .shuffle-mode-radio {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.shuffle-mode-row.selected .shuffle-mode-radio::after {
+  content: '';
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--black);
+}
+.shuffle-mode-icon { font-size: 20px; flex-shrink: 0; }
+.shuffle-mode-name {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: 16px; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--black);
+  flex: 1;
+}
+.shuffle-mode-sublabel {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.3px;
+  color: var(--grey-mid); flex-shrink: 0;
+}
+.shuffle-mode-coming-soon {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--grey-mid);
+  background: var(--grey-xlight);
+  border-radius: 6px; padding: 3px 7px;
+}
+
+/* ── Step 3: Result — round tabs + court cards ── */
+.shuffle-result-meta {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--grey-mid);
+  margin-bottom: 14px;
+}
+.shuffle-round-tabs {
+  margin-bottom: 16px;
+}
+.shuffle-rotation-notice {
+  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px; color: #d97706; /* amber */
+  margin-bottom: 12px;
+}
+/* Court card */
+.court-card {
+  background: var(--white);
+  border-radius: 14px;
+  border: 1px solid var(--grey-light);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.court-card-title {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 900; font-size: 14px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--grey-mid);
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px;
+}
+.court-card-title .court-logged-badge {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.8px;
+  color: var(--success);
+  background: rgba(46,168,74,0.10);
+  border-radius: 6px; padding: 2px 7px;
+}
+.court-team {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  margin-bottom: 6px;
+}
+.court-team-players {
+  display: flex; align-items: baseline; gap: 6px;
+  flex-wrap: wrap; flex: 1;
+}
+.court-player-name {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: 19px; letter-spacing: 0.3px;
+  text-transform: uppercase; color: var(--black);
+  display: inline-block;
+}
+.court-player-rating {
+  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px; color: var(--grey-mid);
+}
+.court-team-avg {
+  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px; color: var(--grey-mid);
+  flex-shrink: 0;
+}
+.court-vs {
+  text-align: left;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 900; font-size: 13px; letter-spacing: 2px;
+  color: var(--grey-mid); margin: 8px 0; padding-left: 4px;
+}
+/* Advisory message */
+.shuffle-advisory {
+  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px; color: var(--grey-mid);
+  margin-top: 4px; margin-bottom: 8px;
+  padding: 8px 10px;
+  background: var(--grey-xlight);
+  border-radius: 8px;
+}
+
+/* ── Session View ── */
+.session-view-card {
+  width: 100%;
+  max-width: 480px;
+  height: calc(100% - env(safe-area-inset-top, 0px));
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.session-view-header {
+  flex-shrink: 0;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--grey-light);
+}
+.session-view-header-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.session-view-title {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 900; font-size: 20px; letter-spacing: 0.5px;
+  text-transform: uppercase; color: var(--black);
+}
+.session-view-meta {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--grey-mid);
+  margin-top: 4px;
+}
+.session-view-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px clamp(12px, 4vw, 20px) 24px;
+}
+.session-view-footer {
+  flex-shrink: 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
+  border-top: 1px solid var(--grey-light);
+  display: flex;
+  gap: 10px;
+}
+/* Session court card — log / logged states */
+.session-log-btn {
+  width: 100%; margin-top: 12px;
+  padding: 11px;
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  border-radius: 10px;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: 14px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--accent);
+  cursor: pointer; transition: all 0.15s;
+}
+.session-log-btn:hover { background: var(--accent-bg); }
+.session-view-btn {
+  width: 100%; margin-top: 12px;
+  padding: 11px;
+  background: var(--grey-xlight);
+  border: none; border-radius: 10px;
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: 14px; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--grey-mid);
+  cursor: pointer; transition: all 0.15s;
+}
+.session-view-btn:hover { color: var(--black); }
+.session-score-display {
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: 18px; letter-spacing: 0.5px;
+  color: var(--black); text-align: center; margin-top: 10px;
+}
+/* Swap save/discard footer mutation */
+.session-swap-actions { display: flex; gap: 10px; width: 100%; }
+
+/* ── Swap Mode Wiggle ── */
+@keyframes forgeWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25%       { transform: rotate(-2deg); }
+  75%       { transform: rotate(2deg); }
+}
+.swap-mode .court-player-name {
+  animation: forgeWiggle 0.4s ease-in-out infinite;
+  border: 1.5px dashed var(--accent);
+  border-radius: 6px;
+  padding: 2px 6px;
+  cursor: pointer;
+  touch-action: manipulation; /* prevent scroll-gesture capture on second tap (iOS/Android) */
+}
+.swap-mode .court-player-name.selected {
+  animation: none;
+  background: var(--accent);
+  color: var(--black);
+  border-style: solid;
+}
+/* Logged courts are locked during swap mode — dim players and prevent interaction */
+.swap-mode .court-card[data-court-logged] .court-player-name {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: default;
+  animation: none;
+  border-color: transparent;
+}
+
+/* Save Session button spinner */
+#shSaveBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
+#shSaveBtn.loading .btn-text { display: none; }
+#shSaveBtn.loading .btn-spinner { display: block; }
+/* End Session button spinner */
+#svEndBtn .btn-spinner { border-color: rgba(170,220,50,0.3); border-top-color: var(--accent); }
+#svEndBtn.loading .btn-text { display: none; }
+#svEndBtn.loading .btn-spinner { display: block; }
+/* Delete Session button spinner */
+#svDeleteBtn .btn-spinner { border-color: rgba(220,53,69,0.3); border-top-color: var(--error); }
+#svDeleteBtn.loading .btn-text { display: none; }
+#svDeleteBtn.loading .btn-spinner { display: block; }
+/* Generate Lineup button spinner */
+#shGenerateBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
+#shGenerateBtn.loading .btn-text { display: none; }
+#shGenerateBtn.loading .btn-spinner { display: block; }
+/* Start Over button spinner */
+#shStartOverBtn .btn-spinner { border-color: rgba(58,58,58,0.3); border-top-color: var(--grey-dark); }
+#shStartOverBtn.loading .btn-text { display: none; }
+#shStartOverBtn.loading .btn-spinner { display: block; }
+/* Save Changes (post-swap) button spinner */
+#svSaveSwapBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
+#svSaveSwapBtn.loading .btn-text { display: none; }
+#svSaveSwapBtn.loading .btn-spinner { display: block; }
+
+/* End Session button — solid lime fill */
+.session-end-btn {
+  flex: 1;
+  padding: 12px 10px;
+  border-radius: 12px;
+  border: none;
+  background: var(--accent);
+  color: var(--black);
+  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 700; font-size: 15px; letter-spacing: 0.5px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.session-end-btn:active { opacity: 0.75; }
+
+/* ── Confirmation modals spawned from inside overlays (z-index > 700) ── */
+#deleteSessionModal,
+#endSessionModal,
+#startOverModal {
+  z-index: 750;
+}
+/* Step 3 meta row: rotation notice + swap icon side by side */
+.shuffle-meta-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 28px; margin-bottom: 4px;
+}
+.shuffle-rotation-notice {
+  flex: 1;
+}
+.swap-inline-btn {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1.5px solid var(--grey-light);
+  background: var(--white);
+  color: var(--grey-mid);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 0.15s, color 0.15s;
+}
+.swap-inline-btn:active {
+  background: var(--grey-xlight);
+  color: var(--black);
+}
+/* Step 1 date + player count */
+.shuffle-date-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--grey-light);
+  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 15px;
+  color: var(--black);
+  background: var(--white);
+  margin-top: 6px;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+}
+.shuffle-player-count {
+  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px; color: var(--grey-mid);
+  font-weight: 500;
+}
+
+/* ════════════════════════════════════════════
+   ADMIN PANEL
+════════════════════════════════════════════ */
+
+.admin-panel-sheet {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.admin-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.admin-panel-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--black);
+}
+
+.admin-section-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--grey-mid);
+  margin-bottom: 8px;
+}
+
+.admin-divider {
+  height: 1px;
+  background: var(--grey-light);
+  margin-bottom: 12px;
+}
+
+.admin-section-desc {
+  font-size: 14px;
+  color: var(--grey-mid);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.admin-info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--grey-xlight);
+}
+
+.admin-info-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--grey-mid);
+  flex: 1;
+}
+
+.admin-info-count {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--black);
+}
+
+.admin-last-export {
+  font-size: 12px;
+  color: var(--grey-mid);
+  margin: 14px 0 20px;
+  text-align: center;
+}
+
+.admin-push-btn {
+  width: 100%;
+  padding: 15px;
+  border-radius: 14px;
+  border: none;
+  background: var(--accent);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--black);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s, opacity 0.15s;
+  box-shadow: 0 4px 14px rgba(170,220,50,0.3);
+}
+.admin-push-btn:hover { background: var(--accent-dim); }
+.admin-push-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+.admin-push-btn.success { background: #d4edda; color: #1a6b35; box-shadow: none; }
+.admin-push-btn.failure { background: var(--error-bg); color: var(--error); box-shadow: none; }
+
+.admin-push-spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: var(--black);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.admin-push-result {
+  font-size: 12px;
+  color: var(--grey-mid);
+  text-align: center;
+  margin-top: 10px;
+}
+
+.admin-push-error {
+  font-size: 12px;
+  color: var(--error);
+  text-align: center;
+  margin-top: 10px;
+}
+
+#adminPwModal,
+#adminPanelModal { z-index: 700; }
 </style>
 </head>
 <body>
@@ -3801,6 +4536,249 @@ body {
 
   </div><!-- /screenAddMatch -->
 
+
+<!-- ══════════════════════════════════════════
+     FORGE SHUFFLE — WIZARD OVERLAY (Pathway A)
+     Full-screen fixed overlay, z-index 700.
+     Overlay tap dismisses exit-confirm if showing; otherwise no-op.
+══════════════════════════════════════════ -->
+<div class="shuffle-full-overlay" id="shuffleWizardOverlay" onclick="if(shuffle.exitConfirmShowing) _hideShuffleExitConfirm()">
+  <div class="shuffle-card" onclick="event.stopPropagation()">
+
+    <!-- Card Header (always visible) -->
+    <div class="shuffle-card-header">
+      <!-- Normal header row -->
+      <div class="shuffle-header-row" id="shuffleHeaderRow">
+        <span class="shuffle-header-title">Plan the Courts</span>
+        <button class="shuffle-exit-btn" type="button" onclick="shuffleExitTap()">✕ Exit</button>
+      </div>
+      <!-- Exit confirmation (inline header mutation) -->
+      <div class="shuffle-exit-confirm" id="shuffleExitConfirm">
+        <span class="shuffle-exit-confirm-msg">⚠ Exit and lose your lineup?</span>
+        <button class="shuffle-exit-confirm-keep" type="button" onclick="shuffleExitKeepGoing()">Keep Going</button>
+        <button class="shuffle-exit-confirm-yes"  type="button" onclick="shuffleExitConfirm()">Yes, Exit</button>
+      </div>
+      <!-- Step progress bar (3 nodes) -->
+      <div class="shuffle-step-progress" id="shuffleStepProgress">
+        <div class="step-node active" id="shNode1">1</div>
+        <div class="step-line" id="shLine1"></div>
+        <div class="step-node" id="shNode2">2</div>
+        <div class="step-line" id="shLine2"></div>
+        <div class="step-node" id="shNode3">3</div>
+      </div>
+    </div>
+
+    <!-- Scrollable Body -->
+    <div class="shuffle-card-body" id="shuffleCardBody" onclick="if(shuffle.exitConfirmShowing) _hideShuffleExitConfirm()">
+
+      <!-- STEP 1: SET UP -->
+      <div class="shuffle-step-panel active" id="shStep1">
+        <div class="shuffle-step-title">Set Up Your Session</div>
+        <div class="shuffle-control-group">
+          <div class="shuffle-control-label">Session Date</div>
+          <input type="date" id="shSessionDate" class="shuffle-date-input" onchange="setShuffleDate(this.value)">
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;margin-top:4px;">
+          <div class="shuffle-control-label" style="margin:0;">Players</div>
+          <span class="shuffle-player-count" id="shPlayerCount">0 selected</span>
+        </div>
+        <div class="shuffle-player-grid" id="shufflePlayerGrid"></div>
+        <div class="shuffle-control-group">
+          <div class="shuffle-control-label">Courts</div>
+          <div class="toggle-pills">
+            <button class="toggle-pill" id="shCourt1" type="button" onclick="setShuffleCourts(1)">1</button>
+            <button class="toggle-pill" id="shCourt2" type="button" onclick="setShuffleCourts(2)">2</button>
+            <button class="toggle-pill" id="shCourt3" type="button" onclick="setShuffleCourts(3)">3</button>
+          </div>
+        </div>
+        <div class="shuffle-control-group">
+          <div class="shuffle-control-label">Rounds</div>
+          <div class="toggle-pills">
+            <button class="toggle-pill" id="shRound1" type="button" onclick="setShuffleRounds(1)">1</button>
+            <button class="toggle-pill" id="shRound2" type="button" onclick="setShuffleRounds(2)">2</button>
+            <button class="toggle-pill" id="shRound3" type="button" onclick="setShuffleRounds(3)">3</button>
+          </div>
+        </div>
+        <!-- Player/court count advisory — shown when selection is invalid -->
+        <div id="shCourtAdvisory" class="shuffle-advisory" style="display:none;"></div>
+      </div>
+
+      <!-- STEP 2: MODE -->
+      <div class="shuffle-step-panel" id="shStep2">
+        <div class="shuffle-step-title">Select Shuffle Mode</div>
+        <!-- Free modes -->
+        <div class="shuffle-mode-row" id="shModeRandom" onclick="setShuffleMode('random')">
+          <div class="shuffle-mode-radio"></div>
+          <span class="shuffle-mode-icon">🎲</span>
+          <span class="shuffle-mode-name">Random</span>
+        </div>
+        <div class="shuffle-mode-row" id="shModeBalanced" onclick="setShuffleMode('balanced')">
+          <div class="shuffle-mode-radio"></div>
+          <span class="shuffle-mode-icon">⚖️</span>
+          <span class="shuffle-mode-name">Balanced</span>
+          <span class="shuffle-mode-sublabel">R1+R4 vs R2+R3 · +jitter</span>
+        </div>
+        <div class="shuffle-mode-row" id="shModeTiered" onclick="setShuffleMode('tiered')">
+          <div class="shuffle-mode-radio"></div>
+          <span class="shuffle-mode-icon">🏆</span>
+          <span class="shuffle-mode-name">Tiered</span>
+          <span class="shuffle-mode-sublabel">R1+R2 vs R3+R4 · +jitter</span>
+        </div>
+        <!-- Locked modes -->
+        <div class="shuffle-mode-row locked" onclick="showComingSoonToast()">
+          <span style="font-size:14px;">🔒</span>
+          <span class="shuffle-mode-icon">🧬</span>
+          <span class="shuffle-mode-name">DNA Pairing</span>
+          <span class="shuffle-mode-coming-soon">Coming Soon</span>
+        </div>
+        <div class="shuffle-mode-row locked" onclick="showComingSoonToast()">
+          <span style="font-size:14px;">🔒</span>
+          <span class="shuffle-mode-icon">📈</span>
+          <span class="shuffle-mode-name">Growth Max</span>
+          <span class="shuffle-mode-coming-soon">Coming Soon</span>
+        </div>
+        <div class="shuffle-mode-row locked" onclick="showComingSoonToast()">
+          <span style="font-size:14px;">🔒</span>
+          <span class="shuffle-mode-icon">⚔️</span>
+          <span class="shuffle-mode-name">Battle Royale</span>
+          <span class="shuffle-mode-coming-soon">Coming Soon</span>
+        </div>
+      </div>
+
+      <!-- STEP 3: LINEUP -->
+      <div class="shuffle-step-panel" id="shStep3">
+        <div class="shuffle-step-title" style="margin-bottom:4px;">Your Lineup</div>
+        <div class="shuffle-result-meta" id="shuffleResultMeta"></div>
+        <!-- Round tab strip (only shown if rounds > 1) -->
+        <div class="toggle-pills shuffle-round-tabs" id="shuffleRoundTabs" style="display:none;"></div>
+        <!-- Meta row: rotation notice + swap icon -->
+        <div class="shuffle-meta-row">
+          <div class="shuffle-rotation-notice" id="shuffleRotationNotice" style="visibility:hidden;"></div>
+          <button class="swap-inline-btn" id="shSwapBtn" type="button" onclick="enterShuffleSwapMode()" title="Swap Players">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+          </button>
+        </div>
+        <!-- Advisories — shown above court 1 so they are never off-screen -->
+        <div id="shuffleAdvisories"></div>
+        <!-- Court cards -->
+        <div id="shuffleCourtCards"></div>
+      </div>
+
+    </div><!-- /shuffle-card-body -->
+
+    <!-- Fixed Footer -->
+    <div class="shuffle-card-footer" id="shuffleCardFooter" onclick="if(shuffle.exitConfirmShowing) _hideShuffleExitConfirm()">
+      <!-- Step 1 footer -->
+      <div id="shFooter1" style="width:100%;">
+        <button class="shuffle-footer-primary full-width" id="shNextBtn1" type="button" onclick="shuffleStep1Next()" disabled>NEXT →</button>
+      </div>
+      <!-- Step 2 footer -->
+      <div id="shFooter2" style="display:none;width:100%;">
+        <div style="display:flex;gap:10px;">
+          <button class="shuffle-footer-secondary" type="button" onclick="showShuffleStep(1)">← BACK</button>
+          <button class="shuffle-footer-primary" id="shGenerateBtn" type="button" onclick="shuffleGenerate()" disabled style="flex:2;">
+            <span class="btn-text">GENERATE LINEUP →</span>
+            <div class="btn-spinner"></div>
+          </button>
+        </div>
+      </div>
+      <!-- Step 3 footer -->
+      <div id="shFooter3" style="display:none;width:100%;">
+        <div id="shF3Normal" style="display:flex;gap:10px;margin-bottom:10px;">
+          <button class="shuffle-footer-secondary" type="button" onclick="showShuffleStep(2)">← BACK</button>
+          <button class="shuffle-footer-secondary" id="shStartOverBtn" type="button" onclick="shuffleStartOver()" style="flex:1;">
+            <span class="btn-text" style="display:flex;align-items:center;justify-content:center;gap:6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Start Over
+            </span>
+            <div class="btn-spinner"></div>
+          </button>
+        </div>
+        <button class="shuffle-footer-primary full-width" id="shSaveBtn" type="button" onclick="saveShuffleSession()">
+          <span class="btn-text" style="display:flex;align-items:center;justify-content:center;width:100%;gap:8px;">Save Session <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <div class="btn-spinner"></div>
+        </button>
+        <!-- Swap mode Done button (hidden until swap active) -->
+        <button class="shuffle-footer-primary full-width" id="shSwapDoneBtn" type="button" onclick="exitShuffleSwapMode()" style="display:none;align-items:center;justify-content:center;gap:8px;">Done <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+      </div>
+    </div>
+
+  </div><!-- /shuffle-card -->
+</div><!-- /shuffleWizardOverlay -->
+
+
+<!-- ══════════════════════════════════════════
+     FORGE SHUFFLE — SESSION VIEW (Pathway B)
+     Full-screen fixed overlay, z-index 700.
+     Overlay tap ENABLED — tap dark area to dismiss.
+══════════════════════════════════════════ -->
+<div class="shuffle-full-overlay" id="sessionViewOverlay" onclick="sessionViewOverlayTap(event)">
+  <div class="session-view-card">
+
+    <div class="session-view-header">
+      <div class="session-view-header-row">
+        <div class="session-view-title">📌 Active Session</div>
+        <button class="shuffle-exit-btn" type="button" onclick="closeSessionView()">✕ EXIT</button>
+      </div>
+      <div class="session-view-meta" id="sessionViewMeta"></div>
+    </div>
+
+    <!-- Round tabs (shown if rounds > 1) -->
+    <div id="sessionViewTabWrap" style="padding:12px 16px 0;flex-shrink:0;display:none;">
+      <div class="toggle-pills" id="sessionViewRoundTabs"></div>
+    </div>
+
+    <!-- Scrollable court cards -->
+    <div class="session-view-body" id="sessionViewBody">
+      <!-- Skeleton shown during fetch -->
+      <div id="sessionViewSkeleton" class="skeleton-list" style="display:none;">
+        <div class="skeleton-card"></div>
+        <div class="skeleton-card"></div>
+      </div>
+      <div id="sessionViewCourtCards"></div>
+    </div>
+
+    <!-- Fixed footer -->
+    <div class="session-view-footer" id="sessionViewFooter">
+      <div id="svFooterNormal" style="display:flex;gap:10px;width:100%;">
+        <button class="shuffle-footer-secondary" id="svSwapBtn" style="flex:1;" type="button" onclick="enterSessionViewSwapMode()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Swap Players
+        </button>
+        <button class="shuffle-footer-secondary" id="svDeleteBtn" style="flex:1;color:var(--error);border-color:var(--error);" type="button" onclick="openDeleteSessionModal()">
+          <span class="btn-text" style="display:flex;align-items:center;justify-content:center;gap:6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            Delete
+          </span>
+          <div class="btn-spinner"></div>
+        </button>
+        <button class="session-end-btn" id="svEndBtn" style="display:none;" type="button" onclick="openEndSessionModal()">
+          <span class="btn-text" style="display:flex;align-items:center;gap:6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            End Session
+          </span>
+          <div class="btn-spinner"></div>
+        </button>
+      </div>
+      <!-- Swap mode footer -->
+      <div id="svFooterSwap" style="display:none;width:100%;">
+        <button class="shuffle-footer-primary full-width" type="button" onclick="exitSessionViewSwapMode()" style="display:flex;align-items:center;justify-content:center;gap:8px;">Done <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+      </div>
+      <!-- Post-swap save/discard footer -->
+      <div id="svFooterSwapSave" style="display:none;width:100%;">
+        <div style="display:flex;gap:10px;">
+          <button class="shuffle-footer-secondary" id="svDiscardSwapBtn" type="button" onclick="discardSessionSwap()">Discard</button>
+          <button class="shuffle-footer-primary" id="svSaveSwapBtn" type="button" onclick="saveSessionSwap()" style="flex:2;">
+            <span class="btn-text">Save Changes</span>
+            <div class="btn-spinner"></div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /session-view-card -->
+</div><!-- /sessionViewOverlay -->
+
   <div class="screen" id="screenLeaderboard">
 
     <!-- Toggle -->
@@ -3835,6 +4813,14 @@ body {
     </div>
 
   </div><!-- /screenLeaderboard -->
+
+  <!-- Shuffle entry button — always visible at bottom of Leaderboard screen -->
+  <div class="shuffle-entry-area" id="shuffleEntryArea">
+    <button class="shuffle-entry-btn" id="shuffleEntryBtn" type="button" onclick="shuffleEntryTap()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="flex-shrink:0;"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+      PLAN THE COURTS
+    </button>
+  </div>
 
   <div class="screen" id="screenMatches">
 
@@ -3886,6 +4872,78 @@ body {
     <div class="modal-btns" style="margin-top:20px;">
       <button class="modal-cancel" type="button" onclick="closeTooltipModal()">Got it</button>
     </div>
+  </div>
+</div>
+
+<!-- Admin Password Modal — outside appShell, z-index 700 -->
+<div class="modal-overlay" id="adminPwModal" onclick="if(event.target===this) closeAdminPwModal()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">ADMIN ACCESS</div>
+    <div class="modal-subtitle">Enter admin password to continue</div>
+    <div class="input-wrap" style="margin: 16px 0 8px;">
+      <input class="password-input" id="adminPwInput" type="password"
+        placeholder="Admin password"
+        autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="pw-error-msg" id="adminPwError">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      Incorrect admin password.
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" type="button" onclick="closeAdminPwModal()">Cancel</button>
+      <button class="modal-confirm" type="button" onclick="submitAdminPassword()">Enter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Panel Modal — outside appShell, z-index 700 -->
+<div class="modal-overlay" id="adminPanelModal" onclick="if(event.target===this && !adminIsExporting) closeAdminPanel()">
+  <div class="modal-sheet admin-panel-sheet">
+    <div class="modal-handle"></div>
+
+    <!-- Header row -->
+    <div class="admin-panel-header">
+      <div class="admin-panel-title">ADMIN</div>
+      <button class="icon-btn" type="button" onclick="closeAdminPanel()">✕</button>
+    </div>
+
+    <!-- Data Export card -->
+    <div class="admin-section-label">DATA EXPORT</div>
+    <div class="admin-divider"></div>
+    <p class="admin-section-desc">
+      Push current Players and Matches data to the connected external sheet.
+    </p>
+
+    <!-- Record counts -->
+    <div class="admin-info-row">
+      <span class="admin-info-icon">👥</span>
+      <span class="admin-info-label">PLAYERS</span>
+      <span class="admin-info-count" id="adminPlayersCount">—</span>
+    </div>
+    <div class="admin-info-row">
+      <span class="admin-info-icon">🏓</span>
+      <span class="admin-info-label">MATCHES</span>
+      <span class="admin-info-count" id="adminMatchesCount">—</span>
+    </div>
+
+    <!-- Last export -->
+    <div class="admin-last-export" id="adminLastExportLabel">Last export: Never</div>
+
+    <!-- Push button -->
+    <button class="admin-push-btn" id="adminPushBtn" type="button" onclick="handlePushData()">
+      <span class="admin-push-text">↑&nbsp; PUSH DATA NOW</span>
+      <span class="admin-push-spinner" style="display:none;"></span>
+    </button>
+
+    <!-- Export result message -->
+    <div class="admin-push-result" id="adminPushResult" style="display:none;"></div>
+
+    <!-- Error message -->
+    <div class="admin-push-error" id="adminPushError" style="display:none;"></div>
+
   </div>
 </div>
 
@@ -4008,10 +5066,51 @@ body {
   </div>
 </div>
 
+
+<!-- Delete Session confirmation (z-index 750 — renders above session view overlay) -->
+<div class="modal-overlay" id="deleteSessionModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Delete Session?</div>
+    <div class="modal-subtitle">Logged match history is not affected.</div>
+    <div class="modal-btns">
+      <button class="modal-confirm" onclick="confirmDeleteSession()">Delete Session</button>
+      <button class="modal-cancel" onclick="closeDeleteSessionModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- End Session confirmation (z-index 750 — all matches logged, session complete) -->
+<div class="modal-overlay" id="endSessionModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Session Complete!</div>
+    <div class="modal-subtitle">All matches have been logged. End this session?</div>
+    <div class="modal-btns">
+      <button class="modal-confirm green" onclick="confirmEndSession()">End Session</button>
+      <button class="modal-cancel" onclick="closeEndSessionModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Start Over confirmation (z-index 750 — renders above shuffle wizard overlay) -->
+<div class="modal-overlay" id="startOverModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Start Over?</div>
+    <div class="modal-subtitle">This will replace your saved session with a new lineup. Logged matches are unaffected.</div>
+    <div class="modal-btns">
+      <button class="modal-confirm green" onclick="confirmShuffleStartOver()">Start Over</button>
+      <button class="modal-cancel" onclick="closeStartOverModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
 /* ============================================
    FORGE = Your Pickleball Mettle
-   Version: 7.7.0 | Backend: Google Apps Script
+   Version: 7.8.0 | Backend: Google Apps Script
    Frontend: GitHub Pages
 ============================================ */
 
@@ -4163,6 +5262,9 @@ function resetDemoData() {
   isDemoMode = false;
   // Reset add match wizard so no demo team/score state leaks into real session
   am = { step:1, date:'', teamA:[], teamB:[], scoring:'', points:'', scores:[] };
+  // Clear shuffle state — demo session data must not persist into real mode
+  demoSession = null;
+  resetShuffle();
 }
 
 // ── Demo-mode local rating computation ──
@@ -4275,9 +5377,38 @@ let alphaRivals             = [];   // up to 2 rival player IDs for comparison
 // == Add Match wizard state ==
 let am = { step:1, date:'', teamA:[], teamB:[], scoring:'', points:'', scores:[] };
 
+// == Forge Shuffle state ==
+// shuffle{} tracks wizard in-progress state. activeSession holds the
+// saved session fetched from backend. demoSession is the local equivalent in demo mode.
+let shuffle = {
+  step: 0,                   // 0=closed, 1=setup, 2=mode, 3=result
+  players: [],               // selected player ids
+  courts: 1,
+  rounds: 1,
+  mode: null,                // 'random' | 'balanced' | 'tiered'
+  lineup: null,              // generated lineup object
+  activeRoundTab: 0,         // 0-indexed
+  swapMode: false,
+  swapSelected: null,
+  exitConfirmShowing: false
+};
+let activeSession      = null;   // loaded from backend; null if no session
+let demoSession        = null;   // demo mode only — local equivalent of activeSession
+let shuffleBaseJitter  = 0.15;   // base jitter magnitude; overridden by CONFIG sheet shuffleJitter
+// Pre-swap snapshot used to support Discard in Session View swap
+let _svPreSwapLineup = null;
+
 // == Background sync state ==
 let lastKnownVersion = 0;
 let syncInterval = null;
+
+// == Admin state ==
+let isAdminUnlocked  = false; // true after successful adminLogin this session
+let adminLastExport  = '';    // populated from getConfig response + updated on push
+let adminPwSession   = '';    // holds admin pw for duration of unlocked session only
+let adminTapCount    = 0;     // 7-tap counter for MATCHES header
+let adminTapTimer    = null;  // resets adminTapCount after 3s inactivity
+let adminIsExporting = false; // true while push is in-flight; blocks overlay dismiss
 
 const MATCH_PAGE_SIZE = 25;
 
@@ -4493,9 +5624,11 @@ async function startup() {
     K_SCALE          = cfg.kScale         || 30;
     lastKnownVersion = cfg.writeVersion   || 0;
     // Forge Alpha access flags — use safe defaults if keys absent
-    if (cfg.premiumMain !== undefined) premiumMain = cfg.premiumMain;
-    if (cfg.premiumDemo !== undefined) premiumDemo = cfg.premiumDemo;
-    if (cfg.alphaLambda !== undefined) alphaLambda = cfg.alphaLambda;
+    if (cfg.premiumMain   !== undefined) premiumMain      = cfg.premiumMain;
+    if (cfg.premiumDemo   !== undefined) premiumDemo      = cfg.premiumDemo;
+    if (cfg.alphaLambda   !== undefined) alphaLambda      = cfg.alphaLambda;
+    if (cfg.shuffleJitter  !== undefined) shuffleBaseJitter = cfg.shuffleJitter;
+    if (cfg.lastExportAt   !== undefined) adminLastExport   = cfg.lastExportAt;
   } catch(e) {
     console.warn('Config fetch failed:', e.message);
     const hint = document.getElementById('pwHint');
@@ -4532,6 +5665,7 @@ function _resetAppUI() {
   document.getElementById('navBar').classList.remove('visible');
   document.getElementById('appHeader').classList.remove('visible');
   document.getElementById('addPlayerArea').classList.remove('visible');
+  document.getElementById('shuffleEntryArea').classList.remove('visible'); // Bug 2: prevents stale .visible persisting across logout/reset
 
   // Hide demo banner and remove demo offsets
   document.getElementById('demoBanner').classList.remove('show');
@@ -4558,7 +5692,7 @@ function _resetAppUI() {
   document.getElementById('ballDeco2').style.display = 'none';
 
   // Close any open modals
-  ['removeModal','deleteMatchModal','reinstateModal','tooltipModal','leaveMatchModal','debriefModal'].forEach(id => {
+  ['removeModal','deleteMatchModal','reinstateModal','tooltipModal','leaveMatchModal','debriefModal','deleteSessionModal','endSessionModal','startOverModal','adminPwModal','adminPanelModal'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('show');
   });
@@ -4571,6 +5705,15 @@ function _resetAppUI() {
 
   // Reset demo mode flag
   isDemoMode = false;
+
+  // Reset admin state
+  isAdminUnlocked  = false;
+  adminPwSession   = '';
+  adminTapCount    = 0;
+  adminIsExporting = false;
+  if (adminTapTimer) { clearTimeout(adminTapTimer); adminTapTimer = null; }
+  // Tear down admin pw keyboard listener if it was active
+  _teardownAdminPwVV();
 }
 
 function showPasswordScreen() {
@@ -4756,7 +5899,8 @@ async function _runSplashThenLaunch(phase1Min) {
     buildPairsFromMatches();
     renderPlayers();
     renderAnalytics();
-    renderLeaderboard();
+    await fetchActiveSession();
+    renderLeaderboard(); // calls renderShuffleEntryButton() internally
     startBackgroundSync();
     initPullToRefresh();
   } catch(e) {
@@ -4825,6 +5969,8 @@ async function launchApp() {
   players = [];
   matches = [];
   pairs   = [];
+  activeSession = null;
+  resetShuffle();
   matchListFilter = null; mlSelectedIds = []; mlSameTeam = false;
   apFilterIds = []; apSameTeam = false;
   _clearRenderedScreens();
@@ -4847,7 +5993,8 @@ async function launchApp() {
     buildPairsFromMatches();
     renderPlayers();
     renderAnalytics();
-    renderLeaderboard();
+    await fetchActiveSession();
+    renderLeaderboard(); // calls renderShuffleEntryButton() internally
     startBackgroundSync();
     initPullToRefresh();
   } catch(e) {
@@ -4988,7 +6135,9 @@ async function refreshAllData() {
     buildPairsFromMatches();
     renderPlayers();
     renderAnalytics();
-    renderLeaderboard();
+    // Fetch session after players/matches — sequential, non-blocking on failure
+    await fetchActiveSession();
+    renderLeaderboard(); // calls renderShuffleEntryButton() internally
     if (currentScreen === 'matches') _renderMatchList();
   } catch(e) {
     console.warn('refreshAllData failed:', e.message);
@@ -5384,6 +6533,10 @@ function _doNavigateTo(screen) {
     mlSameTeam      = false;
   }
   currentScreen = screen;
+
+  // Reset admin tap counter on any navigation
+  adminTapCount = 0;
+  if (adminTapTimer) { clearTimeout(adminTapTimer); adminTapTimer = null; }
   if (screen !== 'players') closeAddForm();
   if (screen === 'add')         initAddMatch();
   if (screen === 'leaderboard') renderLeaderboard();
@@ -5397,6 +6550,7 @@ function _doNavigateTo(screen) {
   document.getElementById('headerTitle').textContent = screenMap[screen].title;
   document.getElementById('headerBadge').style.display = screenMap[screen].badge ? 'block' : 'none';
   document.getElementById('addPlayerArea').classList.toggle('visible', screen === 'players');
+  document.getElementById('shuffleEntryArea').classList.toggle('visible', screen === 'leaderboard');
 
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('nav-' + (screen === 'add' ? 'add' : screen)).classList.add('active');
@@ -6230,7 +7384,44 @@ function togglePairCard(i) {
 // SCREEN 3: ADD MATCH
 // ==========================================================
 
-function initAddMatch() { resetAddMatch(true); }
+function initAddMatch(prefill) {
+  resetAddMatch(true);
+  if (prefill) {
+    am.teamA = prefill.teamA || [];
+    am.teamB = prefill.teamB || [];
+    am.date  = prefill.date  || getTodayStr();
+    am.sessionSource = prefill.sessionSource || null; // { round, court }
+    // Update date input
+    const dateEl = document.getElementById('matchDate');
+    if (dateEl) { dateEl.value = am.date; }
+    // Update team summary display
+    updatePlayerSelectUI();
+    // Jump directly to Step 3 (format picker)
+    showStep(3);
+    // Show context label if from session
+    _renderSessionSourceLabel();
+  } else {
+    am.sessionSource = null;
+  }
+}
+
+function _renderSessionSourceLabel() {
+  // Inject or clear the "📌 From session" context label at top of Step 3
+  const step3 = document.getElementById('step3');
+  if (!step3) return;
+  let label = document.getElementById('sessionSourceLabel');
+  if (am.sessionSource) {
+    if (!label) {
+      label = document.createElement('div');
+      label.id = 'sessionSourceLabel';
+      label.className = 'step2-hint';
+      step3.insertBefore(label, step3.firstChild);
+    }
+    label.textContent = '📌 From session: Court ' + (am.sessionSource.court + 1) + ' · Round ' + (am.sessionSource.round + 1);
+  } else {
+    if (label) label.remove();
+  }
+}
 
 function onMatchDone() {
   // Reset the wizard state silently, then navigate to Matches
@@ -6320,7 +7511,14 @@ function stepNext() {
   if (am.step === 4) buildReviewCard();
   showStep(am.step + 1);
 }
-function stepBack() { if (am.step > 1) showStep(am.step - 1); }
+function stepBack() {
+  // If pre-filled from session and currently on Step 3, back returns to Session View
+  if (am.step === 3 && am.sessionSource) {
+    openSessionView();
+    return;
+  }
+  if (am.step > 1) showStep(am.step - 1);
+}
 
 function getTodayStr() {
   const t = new Date();
@@ -6542,6 +7740,10 @@ async function submitMatch() {
         scores: am.scores, ratingChanges
       };
       matches.push(matchRecord);
+      // Update session logged state if this match came from a session court
+      if (am.sessionSource) {
+        onSessionMatchLogged(am.sessionSource.round, am.sessionSource.court, matchRecord.id);
+      }
 
     } else {
       // ── REAL PATH: backend computes, returns authoritative state ──
@@ -6560,6 +7762,10 @@ async function submitMatch() {
       });
       matches.push(matchRecord);
       lastKnownVersion = res.writeVersion || lastKnownVersion;
+      // Update session logged state if this match came from a session court
+      if (am.sessionSource) {
+        onSessionMatchLogged(am.sessionSource.round, am.sessionSource.court, matchRecord.id);
+      }
     }
 
     buildPairsFromMatches();
@@ -6608,7 +7814,7 @@ function switchLbTab(tab) {
   document.getElementById('lbPanelPairs').classList.toggle('active', tab === 'pairs');
 }
 
-function renderLeaderboard() { renderLbIndividual(); renderLbPairs(); }
+function renderLeaderboard() { renderLbIndividual(); renderLbPairs(); renderShuffleEntryButton(); }
 
 
 // ── GOVERNANCE: W/L derived from authoritative matches[] array ──
@@ -8093,6 +9299,1378 @@ document.addEventListener('DOMContentLoaded', function() {
   // Boot
   startup();
 });
+
+
+// ═══════════════════════════════════════════════════════════════════
+// FORGE SHUFFLE — All functions
+// ═══════════════════════════════════════════════════════════════════
+
+// ── State helpers ──────────────────────────────────────────────────
+
+function resetShuffle() {
+  shuffle = {
+    step: 0, players: [], courts: null, rounds: null,
+    mode: null, lineup: null, activeRoundTab: 0,
+    swapMode: false, swapSelected: null, exitConfirmShowing: false,
+    sessionDate: ''
+  };
+}
+
+// ── Entry button ───────────────────────────────────────────────────
+
+function renderShuffleEntryButton() {
+  const session = isDemoMode ? demoSession : activeSession;
+  const btn = document.getElementById('shuffleEntryBtn');
+  if (!btn) return;
+  const shuffleSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="flex-shrink:0;"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>`;
+  if (session) {
+    const dateStr = session.sessionDate ? formatShortDate(session.sessionDate) : '';
+    const label = '📌 ACTIVE SESSION' + (dateStr ? ' · ' + dateStr : '') + ' →';
+    btn.innerHTML = `<span class="btn-text">${label}</span><div class="shuffle-entry-spinner"></div>`;
+    btn.className = 'shuffle-entry-btn session-active';
+  } else {
+    btn.innerHTML = shuffleSvg + ' PLAN THE COURTS';
+    btn.className = 'shuffle-entry-btn';
+  }
+  // Pulsing dot on Leaderboard nav icon — shown only when active session exists
+  const navIcon = document.querySelector('#nav-leaderboard .nav-icon');
+  if (navIcon) {
+    const existingDot = navIcon.querySelector('.nav-session-dot');
+    if (session && !existingDot) {
+      const dot = document.createElement('span');
+      dot.className = 'nav-session-dot';
+      navIcon.appendChild(dot);
+    } else if (!session && existingDot) {
+      existingDot.remove();
+    }
+  }
+}
+
+async function shuffleEntryTap() {
+  const session = isDemoMode ? demoSession : activeSession;
+  if (session) {
+    // Show spinner on entry button immediately; overlay + skeleton appear on openSessionView
+    if (!isDemoMode) {
+      const btn = document.getElementById('shuffleEntryBtn');
+      if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+    }
+    await openSessionView();
+    // Restore button — view is now open (or error was shown)
+    const btn = document.getElementById('shuffleEntryBtn');
+    if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+  } else {
+    openShuffleWizard();
+  }
+}
+
+// ── Wizard open / close ────────────────────────────────────────────
+
+function openShuffleWizard() {
+  resetShuffle();
+  shuffle.step = 1;
+  // Reset mode row selections
+  ['Random','Balanced','Tiered'].forEach(m => {
+    const row = document.getElementById('shMode' + m);
+    if (row) row.classList.remove('selected');
+  });
+  // Reset generate button
+  const genBtn = document.getElementById('shGenerateBtn');
+  if (genBtn) genBtn.disabled = true;
+  // Clear courts/rounds pills — no default selection
+  [1,2,3].forEach(i => {
+    const c = document.getElementById('shCourt' + i);
+    if (c) c.classList.remove('active');
+    const r = document.getElementById('shRound' + i);
+    if (r) r.classList.remove('active');
+  });
+  // Reset date input — clear value and enforce today as earliest selectable date
+  const dateEl = document.getElementById('shSessionDate');
+  if (dateEl) { dateEl.value = ''; dateEl.min = getTodayStr(); }
+  const countEl = document.getElementById('shPlayerCount');
+  if (countEl) countEl.textContent = '0 selected';
+  const advEl = document.getElementById('shCourtAdvisory');
+  if (advEl) advEl.style.display = 'none';
+  _buildShufflePlayerGrid();
+  showShuffleStep(1);
+  document.getElementById('shuffleWizardOverlay').classList.add('show');
+}
+
+function closeShuffleWizard() {
+  document.getElementById('shuffleWizardOverlay').classList.remove('show');
+  _hideShuffleExitConfirm();
+  _removeSwapModeFromCards('shuffleCourtCards'); // clear swap CSS class; innerHTML won't remove parent class
+  resetShuffle();
+}
+
+function shuffleExitTap() {
+  // If step 0 or nothing selected yet — close immediately
+  if (shuffle.step <= 1 && shuffle.players.length === 0) { closeShuffleWizard(); return; }
+  // If session already saved (editing mode) — close immediately, session is safe
+  const session = isDemoMode ? demoSession : activeSession;
+  if (session && shuffle.step === 3) { closeShuffleWizard(); return; }
+  // Otherwise show inline confirmation
+  _showShuffleExitConfirm();
+}
+
+function shuffleExitKeepGoing() {
+  _hideShuffleExitConfirm();
+}
+
+function shuffleExitConfirm() {
+  _hideShuffleExitConfirm();
+  closeShuffleWizard();
+}
+
+function _showShuffleExitConfirm() {
+  shuffle.exitConfirmShowing = true;
+  document.getElementById('shuffleHeaderRow').style.display = 'none';
+  document.getElementById('shuffleExitConfirm').classList.add('show');
+}
+
+function _hideShuffleExitConfirm() {
+  shuffle.exitConfirmShowing = false;
+  document.getElementById('shuffleHeaderRow').style.display = 'flex';
+  document.getElementById('shuffleExitConfirm').classList.remove('show');
+}
+
+// ── Wizard step navigation ─────────────────────────────────────────
+
+function showShuffleStep(n) {
+  shuffle.step = n;
+  // Panels
+  [1,2,3].forEach(i => {
+    const p = document.getElementById('shStep' + i);
+    if (p) p.classList.toggle('active', i === n);
+  });
+  // Step nodes
+  [1,2,3].forEach(i => {
+    const node = document.getElementById('shNode' + i);
+    if (!node) return;
+    node.classList.remove('active','done');
+    if (i < n) node.classList.add('done');
+    else if (i === n) node.classList.add('active');
+  });
+  // Step lines
+  [1,2].forEach(i => {
+    const line = document.getElementById('shLine' + i);
+    if (line) line.classList.toggle('done', i < n);
+  });
+  // Footer
+  ['shFooter1','shFooter2','shFooter3'].forEach((id, idx) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (idx + 1 === n) ? 'block' : 'none';
+  });
+  // Scroll body to top
+  const body = document.getElementById('shuffleCardBody');
+  if (body) body.scrollTop = 0;
+}
+
+// ── Step 1: Player grid + controls ────────────────────────────────
+
+function _buildShufflePlayerGrid() {
+  const grid = document.getElementById('shufflePlayerGrid');
+  if (!grid) return;
+  const active = players.filter(p => p.status === 'active');
+  const inactive = players.filter(p => p.status !== 'active');
+  const all = [...active, ...inactive];
+  grid.innerHTML = all.map(p => {
+    const isInactive = p.status !== 'active';
+    return `<div class="player-chip${isInactive ? ' inactive-chip' : ''}" id="shChip-${p.id}" onclick="toggleShufflePlayer('${p.id}')">
+      <div class="chip-avatar">${getInitials(p.name)}</div>
+      <span class="chip-name">${escHtml(p.name)}${isInactive ? ' ·' : ''}</span>
+    </div>`;
+  }).join('');
+}
+
+// NEXT button: players ≥ 4, courts set, rounds set, date set, and players ≥ courts*4
+function _updateShStep1Next() {
+  const n       = shuffle.players.length;
+  const courts  = shuffle.courts;
+  const needed  = courts !== null ? courts * 4 : 0;
+  const hasDate = shuffle.sessionDate !== '';
+  const ok      = n >= 4 && courts !== null && shuffle.rounds !== null && hasDate && n >= needed;
+  const btn     = document.getElementById('shNextBtn1');
+  if (btn) btn.disabled = !ok;
+  // Court count advisory
+  const adv = document.getElementById('shCourtAdvisory');
+  if (adv) {
+    if (courts !== null && n < needed) {
+      adv.textContent = '⚠ ' + courts + ' court' + (courts > 1 ? 's' : '') + ' need' + (courts === 1 ? 's' : '') + ' at least ' + needed + ' players — add more players or reduce courts';
+      adv.style.display = 'block';
+    } else {
+      adv.style.display = 'none';
+    }
+  }
+}
+
+function toggleShufflePlayer(id) {
+  const idx = shuffle.players.indexOf(id);
+  if (idx === -1) shuffle.players.push(id);
+  else shuffle.players.splice(idx, 1);
+  // Update chip visual
+  const chip = document.getElementById('shChip-' + id);
+  if (chip) chip.classList.toggle('active', shuffle.players.indexOf(id) !== -1);
+  // Update player count badge
+  const countEl = document.getElementById('shPlayerCount');
+  if (countEl) countEl.textContent = shuffle.players.length + ' selected';
+  _updateShStep1Next();
+}
+
+function setShuffleCourts(n) {
+  shuffle.courts = n;
+  [1,2,3].forEach(i => {
+    const el = document.getElementById('shCourt' + i);
+    if (el) el.classList.toggle('active', i === n);
+  });
+  _updateShStep1Next();
+}
+
+function setShuffleRounds(n) {
+  shuffle.rounds = n;
+  [1,2,3].forEach(i => {
+    const el = document.getElementById('shRound' + i);
+    if (el) el.classList.toggle('active', i === n);
+  });
+  _updateShStep1Next();
+}
+
+function shuffleStep1Next() {
+  if (shuffle.players.length < 4 || shuffle.courts === null || shuffle.rounds === null) return;
+  showShuffleStep(2);
+}
+
+// ── Step 2: Mode selection ─────────────────────────────────────────
+
+function setShuffleMode(mode) {
+  shuffle.mode = mode;
+  ['random','balanced','tiered'].forEach(m => {
+    const row = document.getElementById('shMode' + m.charAt(0).toUpperCase() + m.slice(1));
+    if (row) row.classList.toggle('selected', m === mode);
+  });
+  const btn = document.getElementById('shGenerateBtn');
+  if (btn) btn.disabled = false;
+}
+
+function setShuffleDate(val) {
+  shuffle.sessionDate = val;
+  _updateShStep1Next();
+}
+
+function showComingSoonToast() {
+  showToast('Coming soon — powered by Forge Alpha');
+}
+
+async function shuffleGenerate() {
+  if (!shuffle.mode) return;
+  // Spinner on Generate button + disable ← BACK (lockUI doesn't reach inside z-index 700 overlay)
+  const genBtn  = document.getElementById('shGenerateBtn');
+  const backBtn = document.querySelector('#shFooter2 .shuffle-footer-secondary');
+  if (genBtn)  { genBtn.disabled  = true; genBtn.classList.add('loading'); }
+  if (backBtn)   backBtn.disabled = true;
+  lockUI();
+  const spinnerStart = Date.now();
+
+  const selectedPlayers = shuffle.players.map(id => players.find(p => p.id === id)).filter(Boolean);
+  try {
+    shuffle.lineup = computeShuffleLineup(selectedPlayers, shuffle.courts, shuffle.rounds, shuffle.mode);
+  } catch(e) {
+    if (genBtn)  { genBtn.disabled  = false; genBtn.classList.remove('loading'); }
+    if (backBtn)   backBtn.disabled = false;
+    unlockUI();
+    showToast('Could not generate lineup — try fewer players or adjust courts', 'error');
+    return;
+  }
+  shuffle.activeRoundTab = 0;
+
+  // Always wait a minimum of 600ms — sets user expectation and prevents rapid re-taps
+  const elapsed = Date.now() - spinnerStart;
+  await new Promise(r => setTimeout(r, Math.max(0, 600 - elapsed)));
+
+  if (genBtn)  { genBtn.disabled  = false; genBtn.classList.remove('loading'); }
+  if (backBtn)   backBtn.disabled = false;
+  unlockUI();
+  showShuffleStep(3);
+  _renderShuffleResult();
+}
+
+// ── Step 3: Lineup result ──────────────────────────────────────────
+
+function _renderShuffleResult() {
+  const selectedPlayers = shuffle.players.map(id => players.find(p => p.id === id)).filter(Boolean);
+  const modeLabel = { random: '🎲 Random', balanced: '⚖️ Balanced', tiered: '🏆 Tiered' }[shuffle.mode] || shuffle.mode;
+
+  // Meta label
+  const meta = document.getElementById('shuffleResultMeta');
+  if (meta) meta.textContent = modeLabel + ' · ' + selectedPlayers.length + ' Players · ' + shuffle.rounds + ' Round' + (shuffle.rounds > 1 ? 's' : '');
+
+  // Round tabs — only if rounds > 1
+  const tabsEl = document.getElementById('shuffleRoundTabs');
+  if (tabsEl) {
+    if (shuffle.rounds > 1) {
+      tabsEl.innerHTML = Array.from({length: shuffle.rounds}, (_, i) =>
+        `<button class="toggle-pill${i === shuffle.activeRoundTab ? ' active' : ''}" type="button" onclick="switchShuffleRoundTab(${i})">Round ${i+1}</button>`
+      ).join('');
+      tabsEl.style.display = 'flex';
+    } else {
+      tabsEl.style.display = 'none';
+    }
+  }
+
+  // Rotation notice — use visibility so the flex-1 spacer always holds its space,
+  // keeping the swap icon pinned to the right even when there is no notice text.
+  const noticeEl = document.getElementById('shuffleRotationNotice');
+  if (noticeEl) {
+    if (shuffle.lineup && shuffle.lineup.notice) {
+      noticeEl.textContent = shuffle.lineup.notice;
+      noticeEl.style.visibility = 'visible';
+    } else {
+      noticeEl.textContent = '';
+      noticeEl.style.visibility = 'hidden';
+    }
+  }
+
+  _renderShuffleCourtCards();
+  _renderShuffleAdvisories(selectedPlayers);
+}
+
+function _renderShuffleCourtCards() {
+  const cardsEl = document.getElementById('shuffleCourtCards');
+  if (!cardsEl || !shuffle.lineup) return;
+  const round = shuffle.lineup.rounds[shuffle.activeRoundTab];
+  if (!round) return;
+  cardsEl.innerHTML = round.map((court, ci) => _buildCourtCardHTML(court, ci, null, null, true)).join('');
+}
+
+function switchShuffleRoundTab(idx) {
+  // Fully exit swap mode when switching rounds — edits on the previous round are kept
+  if (shuffle.swapMode) exitShuffleSwapMode();
+  shuffle.activeRoundTab = idx;
+  // Update tab active state
+  const tabsEl = document.getElementById('shuffleRoundTabs');
+  if (tabsEl) {
+    tabsEl.querySelectorAll('.toggle-pill').forEach((btn, i) => btn.classList.toggle('active', i === idx));
+  }
+  _renderShuffleCourtCards();
+}
+
+function _renderShuffleAdvisories(selectedPlayers) {
+  const el = document.getElementById('shuffleAdvisories');
+  if (!el) return;
+  const msgs = [];
+  const totalSlots = shuffle.courts * 4;
+  if (totalSlots > selectedPlayers.length) {
+    msgs.push('Not enough players for ' + shuffle.courts + ' court' + (shuffle.courts > 1 ? 's' : '') + ' — some courts may have fewer than 4 players');
+  }
+  if (shuffle.lineup && shuffle.lineup.doubleRestWarning) {
+    msgs.push(shuffle.lineup.doubleRestWarning);
+  }
+  el.innerHTML = msgs.map(m => `<div class="shuffle-advisory">${escHtml(m)}</div>`).join('');
+}
+
+// ── Court card renderer (shared by wizard + session view) ──────────
+
+function _buildCourtCardHTML(court, courtIdx, roundIdx, loggedMatchId, isWizard, ratingSnapshot) {
+  // ratingSnapshot: { playerId: ratingAtSessionCreation } — used in session view
+  // to show stable ratings even after matches are logged. Wizard passes null (live ratings).
+  function resolvePlayer(id) {
+    const p = players.find(x => x.id === id);
+    if (!p) return null;
+    if (ratingSnapshot && ratingSnapshot[id] !== undefined) {
+      return { ...p, rating: ratingSnapshot[id] };
+    }
+    return p;
+  }
+  const p1A = resolvePlayer(court.teamA[0]);
+  const p2A = resolvePlayer(court.teamA[1]);
+  const p1B = resolvePlayer(court.teamB[0]);
+  const p2B = resolvePlayer(court.teamB[1]);
+
+  function playerHTML(p) {
+    if (!p) return '<span class="court-player-name" data-pid="">?</span>';
+    return `<span class="court-player-name" data-pid="${p.id}">${escHtml(p.name.toUpperCase())}</span><span class="court-player-rating">(${p.rating.toFixed(2)})</span>`;
+  }
+
+  function teamAvg(pa, pb) {
+    if (!pa || !pb) return '—';
+    return ((pa.rating + pb.rating) / 2).toFixed(2);
+  }
+
+  const isLogged = !!loggedMatchId;
+  const loggedBadge = isLogged ? '<span class="court-logged-badge">✅ LOGGED</span>' : '';
+
+  let actionBtn = '';
+  if (!isWizard) {
+    if (isLogged) {
+      actionBtn = `<button class="session-view-btn" type="button" onclick="viewSessionMatch('${loggedMatchId}')">VIEW MATCH</button>`;
+    } else {
+      actionBtn = `<button class="session-log-btn" type="button" onclick="logSessionMatch(${roundIdx},${courtIdx})">+ LOG THIS MATCH</button>`;
+    }
+  }
+
+  return `<div class="court-card"${isLogged ? ' data-court-logged="true"' : ''}>
+    <div class="court-card-title">🏓 COURT ${courtIdx + 1} ${loggedBadge}</div>
+    <div class="court-team">
+      <div class="court-team-players">${playerHTML(p1A)} <span style="color:var(--grey-mid);font-size:14px;">&amp;</span> ${playerHTML(p2A)}</div>
+      <div class="court-team-avg">Team Avg &nbsp;▪&nbsp; ${teamAvg(p1A, p2A)}</div>
+    </div>
+    <div class="court-vs">VS</div>
+    <div class="court-team">
+      <div class="court-team-players">${playerHTML(p1B)} <span style="color:var(--grey-mid);font-size:14px;">&amp;</span> ${playerHTML(p2B)}</div>
+      <div class="court-team-avg">Team Avg &nbsp;▪&nbsp; ${teamAvg(p1B, p2B)}</div>
+    </div>
+    ${actionBtn}
+  </div>`;
+}
+
+// ── Start Over ─────────────────────────────────────────────────────
+
+function shuffleStartOver() {
+  const session = isDemoMode ? demoSession : activeSession;
+  if (session) {
+    document.getElementById('startOverModal').classList.add('show');
+  } else {
+    _doShuffleStartOver();
+  }
+}
+
+function closeStartOverModal() {
+  document.getElementById('startOverModal').classList.remove('show');
+}
+
+async function confirmShuffleStartOver() {
+  closeStartOverModal();
+  _doShuffleStartOver();
+}
+
+async function _doShuffleStartOver() {
+  // Spinner on Start Over button; resolve after modal close so getElementById finds it
+  const startBtn = document.getElementById('shStartOverBtn');
+  const saveBtn  = document.getElementById('shSaveBtn');
+  if (startBtn) { startBtn.disabled = true; startBtn.classList.add('loading'); }
+  if (saveBtn)    saveBtn.disabled  = true;
+  lockUI();
+  const selectedPlayers = shuffle.players.map(id => players.find(p => p.id === id)).filter(Boolean);
+  const spinnerStart = Date.now();
+  try {
+    shuffle.lineup = computeShuffleLineup(selectedPlayers, shuffle.courts, shuffle.rounds, shuffle.mode);
+  } catch(e) {
+    if (startBtn) { startBtn.disabled = false; startBtn.classList.remove('loading'); }
+    if (saveBtn)    saveBtn.disabled  = false;
+    unlockUI();
+    showToast('Could not regenerate lineup', 'error');
+    return;
+  }
+  shuffle.activeRoundTab = 0;
+  // Always show a minimum 600ms spinner — consistent with Generate Lineup
+  const elapsed = Date.now() - spinnerStart;
+  await new Promise(r => setTimeout(r, Math.max(0, 600 - elapsed)));
+  if (startBtn) { startBtn.disabled = false; startBtn.classList.remove('loading'); }
+  if (saveBtn)    saveBtn.disabled  = false;
+  unlockUI();
+  _renderShuffleResult();
+}
+
+// ── Save Session (wizard) ──────────────────────────────────────────
+
+async function saveShuffleSession() {
+  if (isDemoMode) {
+    _buildAndStoreDemoSession();
+    closeShuffleWizard();
+    renderShuffleEntryButton();
+    return;
+  }
+  const btn = document.getElementById('shSaveBtn');
+  if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+  const sessionObj = _buildSessionObject();
+  lockUI();
+  try {
+    const res = await callBackend(getPayload('saveSession', { session: sessionObj, requestId: makeRequestId() }));
+    if (!res.ok) throw new Error(res.error || 'Save failed');
+    activeSession = res.session || sessionObj;
+    resetShuffle();
+    closeShuffleWizard();
+    renderShuffleEntryButton();
+    showToast('Session saved ✓');
+  } catch(e) {
+    showError('Could not save session: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+    unlockUI();
+  }
+}
+
+function _buildSessionObject() {
+  const now = new Date().toISOString();
+  const sessionId = 's' + Date.now();
+  const logged = shuffle.lineup.rounds.map(round => round.map(() => null));
+  // Capture ratings at session-creation time so court cards show consistent
+  // ratings even after matches are logged and player ratings change mid-session.
+  const ratingSnapshot = {};
+  shuffle.players.forEach(id => {
+    const p = players.find(x => x.id === id);
+    if (p) ratingSnapshot[id] = p.rating;
+  });
+  return {
+    sessionId, createdAt: now, createdBy: 'Host',
+    sessionDate: shuffle.sessionDate || '',
+    mode: shuffle.mode,
+    playerIds: shuffle.players,
+    courts: shuffle.courts,
+    rounds: shuffle.rounds,
+    lineup: shuffle.lineup.rounds,
+    logged,
+    ratingSnapshot
+  };
+}
+
+function _buildAndStoreDemoSession() {
+  const sessionObj = _buildSessionObject();
+  demoSession = sessionObj;
+}
+
+// ── Swap mode (wizard) ─────────────────────────────────────────────
+
+function enterShuffleSwapMode() {
+  shuffle.swapMode = true;
+  shuffle.swapSelected = null;
+  _applySwapModeToCards('shuffleCourtCards');
+  document.getElementById('shF3Normal').style.display = 'none';
+  document.getElementById('shSaveBtn').style.display = 'none';
+  document.getElementById('shSwapBtn').style.display = 'none';
+  document.getElementById('shSwapDoneBtn').style.display = 'flex';
+}
+
+function exitShuffleSwapMode() {
+  shuffle.swapMode = false;
+  shuffle.swapSelected = null;
+  _removeSwapModeFromCards('shuffleCourtCards');
+  document.getElementById('shF3Normal').style.display = 'flex';
+  document.getElementById('shSaveBtn').style.display = 'block';
+  document.getElementById('shSwapBtn').style.display = 'flex';
+  document.getElementById('shSwapDoneBtn').style.display = 'none';
+}
+
+function _applySwapModeToCards(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.classList.add('swap-mode');
+  // Only attach tap handlers to players in un-logged courts.
+  // Use touchend (with preventDefault) for reliable iOS tap detection on spans inside
+  // scrollable containers; fall back to click for desktop. Store handler ref on span
+  // so _removeSwapModeFromCards can cleanly remove the exact listener.
+  el.querySelectorAll('.court-card:not([data-court-logged]) .court-player-name[data-pid]').forEach(span => {
+    const handler = (e) => {
+      e.preventDefault();
+      handleSwapTap(span.dataset.pid, containerId);
+    };
+    span._swapTouchHandler = handler;
+    span._swapClickHandler = () => handleSwapTap(span.dataset.pid, containerId);
+    span.addEventListener('touchend', handler, { passive: false });
+    span.addEventListener('click', span._swapClickHandler);
+  });
+}
+
+function _removeSwapModeFromCards(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.classList.remove('swap-mode');
+  el.querySelectorAll('.court-player-name').forEach(span => {
+    span.classList.remove('selected');
+    if (span._swapTouchHandler) {
+      span.removeEventListener('touchend', span._swapTouchHandler);
+      delete span._swapTouchHandler;
+    }
+    if (span._swapClickHandler) {
+      span.removeEventListener('click', span._swapClickHandler);
+      delete span._swapClickHandler;
+    }
+    span.onclick = null;
+  });
+}
+
+function handleSwapTap(pid, containerId) {
+  if (!shuffle.swapMode) return;
+  if (shuffle.swapSelected === null) {
+    // First selection
+    shuffle.swapSelected = pid;
+    _markSwapSelected(pid, containerId);
+  } else if (shuffle.swapSelected === pid) {
+    // Tapped same player — deselect
+    shuffle.swapSelected = null;
+    _markSwapSelected(null, containerId);
+  } else {
+    // Second selection — guard against same player tapped twice via duplicate IDs
+    if (shuffle.swapSelected === pid) {
+      shuffle.swapSelected = null;
+      _markSwapSelected(null, containerId);
+      return;
+    }
+    // Execute swap
+    _executeSwap(shuffle.swapSelected, pid);
+    shuffle.swapSelected = null;
+    // Re-render current round cards maintaining swap mode
+    const cardsEl = document.getElementById(containerId);
+    if (cardsEl) {
+      if (containerId === 'shuffleCourtCards') {
+        _renderShuffleCourtCards();
+        _applySwapModeToCards(containerId);
+      } else {
+        _renderSessionViewCards();
+        _applySwapModeToCards(containerId);
+      }
+    }
+  }
+}
+
+function _markSwapSelected(pid, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.querySelectorAll('.court-player-name[data-pid]').forEach(span => {
+    span.classList.toggle('selected', span.dataset.pid === pid && pid !== null);
+  });
+}
+
+function _executeSwap(pidA, pidB) {
+  if (!pidA || !pidB || pidA === pidB) return; // hard guard: no self-swap
+  const lineup = shuffle.lineup.rounds[shuffle.activeRoundTab];
+  for (let c = 0; c < lineup.length; c++) {
+    const court = lineup[c];
+    ['teamA','teamB'].forEach(team => {
+      court[team] = court[team].map(id => id === pidA ? pidB : id === pidB ? pidA : id);
+    });
+  }
+}
+
+// ── Session View open / close ──────────────────────────────────────
+
+async function openSessionView() {
+  const session = isDemoMode ? demoSession : activeSession;
+  if (!session && !isDemoMode) {
+    // No local session — try fetch
+    await _fetchAndShowSessionView();
+    return;
+  }
+  if (!isDemoMode) {
+    // Always fetch fresh on open
+    await _fetchAndShowSessionView();
+  } else {
+    // Demo path: show overlay first, then populate
+    document.getElementById('sessionViewOverlay').classList.add('show');
+    _showSessionView(demoSession);
+  }
+}
+
+async function _fetchAndShowSessionView() {
+  // Do NOT show overlay until data is ready — the entry button spinner is the
+  // loading indicator. Overlay only appears once content is populated.
+  try {
+    const res = await callBackend(getPayload('getSession'));
+    activeSession = (res.ok && res.session) ? res.session : null;
+    document.getElementById('sessionViewOverlay').classList.add('show');
+    _showSessionView(activeSession);
+  } catch(e) {
+    showError('Could not load session: ' + e.message);
+  }
+}
+
+function _showSessionView(session) {
+  document.getElementById('sessionViewSkeleton').style.display = 'none';
+  if (!session) {
+    document.getElementById('sessionViewOverlay').classList.remove('show');
+    renderShuffleEntryButton();
+    return;
+  }
+  // Meta
+  const modeLabel = { random: '🎲 Random', balanced: '⚖️ Balanced', tiered: '🏆 Tiered' }[session.mode] || session.mode;
+  const meta = document.getElementById('sessionViewMeta');
+  if (meta) meta.textContent = modeLabel + ' · ' + session.playerIds.length + ' Players · ' + session.rounds + ' Round' + (session.rounds > 1 ? 's' : '');
+
+  // Always reset to Round 1 BEFORE building tab HTML so active class is applied correctly
+  shuffle.activeRoundTab = 0;
+
+  // Round tabs
+  const tabWrap = document.getElementById('sessionViewTabWrap');
+  const tabsEl  = document.getElementById('sessionViewRoundTabs');
+  if (tabWrap && tabsEl) {
+    if (session.rounds > 1) {
+      tabsEl.innerHTML = Array.from({length: session.rounds}, (_, i) =>
+        `<button class="toggle-pill${i === shuffle.activeRoundTab ? ' active' : ''}" type="button" onclick="switchSessionViewRoundTab(${i})">Round ${i+1}</button>`
+      ).join('');
+      tabWrap.style.display = 'block';
+    } else {
+      tabWrap.style.display = 'none';
+    }
+  }
+
+  _renderSessionViewCards();
+  _resetSessionViewFooter();
+  _updateSessionViewFooterState();
+}
+
+function _renderSessionViewCards() {
+  const session = isDemoMode ? demoSession : activeSession;
+  if (!session) return;
+  const cardsEl = document.getElementById('sessionViewCourtCards');
+  if (!cardsEl) return;
+  const round    = session.lineup[shuffle.activeRoundTab];
+  const logged   = session.logged[shuffle.activeRoundTab];
+  // Use snapshot ratings if available (set at session creation). Falls back to live
+  // ratings for sessions saved before v7.8.5 which have no ratingSnapshot field.
+  const snapshot = session.ratingSnapshot || null;
+  if (!round) return;
+  cardsEl.innerHTML = round.map((court, ci) => {
+    const loggedId = (logged && logged[ci]) ? logged[ci] : null;
+    return _buildCourtCardHTML(court, ci, shuffle.activeRoundTab, loggedId, false, snapshot);
+  }).join('');
+}
+
+function switchSessionViewRoundTab(idx) {
+  // Fully exit swap mode when switching rounds — edits on the previous round are kept
+  if (shuffle.swapMode) exitSessionViewSwapMode();
+  shuffle.activeRoundTab = idx;
+  const tabsEl = document.getElementById('sessionViewRoundTabs');
+  if (tabsEl) tabsEl.querySelectorAll('.toggle-pill').forEach((b, i) => b.classList.toggle('active', i === idx));
+  _renderSessionViewCards();
+}
+
+function closeSessionView() {
+  document.getElementById('sessionViewOverlay').classList.remove('show');
+  // Always clean up swap mode — removes the CSS class from the cards container
+  // so players don't wiggle on next open even if closeSessionView is called mid-swap
+  _removeSwapModeFromCards('sessionViewCourtCards');
+  _svPreSwapLineup = null;
+  shuffle.swapMode = false;
+  shuffle.swapSelected = null;
+  _resetSessionViewFooter();
+}
+
+function sessionViewOverlayTap(e) {
+  // Only dismiss if the tap was directly on the overlay background, not on the card
+  if (e.target === document.getElementById('sessionViewOverlay')) closeSessionView();
+}
+
+// ── Session View footer states ─────────────────────────────────────
+
+function _resetSessionViewFooter() {
+  document.getElementById('svFooterNormal').style.display   = 'flex';
+  document.getElementById('svFooterSwap').style.display     = 'none';
+  document.getElementById('svFooterSwapSave').style.display = 'none';
+}
+
+// ── Session fully-logged detection ────────────────────────────────
+
+function _isSessionFullyLogged(session) {
+  if (!session || !session.logged) return false;
+  return session.logged.every(roundArr => roundArr.every(id => !!id));
+}
+
+// Updates Swap/Delete/End buttons based on whether all courts are logged.
+// Called from _showSessionView each time the session view opens.
+function _updateSessionViewFooterState() {
+  const session = isDemoMode ? demoSession : activeSession;
+  const swapBtn   = document.getElementById('svSwapBtn');
+  const deleteBtn = document.getElementById('svDeleteBtn');
+  const endBtn    = document.getElementById('svEndBtn');
+  if (!swapBtn || !deleteBtn || !endBtn) return;
+  if (_isSessionFullyLogged(session)) {
+    swapBtn.disabled = true;
+    deleteBtn.style.display = 'none';
+    endBtn.style.display    = 'flex';
+  } else {
+    swapBtn.disabled = false;
+    deleteBtn.style.display = 'flex';
+    endBtn.style.display    = 'none';
+  }
+}
+
+// ── Delete Session ─────────────────────────────────────────────────
+
+function openDeleteSessionModal() {
+  document.getElementById('deleteSessionModal').classList.add('show');
+}
+
+function closeDeleteSessionModal() {
+  document.getElementById('deleteSessionModal').classList.remove('show');
+}
+
+async function confirmDeleteSession() {
+  // Show spinner and lock footer buttons immediately — interactionLock (z-index 600)
+  // cannot block the session view overlay (z-index 700), so we disable buttons directly.
+  const deleteBtn = document.getElementById('svDeleteBtn');
+  const swapBtn   = document.getElementById('svSwapBtn');
+  const endBtn    = document.getElementById('svEndBtn');
+  if (deleteBtn) { deleteBtn.disabled = true; deleteBtn.classList.add('loading'); }
+  if (swapBtn)   swapBtn.disabled = true;
+  if (endBtn)    endBtn.disabled  = true;
+  closeDeleteSessionModal();
+  if (isDemoMode) {
+    demoSession = null;
+    closeSessionView();
+    renderShuffleEntryButton();
+    return;
+  }
+  lockUI();
+  try {
+    const res = await callBackend(getPayload('deleteSession', { requestId: makeRequestId() }));
+    if (!res.ok) throw new Error(res.error || 'Delete failed');
+    activeSession = null;
+    closeSessionView(); // tears down overlay — no button restore needed on success
+    renderShuffleEntryButton();
+    showToast('Session deleted');
+  } catch(e) {
+    // Restore footer buttons so user can retry or cancel
+    if (deleteBtn) { deleteBtn.disabled = false; deleteBtn.classList.remove('loading'); }
+    if (swapBtn)   swapBtn.disabled = false;
+    if (endBtn)    endBtn.disabled  = false;
+    showError('Could not delete session: ' + e.message);
+  } finally {
+    unlockUI();
+  }
+}
+
+// ── End Session ────────────────────────────────────────────────────
+
+function openEndSessionModal() {
+  document.getElementById('endSessionModal').classList.add('show');
+}
+
+function closeEndSessionModal() {
+  document.getElementById('endSessionModal').classList.remove('show');
+}
+
+async function confirmEndSession() {
+  closeEndSessionModal();
+  if (isDemoMode) {
+    demoSession = null;
+    closeSessionView();
+    renderShuffleEntryButton();
+    showToast('Session ended ✓');
+    return;
+  }
+  // Show spinner on End Session button in session view footer while GAS responds
+  const endBtn = document.getElementById('svEndBtn');
+  if (endBtn) { endBtn.disabled = true; endBtn.classList.add('loading'); }
+  lockUI();
+  try {
+    const res = await callBackend(getPayload('deleteSession', { requestId: makeRequestId() }));
+    if (!res.ok) throw new Error(res.error || 'End failed');
+    activeSession = null;
+    closeSessionView();
+    renderShuffleEntryButton();
+    showToast('Session ended ✓');
+  } catch(e) {
+    if (endBtn) { endBtn.disabled = false; endBtn.classList.remove('loading'); }
+    showError('Could not end session: ' + e.message);
+  } finally {
+    unlockUI();
+  }
+}
+
+// ── Log This Match (from Session View) ────────────────────────────
+
+function logSessionMatch(roundIdx, courtIdx) {
+  const session = isDemoMode ? demoSession : activeSession;
+  if (!session) return;
+  const court = session.lineup[roundIdx][courtIdx];
+  const prefill = {
+    teamA: court.teamA,
+    teamB: court.teamB,
+    date: getTodayStr(),
+    sessionSource: { round: roundIdx, court: courtIdx }
+  };
+  closeSessionView();
+  navigateTo('add');
+  // initAddMatch is called by navigateTo('add') via _doNavigateTo.
+  // We call it again with prefill to override the reset.
+  initAddMatch(prefill);
+}
+
+function viewSessionMatch(matchId) {
+  // Navigate to matches screen and filter to show the specific match
+  closeSessionView();
+  navigateTo('matches');
+  // Filter match list to surface this match at top
+  if (matchId) {
+    const m = matches.find(x => x.id === matchId);
+    if (m) {
+      matchListFilter = [...m.teamA, ...m.teamB];
+      mlSelectedIds   = [...m.teamA, ...m.teamB];
+      mlSameTeam      = false;
+      _renderMatchList();
+    }
+  }
+}
+
+// Called from Add Match submit success to update session logged state
+async function onSessionMatchLogged(roundIdx, courtIdx, newMatchId) {
+  const session = isDemoMode ? demoSession : activeSession;
+  if (!session) return;
+  session.logged[roundIdx][courtIdx] = newMatchId;
+  if (isDemoMode) {
+    demoSession = session;
+    return;
+  }
+  // Persist updated logged state to backend
+  try {
+    await callBackend(getPayload('saveSession', { session: session, requestId: makeRequestId() }));
+    activeSession = session;
+  } catch(e) {
+    console.warn('onSessionMatchLogged: could not persist logged state', e.message);
+  }
+}
+
+// ── Session View swap mode ─────────────────────────────────────────
+
+function enterSessionViewSwapMode() {
+  shuffle.swapMode = true;
+  shuffle.swapSelected = null;
+  // Snapshot current lineup for potential discard
+  const session = isDemoMode ? demoSession : activeSession;
+  _svPreSwapLineup = JSON.parse(JSON.stringify(session.lineup));
+  _applySwapModeToCards('sessionViewCourtCards');
+  document.getElementById('svFooterNormal').style.display   = 'none';
+  document.getElementById('svFooterSwap').style.display     = 'block';
+}
+
+function exitSessionViewSwapMode() {
+  shuffle.swapMode = false;
+  shuffle.swapSelected = null;
+  _removeSwapModeFromCards('sessionViewCourtCards');
+  // Check if any changes were made
+  const session = isDemoMode ? demoSession : activeSession;
+  const changed = _svPreSwapLineup &&
+    JSON.stringify(session.lineup) !== JSON.stringify(_svPreSwapLineup);
+  if (changed) {
+    document.getElementById('svFooterSwap').style.display     = 'none';
+    document.getElementById('svFooterSwapSave').style.display = 'flex';
+  } else {
+    _resetSessionViewFooter();
+  }
+}
+
+function discardSessionSwap() {
+  const session = isDemoMode ? demoSession : activeSession;
+  if (session && _svPreSwapLineup) session.lineup = _svPreSwapLineup;
+  _svPreSwapLineup = null;
+  _renderSessionViewCards();
+  _resetSessionViewFooter();
+}
+
+async function saveSessionSwap() {
+  const session = isDemoMode ? demoSession : activeSession;
+  _svPreSwapLineup = null;
+  if (isDemoMode) {
+    demoSession = session;
+    _resetSessionViewFooter();
+    return;
+  }
+  // Spinner on Save Changes + disable Discard (lockUI doesn't reach z-index 700 overlay)
+  const saveBtn    = document.getElementById('svSaveSwapBtn');
+  const discardBtn = document.getElementById('svDiscardSwapBtn');
+  if (saveBtn)    { saveBtn.disabled    = true; saveBtn.classList.add('loading'); }
+  if (discardBtn)   discardBtn.disabled = true;
+  lockUI();
+  try {
+    const res = await callBackend(getPayload('saveSession', { session: session, requestId: makeRequestId() }));
+    if (!res.ok) throw new Error(res.error || 'Save failed');
+    activeSession = res.session || session;
+    showToast('Lineup updated ✓');
+  } catch(e) {
+    // Restore on error — success path calls _resetSessionViewFooter() which rebuilds footer
+    if (saveBtn)    { saveBtn.disabled    = false; saveBtn.classList.remove('loading'); }
+    if (discardBtn)   discardBtn.disabled = false;
+    showError('Could not save: ' + e.message);
+  } finally {
+    unlockUI();
+    _resetSessionViewFooter();
+  }
+}
+
+// ── fetchActiveSession (used in refreshAllData) ────────────────────
+
+async function fetchActiveSession() {
+  if (isDemoMode) return;
+  try {
+    const res = await callBackend(getPayload('getSession'));
+    activeSession = (res.ok && res.session) ? res.session : null;
+  } catch(e) {
+    // Non-fatal — session stays as-is if fetch fails
+    console.warn('fetchActiveSession failed:', e.message);
+  }
+}
+
+// ── Shuffle Algorithm ──────────────────────────────────────────────
+
+function computeShuffleLineup(selectedPlayers, courts, rounds, mode) {
+  const usedPairs = new Set(); // stringified sorted pair keys
+  const roundLineups = [];
+  let restedPlayers  = [];
+  let notice = null;
+  let doubleRestWarning = null;
+
+  for (let r = 0; r < rounds; r++) {
+    const result = r === 0
+      ? { lineup: _generateRound(selectedPlayers, courts, mode, restedPlayers, r), notice: null }
+      : _generateRoundWithRotation(selectedPlayers, courts, mode, usedPairs, restedPlayers, r);
+
+    if (result.notice) notice = result.notice;
+
+    // Track rested players for next round
+    const playedIds = new Set(result.lineup.flatMap(court => [...court.teamA, ...court.teamB]));
+    const newRested = selectedPlayers.filter(p => !playedIds.has(p.id));
+
+    // Double-rest advisory
+    if (r > 0 && newRested.some(p => restedPlayers.find(rp => rp.id === p.id))) {
+      const doubleRestNames = newRested
+        .filter(p => restedPlayers.find(rp => rp.id === p.id))
+        .map(p => p.name).join(', ');
+      doubleRestWarning = doubleRestNames + (newRested.length === 1 ? ' sits' : ' sit') + ' out twice — add a round or adjust courts to balance';
+    }
+
+    // Add pairs from this round to usedPairs
+    result.lineup.forEach(court => {
+      [court.teamA, court.teamB].forEach(team => {
+        if (team.length === 2) usedPairs.add([team[0], team[1]].sort().join('|'));
+      });
+    });
+
+    roundLineups.push(result.lineup);
+    restedPlayers = newRested;
+  }
+
+  return { rounds: roundLineups, notice, doubleRestWarning };
+}
+
+function _generateRound(playerPool, courts, mode, restedPlayers, roundIndex = 0) {
+  // Move rested players to front of pool
+  const rested = playerPool.filter(p => restedPlayers.some(r => r.id === p.id));
+  const others = playerPool.filter(p => !restedPlayers.some(r => r.id === p.id));
+  let pool = [...rested, ...others];
+
+  if (mode === 'random') {
+    pool = _shuffleArray([...pool]);
+  } else {
+    // balanced and tiered: sort by rating descending with pre-computed jitter.
+    // Jitter scales up with round index so later rounds look visibly different
+    // from round 1 — round 0: ±0.15, round 1: ±0.25, round 2: ±0.35, cap at ±0.45.
+    // Players with a rating gap larger than 2×JITTER almost never swap rank;
+    // closely-rated players vary increasingly across rounds.
+    const JITTER = Math.min(shuffleBaseJitter + roundIndex * 0.10, shuffleBaseJitter * 3);
+    const withJitter = pool.map(p => ({ p, j: p.rating + (Math.random() * JITTER * 2 - JITTER) }));
+    withJitter.sort((a, b) => b.j - a.j);
+    pool = withJitter.map(x => x.p);
+  }
+
+  const lineup = [];
+  for (let c = 0; c < courts; c++) {
+    const group = pool.slice(c * 4, c * 4 + 4);
+    if (group.length < 2) break;
+    const ids = group.map(p => p.id);
+    let teamA, teamB;
+    // Use ids[n] directly — never fall back to another player's id.
+    // The Step 1 guard (players ≥ courts*4) prevents underpopulated courts in
+    // normal flow; this null-fill is a last-resort safety net.
+    if (mode === 'balanced') {
+      // rank1+rank4 vs rank2+rank3
+      teamA = [ids[0], ids[3] ?? null];
+      teamB = [ids[1] ?? null, ids[2] ?? null];
+    } else if (mode === 'tiered') {
+      // rank1+rank2 vs rank3+rank4
+      teamA = [ids[0], ids[1] ?? null];
+      teamB = [ids[2] ?? null, ids[3] ?? null];
+    } else {
+      // random: first 2 vs last 2
+      teamA = [ids[0], ids[1] ?? null];
+      teamB = [ids[2] ?? null, ids[3] ?? null];
+    }
+    lineup.push({ teamA, teamB });
+  }
+  return lineup;
+}
+
+function _generateRoundWithRotation(playerPool, courts, mode, usedPairs, restedPlayers, roundIndex = 1) {
+  const rested = playerPool.filter(p => restedPlayers.some(r => r.id === p.id));
+  const others = playerPool.filter(p => !restedPlayers.some(r => r.id === p.id));
+  const basePool = [...rested, ...others];
+
+  let bestResult = null;
+  let bestRepeatCount = Infinity;
+
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const pool = mode === 'random' ? _shuffleArray([...basePool]) : [...basePool];
+    const candidate = _generateRound(pool, courts, mode, restedPlayers, roundIndex);
+    const repeatCount = _countRepeatPairs(candidate, usedPairs);
+
+    if (repeatCount === 0) return { lineup: candidate, notice: null };
+    if (repeatCount < bestRepeatCount) {
+      bestRepeatCount = repeatCount;
+      bestResult = candidate;
+    }
+    // Balanced/tiered are deterministic — no point retrying
+    if (mode !== 'random') break;
+  }
+
+  return {
+    lineup: bestResult,
+    notice: '⚡ Best rotation found — some pairs may repeat'
+  };
+}
+
+function _countRepeatPairs(lineup, usedPairs) {
+  let count = 0;
+  lineup.forEach(court => {
+    [court.teamA, court.teamB].forEach(team => {
+      if (team.length === 2) {
+        const key = [team[0], team[1]].sort().join('|');
+        if (usedPairs.has(key)) count++;
+      }
+    });
+  });
+  return count;
+}
+
+function _shuffleArray(arr) {
+  // Fisher-Yates
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ── Utility ────────────────────────────────────────────────────────
+
+function formatShortDate(isoStr) {
+  if (!isoStr) return '';
+  try {
+    // Plain date string (YYYY-MM-DD) — parse without timezone shift
+    if (/^\d{4}-\d{2}-\d{2}$/.test(isoStr)) {
+      const [y, m, d] = isoStr.split('-').map(Number);
+      const date = new Date(y, m - 1, d);
+      return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+    }
+    const d = new Date(isoStr);
+    return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+  } catch(e) { return ''; }
+}
+
+
+// ==========================================================
+// ADMIN PANEL
+// ==========================================================
+
+// ── 7-tap trigger on MATCHES header title ──
+// Counts taps only when on the matches screen and not in demo mode.
+// Resets after 3s inactivity. On 7th tap: opens admin entry flow.
+document.getElementById('headerTitle').addEventListener('click', function() {
+  if (currentScreen !== 'matches') return;
+  if (isDemoMode) return;
+
+  adminTapCount++;
+  if (adminTapTimer) clearTimeout(adminTapTimer);
+
+  if (adminTapCount >= 7) {
+    adminTapCount = 0;
+    adminTapTimer = null;
+    openAdminEntry();
+    return;
+  }
+
+  adminTapTimer = setTimeout(function() {
+    adminTapCount = 0;
+    adminTapTimer = null;
+  }, 3000);
+});
+
+// ── Enter key on admin password input ──
+document.getElementById('adminPwInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') submitAdminPassword();
+});
+
+/**
+ * Entry point after the 7-tap trigger fires.
+ * If already unlocked this session, skip re-auth and show the panel directly.
+ */
+function openAdminEntry() {
+  if (isDemoMode) return;
+  if (isAdminUnlocked) {
+    showAdminPanel();
+  } else {
+    const modal = document.getElementById('adminPwModal');
+    modal.classList.add('show');
+    document.getElementById('adminPwInput').value = '';
+    document.getElementById('adminPwError').classList.remove('visible');
+    _setupAdminPwVV();
+    setTimeout(function() { document.getElementById('adminPwInput').focus(); }, 300);
+  }
+}
+
+/**
+ * Attaches visualViewport resize listener to the admin password modal sheet.
+ * Translates the sheet upward by keyboard height on Android.
+ * Self-correcting formula: kbH approximates 0 on iOS (Safari pans the visual viewport).
+ */
+function _setupAdminPwVV() {
+  const sheet = document.querySelector('#adminPwModal .modal-sheet');
+  if (!window.visualViewport || !sheet) return;
+  function onResize() {
+    const kbH = Math.max(0,
+      window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+    sheet.style.transform = kbH > 0 ? 'translateY(-' + kbH + 'px)' : '';
+  }
+  sheet._adminVvListener = onResize;
+  window.visualViewport.addEventListener('resize', onResize);
+}
+
+/**
+ * Removes the visualViewport listener and resets sheet transform.
+ * Called on close and by _resetAppUI().
+ */
+function _teardownAdminPwVV() {
+  const sheet = document.querySelector('#adminPwModal .modal-sheet');
+  if (!window.visualViewport || !sheet || !sheet._adminVvListener) return;
+  window.visualViewport.removeEventListener('resize', sheet._adminVvListener);
+  sheet._adminVvListener = null;
+  sheet.style.transform = '';
+}
+
+/**
+ * Reads the admin password input and calls adminLogin on the backend.
+ * On success: stores the password for this session, opens the admin panel.
+ * On failure: shows error in the modal, clears and re-focuses input.
+ */
+async function submitAdminPassword() {
+  const inputEl    = document.getElementById('adminPwInput');
+  const errorEl    = document.getElementById('adminPwError');
+  const confirmBtn = document.querySelector('#adminPwModal .modal-confirm');
+  const inputVal   = inputEl.value;
+  if (!inputVal) return;
+
+  confirmBtn.disabled = true;
+  try {
+    await callBackend(getPayload('adminLogin', {
+      adminPw:   inputVal,
+      requestId: makeRequestId()
+    }));
+    // Success
+    isAdminUnlocked = true;
+    adminPwSession  = inputVal;
+    _teardownAdminPwVV();
+    document.getElementById('adminPwModal').classList.remove('show');
+    showAdminPanel();
+  } catch(e) {
+    // Failure
+    errorEl.classList.add('visible');
+    inputEl.value = '';
+    inputEl.focus();
+  } finally {
+    confirmBtn.disabled = false;
+  }
+}
+
+/**
+ * Closes the admin password modal and tears down the keyboard listener.
+ * Does not change isAdminUnlocked.
+ */
+function closeAdminPwModal() {
+  _teardownAdminPwVV();
+  document.getElementById('adminPwModal').classList.remove('show');
+  document.getElementById('adminPwInput').value = '';
+  document.getElementById('adminPwError').classList.remove('visible');
+}
+
+/**
+ * Opens the admin panel modal, populating counts and last export time.
+ * players.length includes active and inactive players — accurate for export count.
+ */
+function showAdminPanel() {
+  document.getElementById('adminPlayersCount').textContent = players.length;
+  document.getElementById('adminMatchesCount').textContent = matches.length;
+  document.getElementById('adminLastExportLabel').textContent =
+    'Last export: ' + (adminLastExport || 'Never');
+
+  // Reset push button to default state
+  const btn = document.getElementById('adminPushBtn');
+  btn.disabled = false;
+  btn.className = 'admin-push-btn';
+  btn.querySelector('.admin-push-text').textContent   = '↑  PUSH DATA NOW';
+  btn.querySelector('.admin-push-text').style.display = 'inline';
+  btn.querySelector('.admin-push-spinner').style.display = 'none';
+
+  document.getElementById('adminPushResult').style.display = 'none';
+  document.getElementById('adminPushError').style.display  = 'none';
+
+  document.getElementById('adminPanelModal').classList.add('show');
+}
+
+/**
+ * Closes the admin panel.
+ * Does NOT clear isAdminUnlocked — no re-auth needed within the same session.
+ */
+function closeAdminPanel() {
+  document.getElementById('adminPanelModal').classList.remove('show');
+}
+
+/**
+ * Handles the Push Data button tap.
+ * Sets loading state, calls exportData, updates UI on success or failure.
+ * adminIsExporting flag blocks overlay dismiss during the operation.
+ * Retry is supported — failure state re-enables the button.
+ */
+async function handlePushData() {
+  if (isDemoMode) return;
+  if (adminIsExporting) return;
+
+  adminIsExporting = true;
+
+  const btn      = document.getElementById('adminPushBtn');
+  const resultEl = document.getElementById('adminPushResult');
+  const errorEl  = document.getElementById('adminPushError');
+
+  // Loading state
+  btn.disabled = true;
+  btn.className = 'admin-push-btn';
+  btn.querySelector('.admin-push-text').style.display    = 'none';
+  btn.querySelector('.admin-push-spinner').style.display = 'inline-block';
+  resultEl.style.display = 'none';
+  errorEl.style.display  = 'none';
+
+  try {
+    const res = await callBackend(getPayload('exportData', {
+      adminPw:   adminPwSession,
+      requestId: makeRequestId()
+    }));
+
+    // Success state
+    btn.disabled = false;
+    btn.className = 'admin-push-btn success';
+    btn.querySelector('.admin-push-text').textContent    = '✓  PUSHED SUCCESSFULLY';
+    btn.querySelector('.admin-push-text').style.display  = 'inline';
+    btn.querySelector('.admin-push-spinner').style.display = 'none';
+
+    // Update last export display
+    adminLastExport = res.exportedAt || '';
+    document.getElementById('adminLastExportLabel').textContent =
+      'Last export: ' + (adminLastExport || 'Never');
+
+    resultEl.textContent   = (res.playersCount || 0) + ' players · ' + (res.matchesCount || 0) + ' matches exported';
+    resultEl.style.display = 'block';
+
+  } catch(e) {
+    // Failure/retry state — re-enable button for retry
+    btn.disabled = false;
+    btn.className = 'admin-push-btn failure';
+    btn.querySelector('.admin-push-text').textContent    = '✕  PUSH FAILED — tap to retry';
+    btn.querySelector('.admin-push-text').style.display  = 'inline';
+    btn.querySelector('.admin-push-spinner').style.display = 'none';
+
+    errorEl.textContent   = e.message || 'Export failed. Please try again.';
+    errorEl.style.display = 'block';
+  } finally {
+    adminIsExporting = false;
+  }
+}
+
 </script>
 
 <!-- Tooltip Info Sheet (inside app-container for correct stacking) -->
