@@ -2,9 +2,24 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.9.5 — UX Governance Pass        ║
-  ║  Date: 2026-05-16                            ║
-  ║  Changes: Rules 7-11. Scroll filter chip     ║
+  ║  Version: 7.9.8 — Spinner Centering Fix      ║
+  ║  Date: 2026-05-17                            ║
+  ║  Changes: exitShuffleSwapMode sets shSaveBtn ║
+  ║           display to flex (was block),       ║
+  ║           restoring flex centering for       ║
+  ║           spinner. svEndBtn spinner color    ║
+  ║           changed to black-on-lime to match  ║
+  ║           shSaveBtn (was lime-on-lime).       ║
+  ║           session-end-btn:disabled added     ║
+  ║           (opacity + cursor) — consistent    ║
+  ║           with other footer button classes.  ║
+  ║                                              ║
+  ║  v7.9.7 — Session Swap Auto-Save             ║
+  ║                                              ║
+  ║  v7.9.6 — Session Swap + Spinner Fix         ║
+  ║                                              ║
+  ║  v7.9.5 — UX Governance Pass                ║
+  ║           Rules 7-11. Scroll filter chip     ║
   ║           into view on contextual nav.       ║
   ║           Icon position standard. Admin      ║
   ║           spinner unified. Toast-only        ║
@@ -3822,12 +3837,17 @@ body {
   background: rgba(0,0,0,0.12); color: var(--black);
 }
 
+/* btn-text default: flex so icon+label align correctly inside button.
+   Must be CSS (not inline style) so .loading { display:none } can override it. */
+.btn-text { display: flex; align-items: center; justify-content: center; gap: 6px; }
+[class*="loading"] .btn-text, .loading .btn-text { display: none; }
+
 /* Save Session button spinner */
 #shSaveBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
 #shSaveBtn.loading .btn-text { display: none; }
 #shSaveBtn.loading .btn-spinner { display: block; }
 /* End Session button spinner */
-#svEndBtn .btn-spinner { border-color: rgba(170,220,50,0.3); border-top-color: var(--accent); }
+#svEndBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
 #svEndBtn.loading .btn-text { display: none; }
 #svEndBtn.loading .btn-spinner { display: block; }
 /* Delete Session button spinner */
@@ -3842,10 +3862,10 @@ body {
 #shStartOverBtn .btn-spinner { border-color: rgba(58,58,58,0.3); border-top-color: var(--grey-dark); }
 #shStartOverBtn.loading .btn-text { display: none; }
 #shStartOverBtn.loading .btn-spinner { display: block; }
-/* Save Changes (post-swap) button spinner */
-#svSaveSwapBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
-#svSaveSwapBtn.loading .btn-text { display: none; }
-#svSaveSwapBtn.loading .btn-spinner { display: block; }
+/* Session view swap Done button spinner */
+#svSwapDoneBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
+#svSwapDoneBtn.loading .btn-text { display: none; }
+#svSwapDoneBtn.loading .btn-spinner { display: block; }
 
 /* End Session button — solid lime fill */
 .session-end-btn {
@@ -3861,6 +3881,7 @@ body {
   display: flex; align-items: center; justify-content: center; gap: 6px;
 }
 .session-end-btn:active { opacity: 0.75; }
+.session-end-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── Confirmation modals spawned from inside overlays (z-index > 700) ── */
 #deleteSessionModal,
@@ -4739,7 +4760,7 @@ body {
         <div id="shF3Normal" style="display:flex;gap:10px;margin-bottom:10px;">
           <button class="shuffle-footer-secondary" type="button" onclick="showShuffleStep(2)">← BACK</button>
           <button class="shuffle-footer-secondary" id="shStartOverBtn" type="button" onclick="shuffleStartOver()" style="flex:1;">
-            <span class="btn-text" style="display:flex;align-items:center;justify-content:center;gap:6px;">
+            <span class="btn-text">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
               Start Over
             </span>
@@ -4747,7 +4768,7 @@ body {
           </button>
         </div>
         <button class="shuffle-footer-primary full-width" id="shSaveBtn" type="button" onclick="saveShuffleSession()">
-          <span class="btn-text" style="display:flex;align-items:center;justify-content:center;width:100%;gap:8px;">Save Session <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="btn-text" style="width:100%;">Save Session <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
           <div class="btn-spinner"></div>
         </button>
         <!-- Swap mode Done button (hidden until swap active) -->
@@ -4800,14 +4821,14 @@ body {
           Swap Players
         </button>
         <button class="shuffle-footer-secondary" id="svDeleteBtn" style="flex:1;color:var(--error);border-color:var(--error);" type="button" onclick="openDeleteSessionModal()">
-          <span class="btn-text" style="display:flex;align-items:center;justify-content:center;gap:6px;">
+          <span class="btn-text">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
             Delete
           </span>
           <div class="btn-spinner"></div>
         </button>
         <button class="session-end-btn" id="svEndBtn" style="display:none;" type="button" onclick="openEndSessionModal()">
-          <span class="btn-text" style="display:flex;align-items:center;gap:6px;">
+          <span class="btn-text">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
             End Session
           </span>
@@ -4816,17 +4837,10 @@ body {
       </div>
       <!-- Swap mode footer -->
       <div id="svFooterSwap" style="display:none;width:100%;">
-        <button class="shuffle-footer-primary full-width" type="button" onclick="exitSessionViewSwapMode()" style="display:flex;align-items:center;justify-content:center;gap:8px;">Done <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
-      </div>
-      <!-- Post-swap save/discard footer -->
-      <div id="svFooterSwapSave" style="display:none;width:100%;">
-        <div style="display:flex;gap:10px;">
-          <button class="shuffle-footer-secondary" id="svDiscardSwapBtn" type="button" onclick="discardSessionSwap()">Discard</button>
-          <button class="shuffle-footer-primary" id="svSaveSwapBtn" type="button" onclick="saveSessionSwap()" style="flex:2;">
-            <span class="btn-text">Save Changes</span>
-            <div class="btn-spinner"></div>
-          </button>
-        </div>
+        <button class="shuffle-footer-primary full-width" id="svSwapDoneBtn" type="button" onclick="exitSessionViewSwapMode()">
+          <span class="btn-text">Done <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <div class="btn-spinner"></div>
+        </button>
       </div>
     </div>
 
@@ -9942,7 +9956,7 @@ function exitShuffleSwapMode() {
   shuffle.swapSelected = null;
   _removeSwapModeFromCards('shuffleCourtCards');
   document.getElementById('shF3Normal').style.display = 'flex';
-  document.getElementById('shSaveBtn').style.display = 'block';
+  document.getElementById('shSaveBtn').style.display = 'flex';
   document.getElementById('shSwapBtn').style.display = 'flex';
   document.getElementById('shSwapDoneBtn').style.display = 'none';
 }
@@ -10020,8 +10034,8 @@ function handleSwapTap(pid, containerId) {
       _markSwapSelected(null, containerId);
       return;
     }
-    // Execute swap
-    _executeSwap(shuffle.swapSelected, pid);
+    // Execute swap — pass containerId so _executeSwap reads the correct lineup
+    _executeSwap(shuffle.swapSelected, pid, containerId);
     shuffle.swapSelected = null;
     // Re-render current round cards maintaining swap mode
     const cardsEl = document.getElementById(containerId);
@@ -10053,9 +10067,20 @@ function _markSwapSelected(pid, containerId) {
   }
 }
 
-function _executeSwap(pidA, pidB) {
+function _executeSwap(pidA, pidB, containerId) {
   if (!pidA || !pidB || pidA === pidB) return; // hard guard: no self-swap
-  const lineup = shuffle.lineup.rounds[shuffle.activeRoundTab];
+  // Session view stores lineup on session object; wizard stores it on shuffle.lineup.
+  // Reading from the wrong source was why session view swaps silently did nothing.
+  let lineup;
+  if (containerId === 'sessionViewCourtCards') {
+    const session = isDemoMode ? demoSession : activeSession;
+    if (!session) return;
+    lineup = session.lineup[shuffle.activeRoundTab];
+  } else {
+    if (!shuffle.lineup) return;
+    lineup = shuffle.lineup.rounds[shuffle.activeRoundTab];
+  }
+  if (!lineup) return;
   const inCourt = (pid) => lineup.some(c => [...(c.teamA || []), ...(c.teamB || [])].includes(pid));
   const aOnCourt = inCourt(pidA);
   const bOnCourt = inCourt(pidB);
@@ -10191,9 +10216,13 @@ function sessionViewOverlayTap(e) {
 // ── Session View footer states ─────────────────────────────────────
 
 function _resetSessionViewFooter() {
-  document.getElementById('svFooterNormal').style.display   = 'flex';
-  document.getElementById('svFooterSwap').style.display     = 'none';
-  document.getElementById('svFooterSwapSave').style.display = 'none';
+  document.getElementById('svFooterNormal').style.display = 'flex';
+  document.getElementById('svFooterSwap').style.display    = 'none';
+  // Reset loading state on all footer buttons — covers success path and demo mode early-return.
+  ['svDeleteBtn', 'svSwapBtn', 'svEndBtn', 'svSwapDoneBtn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+  });
 }
 
 // ── Session fully-logged detection ────────────────────────────────
@@ -10374,43 +10403,21 @@ function enterSessionViewSwapMode() {
   document.getElementById('svFooterSwap').style.display     = 'block';
 }
 
-function exitSessionViewSwapMode() {
+async function exitSessionViewSwapMode() {
   shuffle.swapMode = false;
   shuffle.swapSelected = null;
   _removeSwapModeFromCards('sessionViewCourtCards');
-  // Check if any changes were made
   const session = isDemoMode ? demoSession : activeSession;
   const changed = _svPreSwapLineup &&
     JSON.stringify(session.lineup) !== JSON.stringify(_svPreSwapLineup);
-  if (changed) {
-    document.getElementById('svFooterSwap').style.display     = 'none';
-    document.getElementById('svFooterSwapSave').style.display = 'flex';
-  } else {
-    _resetSessionViewFooter();
-  }
-}
-
-function discardSessionSwap() {
-  const session = isDemoMode ? demoSession : activeSession;
-  if (session && _svPreSwapLineup) session.lineup = _svPreSwapLineup;
   _svPreSwapLineup = null;
-  _renderSessionViewCards();
-  _resetSessionViewFooter();
-}
-
-async function saveSessionSwap() {
-  const session = isDemoMode ? demoSession : activeSession;
-  _svPreSwapLineup = null;
-  if (isDemoMode) {
-    demoSession = session;
+  if (!changed || isDemoMode) {
     _resetSessionViewFooter();
     return;
   }
-  // Spinner on Save Changes + disable Discard (lockUI doesn't reach z-index 700 overlay)
-  const saveBtn    = document.getElementById('svSaveSwapBtn');
-  const discardBtn = document.getElementById('svDiscardSwapBtn');
-  if (saveBtn)    { saveBtn.disabled    = true; saveBtn.classList.add('loading'); }
-  if (discardBtn)   discardBtn.disabled = true;
+  // Auto-save — show spinner on Done button while saving
+  const doneBtn = document.getElementById('svSwapDoneBtn');
+  if (doneBtn) { doneBtn.disabled = true; doneBtn.classList.add('loading'); }
   lockUI();
   try {
     const res = await callBackend(getPayload('saveSession', { session: session, requestId: makeRequestId() }));
@@ -10418,9 +10425,7 @@ async function saveSessionSwap() {
     activeSession = res.session || session;
     showToast('Lineup updated ✓');
   } catch(e) {
-    // Restore on error — success path calls _resetSessionViewFooter() which rebuilds footer
-    if (saveBtn)    { saveBtn.disabled    = false; saveBtn.classList.remove('loading'); }
-    if (discardBtn)   discardBtn.disabled = false;
+    // Keep swapped lineup in memory — user can retry via Swap Players > Done
     showError('Could not save: ' + e.message);
   } finally {
     unlockUI();
