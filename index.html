@@ -2,17 +2,18 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.9.8 — Spinner Centering Fix      ║
+  ║  Version: 7.9.9 — Share Session + Swap UX    ║
   ║  Date: 2026-05-17                            ║
-  ║  Changes: exitShuffleSwapMode sets shSaveBtn ║
-  ║           display to flex (was block),       ║
-  ║           restoring flex centering for       ║
-  ║           spinner. svEndBtn spinner color    ║
-  ║           changed to black-on-lime to match  ║
-  ║           shSaveBtn (was lime-on-lime).       ║
-  ║           session-end-btn:disabled added     ║
-  ║           (opacity + cursor) — consistent    ║
-  ║           with other footer button classes.  ║
+  ║  Changes: Edit icon inline with meta row in  ║
+  ║           Step 3 wizard and Session View.    ║
+  ║           Post-save wizard shows Done +      ║
+  ║           View Session instead of auto-close.║
+  ║           Share button in Session View footer║
+  ║           fires navigator.share() with       ║
+  ║           clipboard fallback; player roster  ║
+  ║           capped at 10 names + N more.       ║
+  ║                                              ║
+  ║  v7.9.8 — Spinner Centering Fix              ║
   ║                                              ║
   ║  v7.9.7 — Session Swap Auto-Save             ║
   ║                                              ║
@@ -3621,7 +3622,20 @@ body {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px; font-weight: 700; letter-spacing: 1px;
   text-transform: uppercase; color: var(--grey-mid);
-  margin-bottom: 14px;
+  margin-bottom: 8px;
+}
+/* Tab strip + pencil on same row */
+.shuffle-tab-pencil-row {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  margin-bottom: 12px;
+}
+.shuffle-tab-pencil-row .shuffle-round-tabs {
+  flex: 1; margin-bottom: 0;
+}
+/* Strip the full-width top padding when toggle-pills sits inline in a tab-pencil row */
+.shuffle-tab-pencil-row .toggle-pills,
+.session-tab-pencil-row .toggle-pills {
+  padding: 0;
 }
 .shuffle-round-tabs {
   margin-bottom: 16px;
@@ -3709,11 +3723,22 @@ body {
   font-weight: 900; font-size: 20px; letter-spacing: 0.5px;
   text-transform: uppercase; color: var(--black);
 }
+/* Meta row in session view header (meta text only — pencil moved to tab row) */
+.session-meta-edit-row {
+  margin-top: 4px;
+}
+/* Tab strip + pencil on same row in session view */
+.session-tab-pencil-row {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+}
+.session-tab-pencil-row .toggle-pills {
+  flex: 1;
+}
 .session-view-meta {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px; font-weight: 700; letter-spacing: 1px;
   text-transform: uppercase; color: var(--grey-mid);
-  margin-top: 4px;
+  flex: 1;
 }
 .session-view-body {
   flex: 1;
@@ -4719,16 +4744,17 @@ body {
       <!-- STEP 3: LINEUP -->
       <div class="shuffle-step-panel" id="shStep3">
         <div class="shuffle-step-title" style="margin-bottom:4px;">Your Lineup</div>
+        <!-- Meta text: below title, above tab row -->
         <div class="shuffle-result-meta" id="shuffleResultMeta"></div>
-        <!-- Round tab strip (only shown if rounds > 1) -->
-        <div class="toggle-pills shuffle-round-tabs" id="shuffleRoundTabs" style="display:none;"></div>
-        <!-- Meta row: rotation notice + swap icon -->
-        <div class="shuffle-meta-row">
-          <div class="shuffle-rotation-notice" id="shuffleRotationNotice" style="visibility:hidden;"></div>
+        <!-- Tab strip + pencil icon on same row -->
+        <div class="shuffle-tab-pencil-row">
+          <div class="toggle-pills shuffle-round-tabs" id="shuffleRoundTabs" style="display:none;"></div>
           <button class="swap-inline-btn" id="shSwapBtn" type="button" onclick="enterShuffleSwapMode()" title="Swap Players">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
           </button>
         </div>
+        <!-- Rotation notice (standalone row, visibility:hidden reserves space) -->
+        <div class="shuffle-rotation-notice" id="shuffleRotationNotice" style="visibility:hidden;"></div>
         <!-- Advisories — shown above court 1 so they are never off-screen -->
         <div id="shuffleAdvisories"></div>
         <!-- Court cards -->
@@ -4793,12 +4819,19 @@ body {
         <div class="session-view-title">📌 Active Session</div>
         <button class="shuffle-exit-btn" type="button" onclick="closeSessionView()">✕ EXIT</button>
       </div>
-      <div class="session-view-meta" id="sessionViewMeta"></div>
+      <div class="session-meta-edit-row">
+        <div class="session-view-meta" id="sessionViewMeta"></div>
+      </div>
     </div>
 
-    <!-- Round tabs (shown if rounds > 1) -->
-    <div id="sessionViewTabWrap" style="padding:12px 16px 0;flex-shrink:0;display:none;">
-      <div class="toggle-pills" id="sessionViewRoundTabs"></div>
+    <!-- Tab row + pencil: always rendered so pencil is always accessible -->
+    <div id="sessionViewTabWrap" style="padding:12px 16px 0;flex-shrink:0;">
+      <div class="session-tab-pencil-row">
+        <div class="toggle-pills" id="sessionViewRoundTabs" style="display:none;"></div>
+        <button class="swap-inline-btn" id="svSwapBtn" type="button" onclick="enterSessionViewSwapMode()" title="Swap players">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+        </button>
+      </div>
     </div>
 
     <!-- Scrollable court cards -->
@@ -4816,9 +4849,9 @@ body {
     <!-- Fixed footer -->
     <div class="session-view-footer" id="sessionViewFooter">
       <div id="svFooterNormal" style="display:flex;gap:10px;width:100%;">
-        <button class="shuffle-footer-secondary" id="svSwapBtn" style="flex:1;" type="button" onclick="enterSessionViewSwapMode()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Swap Players
+        <button class="shuffle-footer-secondary" id="svShareBtn" style="flex:1;" type="button" onclick="shareSession()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Share
         </button>
         <button class="shuffle-footer-secondary" id="svDeleteBtn" style="flex:1;color:var(--error);border-color:var(--error);" type="button" onclick="openDeleteSessionModal()">
           <span class="btn-text">
@@ -9883,8 +9916,12 @@ async function _doShuffleStartOver() {
 async function saveShuffleSession() {
   if (isDemoMode) {
     _buildAndStoreDemoSession();
-    closeShuffleWizard();
+    resetShuffle();
     renderShuffleEntryButton();
+    showToast('Session saved ✓');
+    document.getElementById('shuffleWizardOverlay').classList.remove('show');
+    document.getElementById('sessionViewOverlay').classList.add('show');
+    _showSessionView(demoSession);
     return;
   }
   const btn = document.getElementById('shSaveBtn');
@@ -9896,14 +9933,58 @@ async function saveShuffleSession() {
     if (!res.ok) throw new Error(res.error || 'Save failed');
     activeSession = res.session || sessionObj;
     resetShuffle();
-    closeShuffleWizard();
     renderShuffleEntryButton();
     showToast('Session saved ✓');
+    // Close wizard and go directly to Session View
+    document.getElementById('shuffleWizardOverlay').classList.remove('show');
+    document.getElementById('sessionViewOverlay').classList.add('show');
+    _showSessionView(activeSession);
   } catch(e) {
     showError('Could not save session: ' + e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
     unlockUI();
+  }
+}
+
+// ── Share Session ──────────────────────────────────────────────────
+// Builds a plain-text share message and fires navigator.share().
+// Falls back to clipboard copy when the Web Share API is unavailable.
+function shareSession() {
+  const session = isDemoMode ? demoSession : activeSession;
+  if (!session) return;
+
+  const sessionDate = session.sessionDate
+    ? new Date(session.sessionDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+    : 'upcoming session';
+
+  const playerNames = (session.playerIds || [])
+    .map(id => { const p = players.find(x => x.id === id); return p ? p.name : null; })
+    .filter(Boolean);
+
+  let rosterText;
+  if (playerNames.length <= 10) {
+    rosterText = playerNames.join(', ');
+  } else {
+    rosterText = playerNames.slice(0, 10).join(', ') + ` +${playerNames.length - 10} more`;
+  }
+
+  const courts = session.courts || 1;
+  const rounds = session.rounds || 1;
+  const msg = `🏓 FORGE – Session Set for ${sessionDate}\n`
+    + `Courts: ${courts} · Rounds: ${rounds}\n`
+    + `Players (${playerNames.length}): ${rosterText}\n`
+    + `Lineup is ready — open the app to see your court assignments!\n`
+    + `\n---\n`
+    + `Smash it on Forge 🏓\n`
+    + `https://forgepickle.github.io/app`;
+
+  if (navigator.share) {
+    navigator.share({ title: 'FORGE Pickleball Session', text: msg }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(msg)
+      .then(() => showToast('Message copied to clipboard ✓'))
+      .catch(() => showError('Could not copy to clipboard'));
   }
 }
 
@@ -10151,17 +10232,16 @@ function _showSessionView(session) {
   // Always reset to Round 1 BEFORE building tab HTML so active class is applied correctly
   shuffle.activeRoundTab = 0;
 
-  // Round tabs
-  const tabWrap = document.getElementById('sessionViewTabWrap');
-  const tabsEl  = document.getElementById('sessionViewRoundTabs');
-  if (tabWrap && tabsEl) {
+  // Round tabs — tabWrap always visible (pencil lives there); only toggle tabsEl
+  const tabsEl = document.getElementById('sessionViewRoundTabs');
+  if (tabsEl) {
     if (session.rounds > 1) {
       tabsEl.innerHTML = Array.from({length: session.rounds}, (_, i) =>
         `<button class="toggle-pill${i === shuffle.activeRoundTab ? ' active' : ''}" type="button" onclick="switchSessionViewRoundTab(${i})">Round ${i+1}</button>`
       ).join('');
-      tabWrap.style.display = 'block';
+      tabsEl.style.display = '';
     } else {
-      tabWrap.style.display = 'none';
+      tabsEl.style.display = 'none';
     }
   }
 
@@ -10206,6 +10286,9 @@ function closeSessionView() {
   shuffle.swapMode = false;
   shuffle.swapSelected = null;
   _resetSessionViewFooter();
+  // If Add Match was launched from this session and left incomplete, wipe it silently
+  // so the stale pre-filled wizard doesn't persist behind the overlay
+  if (am.sessionSource) resetAddMatch(true);
 }
 
 function sessionViewOverlayTap(e) {
@@ -10218,6 +10301,9 @@ function sessionViewOverlayTap(e) {
 function _resetSessionViewFooter() {
   document.getElementById('svFooterNormal').style.display = 'flex';
   document.getElementById('svFooterSwap').style.display    = 'none';
+  // Restore edit icon visibility (hidden while swap mode is active)
+  const svSwapBtn = document.getElementById('svSwapBtn');
+  if (svSwapBtn) svSwapBtn.style.display = '';
   // Reset loading state on all footer buttons — covers success path and demo mode early-return.
   ['svDeleteBtn', 'svSwapBtn', 'svEndBtn', 'svSwapDoneBtn'].forEach(id => {
     const btn = document.getElementById(id);
@@ -10401,6 +10487,9 @@ function enterSessionViewSwapMode() {
   if (round) _renderBenchSection(session.playerIds, round, 'sessionViewBenchSection', 'sessionViewCourtCards');
   document.getElementById('svFooterNormal').style.display   = 'none';
   document.getElementById('svFooterSwap').style.display     = 'block';
+  // Hide edit icon while swap mode is active
+  const svSwapBtn = document.getElementById('svSwapBtn');
+  if (svSwapBtn) svSwapBtn.style.display = 'none';
 }
 
 async function exitSessionViewSwapMode() {
