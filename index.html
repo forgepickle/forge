@@ -4784,7 +4784,7 @@ body {
       <!-- Step 3 footer -->
       <div id="shFooter3" style="display:none;width:100%;">
         <div id="shF3Normal" style="display:flex;gap:10px;margin-bottom:10px;">
-          <button class="shuffle-footer-secondary" type="button" onclick="showShuffleStep(2)">← BACK</button>
+          <button class="shuffle-footer-secondary" id="shBackBtn3" type="button" onclick="showShuffleStep(2)">← BACK</button>
           <button class="shuffle-footer-secondary" id="shStartOverBtn" type="button" onclick="shuffleStartOver()" style="flex:1;">
             <span class="btn-text">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -9924,8 +9924,14 @@ async function saveShuffleSession() {
     _showSessionView(demoSession);
     return;
   }
-  const btn = document.getElementById('shSaveBtn');
-  if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+  const btn      = document.getElementById('shSaveBtn');
+  const backBtn  = document.getElementById('shBackBtn3');
+  const overBtn  = document.getElementById('shStartOverBtn');
+  const swapBtn  = document.getElementById('shSwapBtn');
+  if (btn)     { btn.disabled = true; btn.classList.add('loading'); }
+  if (backBtn)   backBtn.disabled  = true;
+  if (overBtn)   overBtn.disabled  = true;
+  if (swapBtn)   swapBtn.disabled  = true;
   const sessionObj = _buildSessionObject();
   lockUI();
   try {
@@ -9935,14 +9941,17 @@ async function saveShuffleSession() {
     resetShuffle();
     renderShuffleEntryButton();
     showToast('Session saved ✓');
-    // Close wizard and go directly to Session View
+    // Close wizard and go directly to Session View — no button restore needed
     document.getElementById('shuffleWizardOverlay').classList.remove('show');
     document.getElementById('sessionViewOverlay').classList.add('show');
     _showSessionView(activeSession);
   } catch(e) {
+    if (btn)    { btn.disabled = false; btn.classList.remove('loading'); }
+    if (backBtn)  backBtn.disabled = false;
+    if (overBtn)  overBtn.disabled = false;
+    if (swapBtn)  swapBtn.disabled = false;
     showError('Could not save session: ' + e.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
     unlockUI();
   }
 }
