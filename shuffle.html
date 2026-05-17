@@ -3622,7 +3622,20 @@ body {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px; font-weight: 700; letter-spacing: 1px;
   text-transform: uppercase; color: var(--grey-mid);
-  margin-bottom: 14px;
+  margin-bottom: 8px;
+}
+/* Tab strip + pencil on same row */
+.shuffle-tab-pencil-row {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+  margin-bottom: 12px;
+}
+.shuffle-tab-pencil-row .shuffle-round-tabs {
+  flex: 1; margin-bottom: 0;
+}
+/* Strip the full-width top padding when toggle-pills sits inline in a tab-pencil row */
+.shuffle-tab-pencil-row .toggle-pills,
+.session-tab-pencil-row .toggle-pills {
+  padding: 0;
 }
 .shuffle-round-tabs {
   margin-bottom: 16px;
@@ -3710,10 +3723,16 @@ body {
   font-weight: 900; font-size: 20px; letter-spacing: 0.5px;
   text-transform: uppercase; color: var(--black);
 }
-/* Meta + edit icon row in session view header */
+/* Meta row in session view header (meta text only — pencil moved to tab row) */
 .session-meta-edit-row {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
   margin-top: 4px;
+}
+/* Tab strip + pencil on same row in session view */
+.session-tab-pencil-row {
+  display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+}
+.session-tab-pencil-row .toggle-pills {
+  flex: 1;
 }
 .session-view-meta {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -4495,14 +4514,8 @@ body {
       <button class="share-match-btn" type="button" onclick="showMatchShareCard()">📤 Share this result</button>
     </div>
 
-    <!-- STEP 1: DATE -->
+    <!-- STEP 1: PLAYERS -->
     <div class="step-panel active" id="step1">
-      <div class="step-title">When did you play?</div>
-      <input class="date-native" type="date" id="matchDate">
-    </div>
-
-    <!-- STEP 2: PLAYERS -->
-    <div class="step-panel" id="step2">
       <div class="step-title">Who played?</div>
       <div class="step2-hint" id="step2Hint">Tap once → Team A &nbsp;·&nbsp; Tap again → Team B &nbsp;·&nbsp; Tap again → Deselect</div>
       <div class="player-select-grid" id="playerSelectGrid"></div>
@@ -4517,8 +4530,8 @@ body {
       </div>
     </div>
 
-    <!-- STEP 3: FORMAT -->
-    <div class="step-panel" id="step3">
+    <!-- STEP 2: FORMAT -->
+    <div class="step-panel" id="step2">
       <div class="step-title">How did you play?</div>
       <div class="format-group">
         <div class="format-group-label">Scoring Type</div>
@@ -4537,8 +4550,8 @@ body {
       </div>
     </div>
 
-    <!-- STEP 4: SCORES -->
-    <div class="step-panel" id="step4">
+    <!-- STEP 3: SCORES -->
+    <div class="step-panel" id="step3">
       <div class="step-title">Enter Scores</div>
       <div class="score-teams-header">
         <div class="score-team-name a" id="scoreTeamALabel">Team A</div>
@@ -4587,6 +4600,12 @@ body {
 
       <div class="forge-advisory" id="scoreGapWarning"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span class="advisory-body">Please fill games in order</span></div>
       <div class="match-status-bar" id="matchStatusBar">Enter scores above</div>
+    </div>
+
+    <!-- STEP 4: DATE -->
+    <div class="step-panel" id="step4">
+      <div class="step-title">When did you play?</div>
+      <input class="date-native" type="date" id="matchDate">
     </div>
 
     <!-- STEP 5: REVIEW -->
@@ -4725,11 +4744,11 @@ body {
       <!-- STEP 3: LINEUP -->
       <div class="shuffle-step-panel" id="shStep3">
         <div class="shuffle-step-title" style="margin-bottom:4px;">Your Lineup</div>
-        <!-- Round tab strip (only shown if rounds > 1) -->
-        <div class="toggle-pills shuffle-round-tabs" id="shuffleRoundTabs" style="display:none;"></div>
-        <!-- Meta row: result meta (left) + swap/edit icon (right) -->
-        <div class="shuffle-meta-row">
-          <div class="shuffle-result-meta" id="shuffleResultMeta" style="flex:1;"></div>
+        <!-- Meta text: below title, above tab row -->
+        <div class="shuffle-result-meta" id="shuffleResultMeta"></div>
+        <!-- Tab strip + pencil icon on same row -->
+        <div class="shuffle-tab-pencil-row">
+          <div class="toggle-pills shuffle-round-tabs" id="shuffleRoundTabs" style="display:none;"></div>
           <button class="swap-inline-btn" id="shSwapBtn" type="button" onclick="enterShuffleSwapMode()" title="Swap Players">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
           </button>
@@ -4765,7 +4784,7 @@ body {
       <!-- Step 3 footer -->
       <div id="shFooter3" style="display:none;width:100%;">
         <div id="shF3Normal" style="display:flex;gap:10px;margin-bottom:10px;">
-          <button class="shuffle-footer-secondary" type="button" onclick="showShuffleStep(2)">← BACK</button>
+          <button class="shuffle-footer-secondary" id="shBackBtn3" type="button" onclick="showShuffleStep(2)">← BACK</button>
           <button class="shuffle-footer-secondary" id="shStartOverBtn" type="button" onclick="shuffleStartOver()" style="flex:1;">
             <span class="btn-text">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -4780,13 +4799,6 @@ body {
         </button>
         <!-- Swap mode Done button (hidden until swap active) -->
         <button class="shuffle-footer-primary full-width" id="shSwapDoneBtn" type="button" onclick="exitShuffleSwapMode()" style="display:none;align-items:center;justify-content:center;gap:8px;">Done <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
-        <!-- Post-save footer: Done (close wizard) + View Session (open session view) -->
-        <div id="shFooterPostSave" style="display:none;gap:10px;width:100%;">
-          <button class="shuffle-footer-secondary" id="shDoneAfterSaveBtn" type="button" onclick="doneAfterSave()">Done</button>
-          <button class="shuffle-footer-primary" id="shViewSessionBtn" type="button" onclick="viewSavedSession()" style="flex:2;">
-            View Session <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-        </div>
       </div>
     </div>
 
@@ -4809,15 +4821,17 @@ body {
       </div>
       <div class="session-meta-edit-row">
         <div class="session-view-meta" id="sessionViewMeta"></div>
+      </div>
+    </div>
+
+    <!-- Tab row + pencil: always rendered so pencil is always accessible -->
+    <div id="sessionViewTabWrap" style="padding:12px 16px 0;flex-shrink:0;">
+      <div class="session-tab-pencil-row">
+        <div class="toggle-pills" id="sessionViewRoundTabs" style="display:none;"></div>
         <button class="swap-inline-btn" id="svSwapBtn" type="button" onclick="enterSessionViewSwapMode()" title="Swap players">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
         </button>
       </div>
-    </div>
-
-    <!-- Round tabs (shown if rounds > 1) -->
-    <div id="sessionViewTabWrap" style="padding:12px 16px 0;flex-shrink:0;display:none;">
-      <div class="toggle-pills" id="sessionViewRoundTabs"></div>
     </div>
 
     <!-- Scrollable court cards -->
@@ -6575,8 +6589,8 @@ function navigateTo(screen) {
   // ── Guard: warn before leaving Add Match mid-flow ──
   if (currentScreen === 'add' && screen !== 'add') {
     const hasProgress = (
-      (am.step >= 2 && (am.teamA.length > 0 || am.teamB.length > 0)) ||
-      am.step >= 3 ||
+      am.teamA.length > 0 || am.teamB.length > 0 ||
+      am.step >= 2 ||
       document.getElementById('submitSuccess')?.classList.contains('show')
     );
     // Don't intercept if submit success is showing — Done handles that
@@ -7476,8 +7490,8 @@ function initAddMatch(prefill) {
     if (dateEl) { dateEl.value = am.date; }
     // Update team summary display
     updatePlayerSelectUI();
-    // Jump directly to Step 3 (format picker)
-    showStep(3);
+    // Jump directly to Step 2 (format picker) — teams/date pre-filled from session
+    showStep(2);
     // Show context label if from session
     _renderSessionSourceLabel();
   } else {
@@ -7486,16 +7500,16 @@ function initAddMatch(prefill) {
 }
 
 function _renderSessionSourceLabel() {
-  // Inject or clear the "📌 From session" context label at top of Step 3
-  const step3 = document.getElementById('step3');
-  if (!step3) return;
+  // Inject or clear the "📌 From session" context label at top of Step 2 (format picker)
+  const step2 = document.getElementById('step2');
+  if (!step2) return;
   let label = document.getElementById('sessionSourceLabel');
   if (am.sessionSource) {
     if (!label) {
       label = document.createElement('div');
       label.id = 'sessionSourceLabel';
       label.className = 'step2-hint';
-      step3.insertBefore(label, step3.firstChild);
+      step2.insertBefore(label, step2.firstChild);
     }
     label.textContent = '📌 From session: Court ' + (am.sessionSource.court + 1) + ' · Round ' + (am.sessionSource.round + 1);
   } else {
@@ -7550,6 +7564,9 @@ function resetAddMatch(silent) {
   // Clear all chip visual states — am.teamA/B are already [] so
   // updatePlayerSelectUI removes team-a/team-b classes from every chip
   updatePlayerSelectUI();
+  // Always clean up the session source label from the DOM (am.sessionSource is
+  // now gone from the reset am object, so this call removes any stale label)
+  _renderSessionSourceLabel();
   showStep(1);
   if (!silent) { currentScreen = 'add'; navigateTo('players'); }
 }
@@ -7579,7 +7596,7 @@ function showStep(n) {
       ? 'Submit Match <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
       : 'Next <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
   }
-  if (n === 4) { updateScoreLabels(); onScoreInput(); }
+  if (n === 3) { updateScoreLabels(); onScoreInput(); }
   validateStep(n);
   const s = document.getElementById('screenAddMatch'); if (s) s.scrollTop = 0;
 }
@@ -7587,13 +7604,12 @@ function showStep(n) {
 function stepNext() {
   if (!validateStep(am.step)) return;
   if (am.step === 5) { submitMatch(); return; }
-  if (am.step === 1) am.date = document.getElementById('matchDate').value;
-  if (am.step === 4) buildReviewCard();
+  if (am.step === 4) { am.date = document.getElementById('matchDate').value; buildReviewCard(); }
   showStep(am.step + 1);
 }
 function stepBack() {
-  // If pre-filled from session and currently on Step 3, back returns to Session View
-  if (am.step === 3 && am.sessionSource) {
+  // If pre-filled from session and currently on Step 2, back returns to Session View
+  if (am.step === 2 && am.sessionSource) {
     openSessionView();
     return;
   }
@@ -7608,10 +7624,10 @@ function getTodayStr() {
 function validateStep(n) {
   const nb = document.getElementById('stepNextBtn');
   let valid = false;
-  if (n===1) { const dv = document.getElementById('matchDate').value; valid = !!dv && dv <= getTodayStr(); }
-  else if (n===2) valid = am.teamA.length === 2 && am.teamB.length === 2;
-  else if (n===3) valid = !!am.scoring && !!am.points;
-  else if (n===4) { const hg = checkScoreGap(); valid = isRowFilled('g1a','g1b') && !hg; }
+  if (n===1) valid = am.teamA.length === 2 && am.teamB.length === 2;
+  else if (n===2) valid = !!am.scoring && !!am.points;
+  else if (n===3) { const hg = checkScoreGap(); valid = isRowFilled('g1a','g1b') && !hg; }
+  else if (n===4) { const dv = document.getElementById('matchDate').value; valid = !!dv && dv <= getTodayStr(); }
   else if (n===5) valid = true;
   if (nb) nb.disabled = !valid;
   return valid;
@@ -7664,7 +7680,7 @@ function togglePlayerSelect(id) {
   } else if (inA) am.teamA = am.teamA.filter(x => x !== id);
   else if (inB) am.teamB = am.teamB.filter(x => x !== id);
   updatePlayerSelectUI();
-  validateStep(2);
+  validateStep(1);
 }
 
 function updatePlayerSelectUI() {
@@ -7691,7 +7707,7 @@ function selectFormat(type, value, el) {
   if (type === 'scoring') { document.querySelectorAll('#fmt-standard,#fmt-rally').forEach(p => p.classList.remove('selected')); am.scoring = value; }
   else { document.querySelectorAll('#fmt-11,#fmt-15,#fmt-21').forEach(p => p.classList.remove('selected')); am.points = value; }
   el.classList.add('selected');
-  validateStep(3);
+  validateStep(2);
 }
 
 function updateScoreLabels() {
@@ -7738,7 +7754,7 @@ function onScoreInput() {
   document.getElementById('scoreRow1').classList.toggle('active-game', r1);
   document.getElementById('scoreRow2').classList.toggle('active-game', r2);
   updateMatchStatus(s1, s2, getRowScores('g3a','g3b'));
-  validateStep(4);
+  validateStep(3);
 }
 
 function renderGameWinner(ia, ib, tid) {
@@ -9375,7 +9391,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Date input change handler
   const de = document.getElementById('matchDate');
-  if (de) de.addEventListener('change', function() { am.date = this.value; validateStep(1); });
+  if (de) de.addEventListener('change', function() { am.date = this.value; validateStep(4); });
 
   // Zoom prevention
   document.addEventListener('gesturestart',  e => e.preventDefault(), { passive:false });
@@ -9905,13 +9921,19 @@ async function saveShuffleSession() {
     resetShuffle();
     renderShuffleEntryButton();
     showToast('Session saved ✓');
-    document.getElementById('shF3Normal').style.display    = 'none';
-    document.getElementById('shSaveBtn').style.display     = 'none';
-    document.getElementById('shFooterPostSave').style.display = 'flex';
+    document.getElementById('shuffleWizardOverlay').classList.remove('show');
+    document.getElementById('sessionViewOverlay').classList.add('show');
+    _showSessionView(demoSession);
     return;
   }
-  const btn = document.getElementById('shSaveBtn');
-  if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+  const btn      = document.getElementById('shSaveBtn');
+  const backBtn  = document.getElementById('shBackBtn3');
+  const overBtn  = document.getElementById('shStartOverBtn');
+  const swapBtn  = document.getElementById('shSwapBtn');
+  if (btn)     { btn.disabled = true; btn.classList.add('loading'); }
+  if (backBtn)   backBtn.disabled  = true;
+  if (overBtn)   overBtn.disabled  = true;
+  if (swapBtn)   swapBtn.disabled  = true;
   const sessionObj = _buildSessionObject();
   lockUI();
   try {
@@ -9921,33 +9943,19 @@ async function saveShuffleSession() {
     resetShuffle();
     renderShuffleEntryButton();
     showToast('Session saved ✓');
-    // Show post-save footer (Done + View Session) instead of closing wizard immediately
-    document.getElementById('shF3Normal').style.display    = 'none';
-    document.getElementById('shSaveBtn').style.display     = 'none';
-    document.getElementById('shFooterPostSave').style.display = 'flex';
+    // Close wizard and go directly to Session View — no button restore needed
+    document.getElementById('shuffleWizardOverlay').classList.remove('show');
+    document.getElementById('sessionViewOverlay').classList.add('show');
+    _showSessionView(activeSession);
   } catch(e) {
+    if (btn)    { btn.disabled = false; btn.classList.remove('loading'); }
+    if (backBtn)  backBtn.disabled = false;
+    if (overBtn)  overBtn.disabled = false;
+    if (swapBtn)  swapBtn.disabled = false;
     showError('Could not save session: ' + e.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
     unlockUI();
   }
-}
-
-// Closes the wizard without opening Session View (post-save Done button).
-function doneAfterSave() {
-  document.getElementById('shuffleWizard').classList.remove('show');
-  document.getElementById('shFooterPostSave').style.display = 'none';
-  document.getElementById('shF3Normal').style.display       = 'flex';
-  document.getElementById('shSaveBtn').style.display        = 'flex';
-}
-
-// Closes the wizard and opens Session View so user can inspect the saved session.
-function viewSavedSession() {
-  document.getElementById('shuffleWizard').classList.remove('show');
-  document.getElementById('shFooterPostSave').style.display = 'none';
-  document.getElementById('shF3Normal').style.display       = 'flex';
-  document.getElementById('shSaveBtn').style.display        = 'flex';
-  _showSessionView();
 }
 
 // ── Share Session ──────────────────────────────────────────────────
@@ -9976,8 +9984,12 @@ function shareSession() {
   const rounds = session.rounds || 1;
   const msg = `🏓 FORGE – Session Set for ${sessionDate}\n`
     + `Courts: ${courts} · Rounds: ${rounds}\n`
+    + `\n`
     + `Players (${playerNames.length}): ${rosterText}\n`
-    + `\nLineup is ready — open the app to see your court assignments!`;
+    + `\n`
+    + `Lineup is ready — open the app to see your court assignments!\n`
+    + `\n`
+    + `--- Smash it on Forge 🏓  https://forgepickle.github.io/app`;
 
   if (navigator.share) {
     navigator.share({ title: 'FORGE Pickleball Session', text: msg }).catch(() => {});
@@ -10232,17 +10244,16 @@ function _showSessionView(session) {
   // Always reset to Round 1 BEFORE building tab HTML so active class is applied correctly
   shuffle.activeRoundTab = 0;
 
-  // Round tabs
-  const tabWrap = document.getElementById('sessionViewTabWrap');
-  const tabsEl  = document.getElementById('sessionViewRoundTabs');
-  if (tabWrap && tabsEl) {
+  // Round tabs — tabWrap always visible (pencil lives there); only toggle tabsEl
+  const tabsEl = document.getElementById('sessionViewRoundTabs');
+  if (tabsEl) {
     if (session.rounds > 1) {
       tabsEl.innerHTML = Array.from({length: session.rounds}, (_, i) =>
         `<button class="toggle-pill${i === shuffle.activeRoundTab ? ' active' : ''}" type="button" onclick="switchSessionViewRoundTab(${i})">Round ${i+1}</button>`
       ).join('');
-      tabWrap.style.display = 'block';
+      tabsEl.style.display = '';
     } else {
-      tabWrap.style.display = 'none';
+      tabsEl.style.display = 'none';
     }
   }
 
@@ -10276,6 +10287,8 @@ function switchSessionViewRoundTab(idx) {
   const tabsEl = document.getElementById('sessionViewRoundTabs');
   if (tabsEl) tabsEl.querySelectorAll('.toggle-pill').forEach((b, i) => b.classList.toggle('active', i === idx));
   _renderSessionViewCards();
+  // Re-evaluate pencil state — completed rounds lock the pencil
+  _updateSessionViewFooterState();
 }
 
 function closeSessionView() {
@@ -10287,6 +10300,9 @@ function closeSessionView() {
   shuffle.swapMode = false;
   shuffle.swapSelected = null;
   _resetSessionViewFooter();
+  // If Add Match was launched from this session and left incomplete, wipe it silently
+  // so the stale pre-filled wizard doesn't persist behind the overlay
+  if (am.sessionSource) resetAddMatch(true);
 }
 
 function sessionViewOverlayTap(e) {
@@ -10316,8 +10332,14 @@ function _isSessionFullyLogged(session) {
   return session.logged.every(roundArr => roundArr.every(id => !!id));
 }
 
+function _isRoundFullyLogged(session, roundIdx) {
+  if (!session || !session.logged || !session.logged[roundIdx]) return false;
+  return session.logged[roundIdx].every(id => !!id);
+}
+
 // Updates Swap/Delete/End buttons based on whether all courts are logged.
-// Called from _showSessionView each time the session view opens.
+// Pencil is also locked when the currently viewed round is fully logged.
+// Called from _showSessionView, switchSessionViewRoundTab, and onSessionMatchLogged.
 function _updateSessionViewFooterState() {
   const session = isDemoMode ? demoSession : activeSession;
   const swapBtn   = document.getElementById('svSwapBtn');
@@ -10329,7 +10351,8 @@ function _updateSessionViewFooterState() {
     deleteBtn.style.display = 'none';
     endBtn.style.display    = 'flex';
   } else {
-    swapBtn.disabled = false;
+    // Lock pencil if the current round is fully logged, even if other rounds are not
+    swapBtn.disabled = _isRoundFullyLogged(session, shuffle.activeRoundTab);
     deleteBtn.style.display = 'flex';
     endBtn.style.display    = 'none';
   }
@@ -10384,14 +10407,30 @@ async function confirmDeleteSession() {
 
 function openEndSessionModal() {
   document.getElementById('endSessionModal').classList.add('show');
+  // Lock Share and Pencil while End Session flow is active
+  const shareBtn = document.getElementById('svShareBtn');
+  const swapBtn  = document.getElementById('svSwapBtn');
+  if (shareBtn) shareBtn.disabled = true;
+  if (swapBtn)  swapBtn.disabled  = true;
 }
 
 function closeEndSessionModal() {
   document.getElementById('endSessionModal').classList.remove('show');
+  // Restore Share and Pencil on cancel — confirmEndSession re-locks them if proceeding
+  const shareBtn = document.getElementById('svShareBtn');
+  const swapBtn  = document.getElementById('svSwapBtn');
+  if (shareBtn) shareBtn.disabled = false;
+  if (swapBtn)  swapBtn.disabled  = false;
 }
 
 async function confirmEndSession() {
-  closeEndSessionModal();
+  closeEndSessionModal(); // restores buttons briefly — re-lock immediately below
+  const endBtn   = document.getElementById('svEndBtn');
+  const shareBtn = document.getElementById('svShareBtn');
+  const swapBtn  = document.getElementById('svSwapBtn');
+  if (endBtn)   { endBtn.disabled = true; endBtn.classList.add('loading'); }
+  if (shareBtn)   shareBtn.disabled = true;
+  if (swapBtn)    swapBtn.disabled  = true;
   if (isDemoMode) {
     demoSession = null;
     closeSessionView();
@@ -10399,9 +10438,6 @@ async function confirmEndSession() {
     showToast('Session ended ✓');
     return;
   }
-  // Show spinner on End Session button in session view footer while GAS responds
-  const endBtn = document.getElementById('svEndBtn');
-  if (endBtn) { endBtn.disabled = true; endBtn.classList.add('loading'); }
   lockUI();
   try {
     const res = await callBackend(getPayload('deleteSession', { requestId: makeRequestId() }));
@@ -10411,7 +10447,9 @@ async function confirmEndSession() {
     renderShuffleEntryButton();
     showToast('Session ended ✓');
   } catch(e) {
-    if (endBtn) { endBtn.disabled = false; endBtn.classList.remove('loading'); }
+    if (endBtn)   { endBtn.disabled = false; endBtn.classList.remove('loading'); }
+    if (shareBtn)   shareBtn.disabled = false;
+    if (swapBtn)    swapBtn.disabled  = false;
     showError('Could not end session: ' + e.message);
   } finally {
     unlockUI();
@@ -10460,8 +10498,12 @@ async function onSessionMatchLogged(roundIdx, courtIdx, newMatchId) {
   session.logged[roundIdx][courtIdx] = newMatchId;
   if (isDemoMode) {
     demoSession = session;
+    // Re-evaluate pencil + footer state immediately after logging
+    _updateSessionViewFooterState();
     return;
   }
+  // Re-evaluate pencil + footer state immediately after logging
+  _updateSessionViewFooterState();
   // Persist updated logged state to backend
   try {
     await callBackend(getPayload('saveSession', { session: session, requestId: makeRequestId() }));
