@@ -2,20 +2,62 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.8.6 — Courts Fix Pass             ║
-  ║  Date: 2026-05-16                            ║
-  ║  Changes: VS text left-aligned grey-mid,     ║
-  ║           Save Session btn-text centered,    ║
-  ║           Mode sub-labels (Balanced/Tiered), ║
-  ║           shuffleBaseJitter from CONFIG,     ║
-  ║           closeShuffleWizard clears swap CSS,║
-  ║           exit-confirm tap-outside dismiss,  ║
-  ║           nav pulsing dot on active session, ║
-  ║           swap touchend fix (stored handler),║
-  ║           Round 1 tab reset before HTML build║
-  ║           End Session solid lime fill,       ║
-  ║           disabled state on secondary btns, ║
-  ║           debrief header prominent (20px).   ║
+  ║  Version: 7.9.9 — Share Session + Swap UX    ║
+  ║  Date: 2026-05-17                            ║
+  ║  Changes: Edit icon inline with meta row in  ║
+  ║           Step 3 wizard and Session View.    ║
+  ║           Post-save wizard shows Done +      ║
+  ║           View Session instead of auto-close.║
+  ║           Share button in Session View footer║
+  ║           fires navigator.share() with       ║
+  ║           clipboard fallback; player roster  ║
+  ║           capped at 10 names + N more.       ║
+  ║                                              ║
+  ║  v7.9.8 — Spinner Centering Fix              ║
+  ║                                              ║
+  ║  v7.9.7 — Session Swap Auto-Save             ║
+  ║                                              ║
+  ║  v7.9.6 — Session Swap + Spinner Fix         ║
+  ║                                              ║
+  ║  v7.9.5 — UX Governance Pass                ║
+  ║           Rules 7-11. Scroll filter chip     ║
+  ║           into view on contextual nav.       ║
+  ║           Icon position standard. Admin      ║
+  ║           spinner unified. Toast-only        ║
+  ║           feedback. forge-notice/advisory.   ║
+  ║                                              ║
+  ║  v7.9.4 — Bench Swap Fix                    ║
+  ║           Bench players shown below court    ║
+  ║           cards in wizard + session view.    ║
+  ║           Wiggle + tappable in swap mode.    ║
+  ║           Court-bench swap supported in      ║
+  ║           _executeSwap.                      ║
+  ║                                              ║
+  ║  v7.9.2 — Shuffle UX Fixes                  ║
+  ║           Inactive players excluded from     ║
+  ║           shuffle player grid; session date  ║
+  ║           defaults to today on wizard open.  ║
+  ║                                              ║
+  ║  v7.9.1 — Bug Fix Pass                      ║
+  ║           Delete Session spinner + footer    ║
+  ║           button lock during delete,         ║
+  ║           shuffleEntryArea cleared on reset  ║
+  ║           (fixes Add Player / Active Session ║
+  ║           collision on login), GENERATE      ║
+  ║           LINEUP + Start Over + Save Changes ║
+  ║           spinners (label-replaced pattern), ║
+  ║           exit-confirm tap-outside extended  ║
+  ║           to card body and footer.           ║
+  ║                                              ║
+  ║  v7.9.0 — Admin Screen                      ║
+  ║           Admin entry via 7-tap MATCHES      ║
+  ║           header trigger, admin password     ║
+  ║           modal with keyboard-lift fix,      ║
+  ║           admin panel with Push Data action, ║
+  ║           GAS adminLogin + exportData        ║
+  ║           actions, ADMIN_LOG audit trail,    ║
+  ║           lastExportAt in getConfig,         ║
+  ║           session-scoped admin unlock.       ║
   ║                                              ║
   ║  v7.8.0 — Forge Shuffle                     ║
   ║           Full Forge Shuffle feature —       ║
@@ -236,6 +278,7 @@ body {
 .toast-dot { font-size: 8px; }
 .toast.success .toast-dot { color: var(--accent); }
 .toast.error   .toast-dot { color: var(--error); }
+.toast.info    .toast-dot { color: var(--grey-mid); }
 
 /* ════════════════════════════════════════════
    SHARED: MODAL OVERLAY (BOTTOM SHEET)
@@ -1727,11 +1770,9 @@ body {
 .score-winner-chip.a { background: rgba(74,144,217,0.12); color: #4a90d9; }
 .score-winner-chip.b { background: var(--accent-bg); color: var(--accent-dim); }
 
-.score-gap-warning {
-  font-size: 12px; color: var(--error);
-  margin-bottom: 8px; display: none;
-}
-.score-gap-warning.show { display: block; }
+/* Score gap warning — uses .forge-advisory (Rule 11 Type B). Show/hide via .show class. */
+#scoreGapWarning { display: none; margin-bottom: 8px; }
+#scoreGapWarning.show { display: flex; }
 
 /* Match status live ticker */
 .match-status-bar {
@@ -2250,6 +2291,28 @@ body {
 .dscore.win  { color: var(--accent-dim); }
 .dscore.lose { color: var(--grey-mid); }
 .dscore-sep  { font-size: 14px; font-weight: 700; color: var(--grey-mid); }
+/* ── Governance Rule 11: Two canonical inline message types ─────────────
+   Type A (.forge-notice)   — grey box + ℹ icon. Context, caveats, gate states.
+   Type B (.forge-advisory) — amber box + ⚠ icon. Actionable constraints/warnings.
+   .debrief-notice implements Type A in-place (margin scoped to debrief modal).
+   Use .forge-notice / .forge-advisory for all new and migrated instances.
+──────────────────────────────────────────────────────────────────────── */
+.forge-notice {
+  display: flex; align-items: flex-start; gap: 7px;
+  background: var(--grey-xlight); border: 0.5px solid var(--grey-light);
+  border-radius: 8px; padding: 8px 11px;
+}
+.forge-notice svg { flex-shrink: 0; margin-top: 1px; color: var(--grey-mid); }
+.forge-notice .notice-body { font-size: 12px; color: var(--grey-mid); line-height: 1.45; }
+.forge-notice .notice-title { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--grey-dark); margin-bottom: 2px; }
+.forge-advisory {
+  display: flex; align-items: flex-start; gap: 7px;
+  background: #fff8ec; border: 0.5px solid #f0c060;
+  border-radius: 8px; padding: 8px 11px;
+}
+.forge-advisory svg { flex-shrink: 0; margin-top: 1px; color: #d97706; }
+.forge-advisory .advisory-body { font-size: 12px; color: #92600a; line-height: 1.45; }
+
 .debrief-notice {
   display: flex; align-items: flex-start; gap: 6px;
   margin: 0 14px 10px;
@@ -2897,8 +2960,8 @@ body {
   border-color: var(--grey-light);
   opacity: 0.75;
 }
+/* Pair unqualified — uses .forge-advisory (Rule 11 Type B). Padding for card spacing. */
 .pair-unqualified-notice {
-  font-size: 12px; color: #F5A623;
   padding: 10px 0 4px;
   display: flex; align-items: center; gap: 6px;
 }
@@ -3185,21 +3248,7 @@ body {
 /* Paywall blur — State A */
 .alpha-body-blurred { filter: blur(5px); pointer-events: none; user-select: none; }
 
-/* Access banner — paywall or progress */
-.alpha-banner {
-  padding: 12px 0 12px;
-  text-align: center;
-}
-.alpha-banner-title {
-  font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-weight: 600;
-  font-size: 11px;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--grey-mid);
-  margin-bottom: 4px;
-}
-.alpha-banner-sub { font-size: 12px; color: var(--grey-mid); }
+/* Access banner — replaced by forge-notice (Rule 11 Type A). See _alphaBannerHtml(). */
 
 /* Empty card body — States B / D */
 .alpha-body-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px; gap: 8px; }
@@ -3633,15 +3682,8 @@ body {
   font-weight: 900; font-size: 13px; letter-spacing: 2px;
   color: var(--grey-mid); margin: 8px 0; padding-left: 4px;
 }
-/* Advisory message */
-.shuffle-advisory {
-  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 13px; color: var(--grey-mid);
-  margin-top: 4px; margin-bottom: 8px;
-  padding: 8px 10px;
-  background: var(--grey-xlight);
-  border-radius: 8px;
-}
+/* Shuffle advisory — uses .forge-advisory (Rule 11 Type B). Margin spacing only. */
+.shuffle-advisory { margin-top: 4px; margin-bottom: 8px; }
 
 /* ── Session View ── */
 .session-view-card {
@@ -3668,11 +3710,16 @@ body {
   font-weight: 900; font-size: 20px; letter-spacing: 0.5px;
   text-transform: uppercase; color: var(--black);
 }
+/* Meta + edit icon row in session view header */
+.session-meta-edit-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-top: 4px;
+}
 .session-view-meta {
   font-family: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px; font-weight: 700; letter-spacing: 1px;
   text-transform: uppercase; color: var(--grey-mid);
-  margin-top: 4px;
+  flex: 1;
 }
 .session-view-body {
   flex: 1;
@@ -3749,14 +3796,82 @@ body {
   border-color: transparent;
 }
 
+/* ── Bench Section ── */
+.bench-section {
+  border: 1.5px dashed var(--grey-light);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.bench-section-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--grey-mid); margin-bottom: 9px;
+}
+.bench-player-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.bench-player-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--grey-lightest, #f5f5f5);
+  border: 1px solid var(--grey-light); border-radius: 20px;
+  padding: 5px 11px;
+}
+.bench-player-chip .chip-avatar {
+  width: 22px; height: 22px; font-size: 9px;
+}
+.bench-player-chip .chip-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 13px; font-weight: 700; color: var(--grey-dark);
+}
+/* Swap mode — bench chips wiggle and become tappable */
+.swap-mode ~ .bench-section .bench-player-chip,
+.bench-section.swap-active .bench-player-chip {
+  animation: forgeWiggle 0.4s ease-in-out infinite;
+  border: 1.5px dashed var(--accent);
+  border-radius: 20px;
+  cursor: pointer;
+  touch-action: manipulation;
+  background: var(--white);
+}
+.bench-section.swap-active .bench-player-chip .chip-name { color: var(--black); }
+.bench-section.swap-active .bench-player-chip.selected {
+  animation: none;
+  background: var(--accent);
+  border-style: solid;
+}
+.bench-section.swap-active .bench-player-chip.selected .chip-name { color: var(--black); }
+.bench-section.swap-active .bench-player-chip.selected .chip-avatar {
+  background: rgba(0,0,0,0.12); color: var(--black);
+}
+
+/* btn-text default: flex so icon+label align correctly inside button.
+   Must be CSS (not inline style) so .loading { display:none } can override it. */
+.btn-text { display: flex; align-items: center; justify-content: center; gap: 6px; }
+[class*="loading"] .btn-text, .loading .btn-text { display: none; }
+
 /* Save Session button spinner */
 #shSaveBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
 #shSaveBtn.loading .btn-text { display: none; }
 #shSaveBtn.loading .btn-spinner { display: block; }
 /* End Session button spinner */
-#svEndBtn .btn-spinner { border-color: rgba(170,220,50,0.3); border-top-color: var(--accent); }
+#svEndBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
 #svEndBtn.loading .btn-text { display: none; }
 #svEndBtn.loading .btn-spinner { display: block; }
+/* Delete Session button spinner */
+#svDeleteBtn .btn-spinner { border-color: rgba(220,53,69,0.3); border-top-color: var(--error); }
+#svDeleteBtn.loading .btn-text { display: none; }
+#svDeleteBtn.loading .btn-spinner { display: block; }
+/* Generate Lineup button spinner */
+#shGenerateBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
+#shGenerateBtn.loading .btn-text { display: none; }
+#shGenerateBtn.loading .btn-spinner { display: block; }
+/* Start Over button spinner */
+#shStartOverBtn .btn-spinner { border-color: rgba(58,58,58,0.3); border-top-color: var(--grey-dark); }
+#shStartOverBtn.loading .btn-text { display: none; }
+#shStartOverBtn.loading .btn-spinner { display: block; }
+/* Session view swap Done button spinner */
+#svSwapDoneBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
+#svSwapDoneBtn.loading .btn-text { display: none; }
+#svSwapDoneBtn.loading .btn-spinner { display: block; }
 
 /* End Session button — solid lime fill */
 .session-end-btn {
@@ -3772,6 +3887,7 @@ body {
   display: flex; align-items: center; justify-content: center; gap: 6px;
 }
 .session-end-btn:active { opacity: 0.75; }
+.session-end-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── Confirmation modals spawned from inside overlays (z-index > 700) ── */
 #deleteSessionModal,
@@ -3822,6 +3938,120 @@ body {
   font-size: 13px; color: var(--grey-mid);
   font-weight: 500;
 }
+
+/* ════════════════════════════════════════════
+   ADMIN PANEL
+════════════════════════════════════════════ */
+
+.admin-panel-sheet {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.admin-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.admin-panel-title {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--black);
+}
+
+.admin-section-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--grey-mid);
+  margin-bottom: 8px;
+}
+
+.admin-divider {
+  height: 1px;
+  background: var(--grey-light);
+  margin-bottom: 12px;
+}
+
+.admin-section-desc {
+  font-size: 14px;
+  color: var(--grey-mid);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.admin-info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--grey-xlight);
+}
+
+.admin-info-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--grey-mid);
+  flex: 1;
+}
+
+.admin-info-count {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--black);
+}
+
+.admin-last-export {
+  font-size: 12px;
+  color: var(--grey-mid);
+  margin: 14px 0 20px;
+  text-align: center;
+}
+
+.admin-push-btn {
+  width: 100%;
+  padding: 15px;
+  border-radius: 14px;
+  border: none;
+  background: var(--accent);
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--black);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.15s, opacity 0.15s;
+  box-shadow: 0 4px 14px rgba(170,220,50,0.3);
+}
+.admin-push-btn:hover { background: var(--accent-dim); }
+.admin-push-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+.admin-push-btn.success { background: #d4edda; color: #1a6b35; box-shadow: none; }
+.admin-push-btn.failure { background: var(--error-bg); color: var(--error); box-shadow: none; }
+
+#adminPushBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
+#adminPushBtn.loading .btn-text    { display: none; }
+#adminPushBtn.loading .btn-spinner { display: block; }
+
+/* admin-push-result and admin-push-error retired in Rule 10 — feedback routes to toast */
+
+#adminPwModal,
+#adminPanelModal { z-index: 700; }
 </style>
 </head>
 <body>
@@ -4355,7 +4585,7 @@ body {
         <div id="g3winner"></div>
       </div>
 
-      <div class="score-gap-warning" id="scoreGapWarning">⚠ Please fill games in order</div>
+      <div class="forge-advisory" id="scoreGapWarning"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span class="advisory-body">Please fill games in order</span></div>
       <div class="match-status-bar" id="matchStatusBar">Enter scores above</div>
     </div>
 
@@ -4416,7 +4646,7 @@ body {
     </div>
 
     <!-- Scrollable Body -->
-    <div class="shuffle-card-body" id="shuffleCardBody">
+    <div class="shuffle-card-body" id="shuffleCardBody" onclick="if(shuffle.exitConfirmShowing) _hideShuffleExitConfirm()">
 
       <!-- STEP 1: SET UP -->
       <div class="shuffle-step-panel active" id="shStep1">
@@ -4447,7 +4677,7 @@ body {
           </div>
         </div>
         <!-- Player/court count advisory — shown when selection is invalid -->
-        <div id="shCourtAdvisory" class="shuffle-advisory" style="display:none;"></div>
+        <div id="shCourtAdvisory" class="forge-advisory shuffle-advisory" style="display:none;"></div>
       </div>
 
       <!-- STEP 2: MODE -->
@@ -4495,26 +4725,29 @@ body {
       <!-- STEP 3: LINEUP -->
       <div class="shuffle-step-panel" id="shStep3">
         <div class="shuffle-step-title" style="margin-bottom:4px;">Your Lineup</div>
-        <div class="shuffle-result-meta" id="shuffleResultMeta"></div>
         <!-- Round tab strip (only shown if rounds > 1) -->
         <div class="toggle-pills shuffle-round-tabs" id="shuffleRoundTabs" style="display:none;"></div>
-        <!-- Meta row: rotation notice + swap icon -->
+        <!-- Meta row: result meta (left) + swap/edit icon (right) -->
         <div class="shuffle-meta-row">
-          <div class="shuffle-rotation-notice" id="shuffleRotationNotice" style="visibility:hidden;"></div>
+          <div class="shuffle-result-meta" id="shuffleResultMeta" style="flex:1;"></div>
           <button class="swap-inline-btn" id="shSwapBtn" type="button" onclick="enterShuffleSwapMode()" title="Swap Players">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
           </button>
         </div>
+        <!-- Rotation notice (standalone row, visibility:hidden reserves space) -->
+        <div class="shuffle-rotation-notice" id="shuffleRotationNotice" style="visibility:hidden;"></div>
         <!-- Advisories — shown above court 1 so they are never off-screen -->
         <div id="shuffleAdvisories"></div>
         <!-- Court cards -->
         <div id="shuffleCourtCards"></div>
+        <!-- Bench section (always visible when bench players exist) -->
+        <div id="shuffleBenchSection"></div>
       </div>
 
     </div><!-- /shuffle-card-body -->
 
     <!-- Fixed Footer -->
-    <div class="shuffle-card-footer" id="shuffleCardFooter">
+    <div class="shuffle-card-footer" id="shuffleCardFooter" onclick="if(shuffle.exitConfirmShowing) _hideShuffleExitConfirm()">
       <!-- Step 1 footer -->
       <div id="shFooter1" style="width:100%;">
         <button class="shuffle-footer-primary full-width" id="shNextBtn1" type="button" onclick="shuffleStep1Next()" disabled>NEXT →</button>
@@ -4523,24 +4756,37 @@ body {
       <div id="shFooter2" style="display:none;width:100%;">
         <div style="display:flex;gap:10px;">
           <button class="shuffle-footer-secondary" type="button" onclick="showShuffleStep(1)">← BACK</button>
-          <button class="shuffle-footer-primary" id="shGenerateBtn" type="button" onclick="shuffleGenerate()" disabled style="flex:2;">GENERATE LINEUP →</button>
+          <button class="shuffle-footer-primary" id="shGenerateBtn" type="button" onclick="shuffleGenerate()" disabled style="flex:2;">
+            <span class="btn-text">GENERATE LINEUP →</span>
+            <div class="btn-spinner"></div>
+          </button>
         </div>
       </div>
       <!-- Step 3 footer -->
       <div id="shFooter3" style="display:none;width:100%;">
         <div id="shF3Normal" style="display:flex;gap:10px;margin-bottom:10px;">
           <button class="shuffle-footer-secondary" type="button" onclick="showShuffleStep(2)">← BACK</button>
-          <button class="shuffle-footer-secondary" type="button" onclick="shuffleStartOver()" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            Start Over
+          <button class="shuffle-footer-secondary" id="shStartOverBtn" type="button" onclick="shuffleStartOver()" style="flex:1;">
+            <span class="btn-text">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              Start Over
+            </span>
+            <div class="btn-spinner"></div>
           </button>
         </div>
         <button class="shuffle-footer-primary full-width" id="shSaveBtn" type="button" onclick="saveShuffleSession()">
-          <span class="btn-text" style="display:flex;align-items:center;justify-content:center;width:100%;gap:8px;">Save Session <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <span class="btn-text" style="width:100%;">Save Session <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
           <div class="btn-spinner"></div>
         </button>
         <!-- Swap mode Done button (hidden until swap active) -->
         <button class="shuffle-footer-primary full-width" id="shSwapDoneBtn" type="button" onclick="exitShuffleSwapMode()" style="display:none;align-items:center;justify-content:center;gap:8px;">Done <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+        <!-- Post-save footer: Done (close wizard) + View Session (open session view) -->
+        <div id="shFooterPostSave" style="display:none;gap:10px;width:100%;">
+          <button class="shuffle-footer-secondary" id="shDoneAfterSaveBtn" type="button" onclick="doneAfterSave()">Done</button>
+          <button class="shuffle-footer-primary" id="shViewSessionBtn" type="button" onclick="viewSavedSession()" style="flex:2;">
+            View Session <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -4561,7 +4807,12 @@ body {
         <div class="session-view-title">📌 Active Session</div>
         <button class="shuffle-exit-btn" type="button" onclick="closeSessionView()">✕ EXIT</button>
       </div>
-      <div class="session-view-meta" id="sessionViewMeta"></div>
+      <div class="session-meta-edit-row">
+        <div class="session-view-meta" id="sessionViewMeta"></div>
+        <button class="swap-inline-btn" id="svSwapBtn" type="button" onclick="enterSessionViewSwapMode()" title="Swap players">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/></svg>
+        </button>
+      </div>
     </div>
 
     <!-- Round tabs (shown if rounds > 1) -->
@@ -4577,21 +4828,26 @@ body {
         <div class="skeleton-card"></div>
       </div>
       <div id="sessionViewCourtCards"></div>
+      <!-- Bench section (always visible when bench players exist) -->
+      <div id="sessionViewBenchSection"></div>
     </div>
 
     <!-- Fixed footer -->
     <div class="session-view-footer" id="sessionViewFooter">
       <div id="svFooterNormal" style="display:flex;gap:10px;width:100%;">
-        <button class="shuffle-footer-secondary" id="svSwapBtn" style="flex:1;" type="button" onclick="enterSessionViewSwapMode()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Swap Players
+        <button class="shuffle-footer-secondary" id="svShareBtn" style="flex:1;" type="button" onclick="shareSession()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Share
         </button>
         <button class="shuffle-footer-secondary" id="svDeleteBtn" style="flex:1;color:var(--error);border-color:var(--error);" type="button" onclick="openDeleteSessionModal()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-          Delete
+          <span class="btn-text">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+            Delete
+          </span>
+          <div class="btn-spinner"></div>
         </button>
         <button class="session-end-btn" id="svEndBtn" style="display:none;" type="button" onclick="openEndSessionModal()">
-          <span class="btn-text" style="display:flex;align-items:center;gap:6px;">
+          <span class="btn-text">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
             End Session
           </span>
@@ -4600,14 +4856,10 @@ body {
       </div>
       <!-- Swap mode footer -->
       <div id="svFooterSwap" style="display:none;width:100%;">
-        <button class="shuffle-footer-primary full-width" type="button" onclick="exitSessionViewSwapMode()" style="display:flex;align-items:center;justify-content:center;gap:8px;">Done <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
-      </div>
-      <!-- Post-swap save/discard footer -->
-      <div id="svFooterSwapSave" style="display:none;width:100%;">
-        <div style="display:flex;gap:10px;">
-          <button class="shuffle-footer-secondary" type="button" onclick="discardSessionSwap()">Discard</button>
-          <button class="shuffle-footer-primary" type="button" onclick="saveSessionSwap()" style="flex:2;">Save Changes</button>
-        </div>
+        <button class="shuffle-footer-primary full-width" id="svSwapDoneBtn" type="button" onclick="exitSessionViewSwapMode()">
+          <span class="btn-text">Done <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          <div class="btn-spinner"></div>
+        </button>
       </div>
     </div>
 
@@ -4707,6 +4959,72 @@ body {
     <div class="modal-btns" style="margin-top:20px;">
       <button class="modal-cancel" type="button" onclick="closeTooltipModal()">Got it</button>
     </div>
+  </div>
+</div>
+
+<!-- Admin Password Modal — outside appShell, z-index 700 -->
+<div class="modal-overlay" id="adminPwModal" onclick="if(event.target===this) closeAdminPwModal()">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">ADMIN ACCESS</div>
+    <div class="modal-subtitle">Enter admin password to continue</div>
+    <div class="input-wrap" style="margin: 16px 0 8px;">
+      <input class="password-input" id="adminPwInput" type="password"
+        placeholder="Admin password"
+        autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="pw-error-msg" id="adminPwError">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      Incorrect admin password.
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" type="button" onclick="closeAdminPwModal()">Cancel</button>
+      <button class="modal-confirm" type="button" onclick="submitAdminPassword()">Enter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Panel Modal — outside appShell, z-index 700 -->
+<div class="modal-overlay" id="adminPanelModal" onclick="if(event.target===this && !adminIsExporting) closeAdminPanel()">
+  <div class="modal-sheet admin-panel-sheet">
+    <div class="modal-handle"></div>
+
+    <!-- Header row -->
+    <div class="admin-panel-header">
+      <div class="admin-panel-title">ADMIN</div>
+      <button class="icon-btn" type="button" onclick="closeAdminPanel()">✕</button>
+    </div>
+
+    <!-- Data Export card -->
+    <div class="admin-section-label">DATA EXPORT</div>
+    <div class="admin-divider"></div>
+    <p class="admin-section-desc">
+      Push current Players and Matches data to the connected external sheet.
+    </p>
+
+    <!-- Record counts -->
+    <div class="admin-info-row">
+      <span class="admin-info-icon">👥</span>
+      <span class="admin-info-label">PLAYERS</span>
+      <span class="admin-info-count" id="adminPlayersCount">—</span>
+    </div>
+    <div class="admin-info-row">
+      <span class="admin-info-icon">🏓</span>
+      <span class="admin-info-label">MATCHES</span>
+      <span class="admin-info-count" id="adminMatchesCount">—</span>
+    </div>
+
+    <!-- Last export -->
+    <div class="admin-last-export" id="adminLastExportLabel">Last export: Never</div>
+
+    <!-- Push button -->
+    <button class="admin-push-btn" id="adminPushBtn" type="button" onclick="handlePushData()">
+      <span class="btn-text">↑&nbsp; PUSH DATA NOW</span>
+      <div class="btn-spinner"></div>
+    </button>
+
   </div>
 </div>
 
@@ -5165,6 +5483,14 @@ let _svPreSwapLineup = null;
 let lastKnownVersion = 0;
 let syncInterval = null;
 
+// == Admin state ==
+let isAdminUnlocked  = false; // true after successful adminLogin this session
+let adminLastExport  = '';    // populated from getConfig response + updated on push
+let adminPwSession   = '';    // holds admin pw for duration of unlocked session only
+let adminTapCount    = 0;     // 7-tap counter for MATCHES header
+let adminTapTimer    = null;  // resets adminTapCount after 3s inactivity
+let adminIsExporting = false; // true while push is in-flight; blocks overlay dismiss
+
 const MATCH_PAGE_SIZE = 25;
 
 // ==========================================================
@@ -5382,7 +5708,8 @@ async function startup() {
     if (cfg.premiumMain   !== undefined) premiumMain      = cfg.premiumMain;
     if (cfg.premiumDemo   !== undefined) premiumDemo      = cfg.premiumDemo;
     if (cfg.alphaLambda   !== undefined) alphaLambda      = cfg.alphaLambda;
-    if (cfg.shuffleJitter !== undefined) shuffleBaseJitter = cfg.shuffleJitter;
+    if (cfg.shuffleJitter  !== undefined) shuffleBaseJitter = cfg.shuffleJitter;
+    if (cfg.lastExportAt   !== undefined) adminLastExport   = cfg.lastExportAt;
   } catch(e) {
     console.warn('Config fetch failed:', e.message);
     const hint = document.getElementById('pwHint');
@@ -5419,6 +5746,7 @@ function _resetAppUI() {
   document.getElementById('navBar').classList.remove('visible');
   document.getElementById('appHeader').classList.remove('visible');
   document.getElementById('addPlayerArea').classList.remove('visible');
+  document.getElementById('shuffleEntryArea').classList.remove('visible'); // Bug 2: prevents stale .visible persisting across logout/reset
 
   // Hide demo banner and remove demo offsets
   document.getElementById('demoBanner').classList.remove('show');
@@ -5445,7 +5773,7 @@ function _resetAppUI() {
   document.getElementById('ballDeco2').style.display = 'none';
 
   // Close any open modals
-  ['removeModal','deleteMatchModal','reinstateModal','tooltipModal','leaveMatchModal','debriefModal','deleteSessionModal','endSessionModal','startOverModal'].forEach(id => {
+  ['removeModal','deleteMatchModal','reinstateModal','tooltipModal','leaveMatchModal','debriefModal','deleteSessionModal','endSessionModal','startOverModal','adminPwModal','adminPanelModal'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('show');
   });
@@ -5458,6 +5786,15 @@ function _resetAppUI() {
 
   // Reset demo mode flag
   isDemoMode = false;
+
+  // Reset admin state
+  isAdminUnlocked  = false;
+  adminPwSession   = '';
+  adminTapCount    = 0;
+  adminIsExporting = false;
+  if (adminTapTimer) { clearTimeout(adminTapTimer); adminTapTimer = null; }
+  // Tear down admin pw keyboard listener if it was active
+  _teardownAdminPwVV();
 }
 
 function showPasswordScreen() {
@@ -6277,6 +6614,10 @@ function _doNavigateTo(screen) {
     mlSameTeam      = false;
   }
   currentScreen = screen;
+
+  // Reset admin tap counter on any navigation
+  adminTapCount = 0;
+  if (adminTapTimer) { clearTimeout(adminTapTimer); adminTapTimer = null; }
   if (screen !== 'players') closeAddForm();
   if (screen === 'add')         initAddMatch();
   if (screen === 'leaderboard') renderLeaderboard();
@@ -7002,7 +7343,7 @@ function renderClutchRating(p) {
   const btn = document.createElement('button');
   btn.id = 'viewMatchesBtn';
   btn.className = 'view-matches-btn';
-  btn.innerHTML = `<svg class="vmb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="view-matches-btn-text">View ${escHtml(p.name)}'s Matches</span><svg class="vmb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+  btn.innerHTML = `<svg class="vmb-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="view-matches-btn-text">View ${escHtml(p.name)}'s Matches</span>`;
   btn.onclick = () => goToFilteredMatches('player', p.id);
   const clutchCard = document.getElementById('clutchContent').closest('.metric-card');
   if (clutchCard && clutchCard.parentNode) clutchCard.parentNode.insertBefore(btn, clutchCard.nextSibling);
@@ -7046,7 +7387,7 @@ function renderPairCards() {
 
     // Advanced stats only shown for qualified pairs (≥2 matches)
     const advancedStats = isUnqualified
-      ? `<div class="pair-unqualified-notice">⚠ Play 1 more match together to unlock full stats</div>`
+      ? `<div class="pair-unqualified-notice forge-advisory"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span class="advisory-body">Play 1 more match together to unlock full stats</span></div>`
       : `<div class="pair-metric">
           <div class="pair-metric-label">Partnership Win Rate ${lowSample?'<span class="low-sample-tag">⚠ Low sample</span>':''}<button class="tooltip-btn" onclick="showTooltipKey('pairWinRate')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></button></div>
           <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pair.winPct}%"></div></div>
@@ -7075,7 +7416,6 @@ function renderPairCards() {
         <button class="pair-view-matches-btn" onclick="goToFilteredMatches('pair','${pair.p1}','${pair.p2}')">
           <svg class="pvmb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           <span class="pair-view-matches-btn-text">View Their Matches Together</span>
-          <svg class="pvmb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
       </div>
     </div>`;
@@ -8044,6 +8384,13 @@ function goToFilteredMatches(type, id1, id2) {
   if (type==='player') matchListFilter = { type:'player', id:id1 };
   else if (type==='pair') matchListFilter = { type:'pair', id1:id1, id2:id2 };
   navigateTo('matches');
+  // Rule 7: scroll first filter chip into view after navigation and chip render settle
+  setTimeout(() => {
+    const chip = document.getElementById('mlchip-' + id1);
+    if (chip) {
+      try { chip.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' }); } catch(e) { chip.scrollIntoView(false); }
+    }
+  }, 100);
 }
 
 function goToPairAnalytics(id1, id2) {
@@ -8283,7 +8630,7 @@ function selectAlphaChip(id) {
 
 function toggleAlphaRival(id, name, games) {
   if (games < 15) {
-    showToast(name + ' has ' + games + ' of 15 matches — not enough for Alpha yet');
+    showToast(name + ' has ' + games + ' of 15 matches — not enough for Alpha yet', 'info');
     return;
   }
   if (alphaRivals.includes(id)) {
@@ -8679,9 +9026,10 @@ function _renderCorridorHtml(corridor) {
 }
 
 function _alphaBannerHtml(title, sub) {
-  return '<div class="alpha-banner">' +
-    '<div class="alpha-banner-title">' + title + '</div>' +
-    '<div class="alpha-banner-sub">' + sub + '</div>' +
+  // Rule 11 Type A: forge-notice box with optional bold title + body text
+  return '<div class="forge-notice" style="margin:8px clamp(12px,4vw,20px) 12px; background:#ffffff;">' +
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+    '<div><strong class="notice-title">' + title + '</strong><span class="notice-body">' + sub + '</span></div>' +
     '</div>';
 }
 
@@ -9123,9 +9471,10 @@ function openShuffleWizard() {
     const r = document.getElementById('shRound' + i);
     if (r) r.classList.remove('active');
   });
-  // Reset date input — clear value and enforce today as earliest selectable date
+  // Reset date input — default to today; enforce today as earliest selectable date
   const dateEl = document.getElementById('shSessionDate');
-  if (dateEl) { dateEl.value = ''; dateEl.min = getTodayStr(); }
+  if (dateEl) { dateEl.value = getTodayStr(); dateEl.min = getTodayStr(); }
+  setShuffleDate(getTodayStr());
   const countEl = document.getElementById('shPlayerCount');
   if (countEl) countEl.textContent = '0 selected';
   const advEl = document.getElementById('shCourtAdvisory');
@@ -9211,15 +9560,12 @@ function _buildShufflePlayerGrid() {
   const grid = document.getElementById('shufflePlayerGrid');
   if (!grid) return;
   const active = players.filter(p => p.status === 'active');
-  const inactive = players.filter(p => p.status !== 'active');
-  const all = [...active, ...inactive];
-  grid.innerHTML = all.map(p => {
-    const isInactive = p.status !== 'active';
-    return `<div class="player-chip${isInactive ? ' inactive-chip' : ''}" id="shChip-${p.id}" onclick="toggleShufflePlayer('${p.id}')">
+  grid.innerHTML = active.map(p =>
+    `<div class="player-chip" id="shChip-${p.id}" onclick="toggleShufflePlayer('${p.id}')">
       <div class="chip-avatar">${getInitials(p.name)}</div>
-      <span class="chip-name">${escHtml(p.name)}${isInactive ? ' ·' : ''}</span>
-    </div>`;
-  }).join('');
+      <span class="chip-name">${escHtml(p.name)}</span>
+    </div>`
+  ).join('');
 }
 
 // NEXT button: players ≥ 4, courts set, rounds set, date set, and players ≥ courts*4
@@ -9235,8 +9581,9 @@ function _updateShStep1Next() {
   const adv = document.getElementById('shCourtAdvisory');
   if (adv) {
     if (courts !== null && n < needed) {
-      adv.textContent = '⚠ ' + courts + ' court' + (courts > 1 ? 's' : '') + ' need' + (courts === 1 ? 's' : '') + ' at least ' + needed + ' players — add more players or reduce courts';
-      adv.style.display = 'block';
+      const msg = courts + ' court' + (courts > 1 ? 's' : '') + ' need' + (courts === 1 ? 's' : '') + ' at least ' + needed + ' players — add more players or reduce courts';
+      adv.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span class="advisory-body">' + escHtml(msg) + '</span>';
+      adv.style.display = 'flex';
     } else {
       adv.style.display = 'none';
     }
@@ -9302,13 +9649,20 @@ function showComingSoonToast() {
 
 async function shuffleGenerate() {
   if (!shuffle.mode) return;
+  // Spinner on Generate button + disable ← BACK (lockUI doesn't reach inside z-index 700 overlay)
+  const genBtn  = document.getElementById('shGenerateBtn');
+  const backBtn = document.querySelector('#shFooter2 .shuffle-footer-secondary');
+  if (genBtn)  { genBtn.disabled  = true; genBtn.classList.add('loading'); }
+  if (backBtn)   backBtn.disabled = true;
   lockUI();
-  const spinnerStart = Date.now(); // always show spinner regardless of round count
+  const spinnerStart = Date.now();
 
   const selectedPlayers = shuffle.players.map(id => players.find(p => p.id === id)).filter(Boolean);
   try {
     shuffle.lineup = computeShuffleLineup(selectedPlayers, shuffle.courts, shuffle.rounds, shuffle.mode);
   } catch(e) {
+    if (genBtn)  { genBtn.disabled  = false; genBtn.classList.remove('loading'); }
+    if (backBtn)   backBtn.disabled = false;
     unlockUI();
     showToast('Could not generate lineup — try fewer players or adjust courts', 'error');
     return;
@@ -9319,6 +9673,8 @@ async function shuffleGenerate() {
   const elapsed = Date.now() - spinnerStart;
   await new Promise(r => setTimeout(r, Math.max(0, 600 - elapsed)));
 
+  if (genBtn)  { genBtn.disabled  = false; genBtn.classList.remove('loading'); }
+  if (backBtn)   backBtn.disabled = false;
   unlockUI();
   showShuffleStep(3);
   _renderShuffleResult();
@@ -9370,6 +9726,45 @@ function _renderShuffleCourtCards() {
   const round = shuffle.lineup.rounds[shuffle.activeRoundTab];
   if (!round) return;
   cardsEl.innerHTML = round.map((court, ci) => _buildCourtCardHTML(court, ci, null, null, true)).join('');
+  _renderBenchSection(shuffle.players, round, 'shuffleBenchSection', 'shuffleCourtCards');
+}
+
+// ── Bench Section ──────────────────────────────────────────────────
+// Derives bench players (selected but not in any court slot this round),
+// renders the bench card. When swap mode is active the section gets
+// .swap-active so chips wiggle and become tappable via stored handler refs.
+function _renderBenchSection(allPlayerIds, round, sectionId, containerId) {
+  const sectionEl = document.getElementById(sectionId);
+  if (!sectionEl) return;
+  // Collect all court-assigned IDs for this round
+  const courtIds = new Set(round.flatMap(c => [...(c.teamA || []), ...(c.teamB || [])]).filter(Boolean));
+  const benchIds = allPlayerIds.filter(id => !courtIds.has(id));
+  if (benchIds.length === 0) { sectionEl.innerHTML = ''; return; }
+  const isSwap = shuffle.swapMode;
+  sectionEl.innerHTML = `
+    <div class="bench-section${isSwap ? ' swap-active' : ''}" id="${sectionId}-card">
+      <div class="bench-section-label">BENCH</div>
+      <div class="bench-player-chips">
+        ${benchIds.map(id => {
+          const p = players.find(x => x.id === id);
+          if (!p) return '';
+          return `<div class="bench-player-chip" data-pid="${p.id}" id="bchip-${sectionId}-${p.id}">
+            <div class="chip-avatar">${getInitials(p.name)}</div>
+            <span class="chip-name">${escHtml(p.name.toUpperCase())}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  // In swap mode, attach touchend+click handlers (same pattern as court cards)
+  if (isSwap) {
+    sectionEl.querySelectorAll('.bench-player-chip[data-pid]').forEach(chip => {
+      const handler = (e) => { e.preventDefault(); handleSwapTap(chip.dataset.pid, containerId); };
+      chip._swapTouchHandler = handler;
+      chip._swapClickHandler = () => handleSwapTap(chip.dataset.pid, containerId);
+      chip.addEventListener('touchend', handler, { passive: false });
+      chip.addEventListener('click', chip._swapClickHandler);
+    });
+  }
 }
 
 function switchShuffleRoundTab(idx) {
@@ -9395,7 +9790,8 @@ function _renderShuffleAdvisories(selectedPlayers) {
   if (shuffle.lineup && shuffle.lineup.doubleRestWarning) {
     msgs.push(shuffle.lineup.doubleRestWarning);
   }
-  el.innerHTML = msgs.map(m => `<div class="shuffle-advisory">${escHtml(m)}</div>`).join('');
+  const warnSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+  el.innerHTML = msgs.map(m => `<div class="forge-advisory shuffle-advisory">${warnSvg}<span class="advisory-body">${escHtml(m)}</span></div>`).join('');
 }
 
 // ── Court card renderer (shared by wizard + session view) ──────────
@@ -9474,12 +9870,19 @@ async function confirmShuffleStartOver() {
 }
 
 async function _doShuffleStartOver() {
+  // Spinner on Start Over button; resolve after modal close so getElementById finds it
+  const startBtn = document.getElementById('shStartOverBtn');
+  const saveBtn  = document.getElementById('shSaveBtn');
+  if (startBtn) { startBtn.disabled = true; startBtn.classList.add('loading'); }
+  if (saveBtn)    saveBtn.disabled  = true;
   lockUI();
   const selectedPlayers = shuffle.players.map(id => players.find(p => p.id === id)).filter(Boolean);
   const spinnerStart = Date.now();
   try {
     shuffle.lineup = computeShuffleLineup(selectedPlayers, shuffle.courts, shuffle.rounds, shuffle.mode);
   } catch(e) {
+    if (startBtn) { startBtn.disabled = false; startBtn.classList.remove('loading'); }
+    if (saveBtn)    saveBtn.disabled  = false;
     unlockUI();
     showToast('Could not regenerate lineup', 'error');
     return;
@@ -9488,6 +9891,8 @@ async function _doShuffleStartOver() {
   // Always show a minimum 600ms spinner — consistent with Generate Lineup
   const elapsed = Date.now() - spinnerStart;
   await new Promise(r => setTimeout(r, Math.max(0, 600 - elapsed)));
+  if (startBtn) { startBtn.disabled = false; startBtn.classList.remove('loading'); }
+  if (saveBtn)    saveBtn.disabled  = false;
   unlockUI();
   _renderShuffleResult();
 }
@@ -9497,8 +9902,12 @@ async function _doShuffleStartOver() {
 async function saveShuffleSession() {
   if (isDemoMode) {
     _buildAndStoreDemoSession();
-    closeShuffleWizard();
+    resetShuffle();
     renderShuffleEntryButton();
+    showToast('Session saved ✓');
+    document.getElementById('shF3Normal').style.display    = 'none';
+    document.getElementById('shSaveBtn').style.display     = 'none';
+    document.getElementById('shFooterPostSave').style.display = 'flex';
     return;
   }
   const btn = document.getElementById('shSaveBtn');
@@ -9510,14 +9919,72 @@ async function saveShuffleSession() {
     if (!res.ok) throw new Error(res.error || 'Save failed');
     activeSession = res.session || sessionObj;
     resetShuffle();
-    closeShuffleWizard();
     renderShuffleEntryButton();
     showToast('Session saved ✓');
+    // Show post-save footer (Done + View Session) instead of closing wizard immediately
+    document.getElementById('shF3Normal').style.display    = 'none';
+    document.getElementById('shSaveBtn').style.display     = 'none';
+    document.getElementById('shFooterPostSave').style.display = 'flex';
   } catch(e) {
     showError('Could not save session: ' + e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
     unlockUI();
+  }
+}
+
+// Closes the wizard without opening Session View (post-save Done button).
+function doneAfterSave() {
+  document.getElementById('shuffleWizard').classList.remove('show');
+  document.getElementById('shFooterPostSave').style.display = 'none';
+  document.getElementById('shF3Normal').style.display       = 'flex';
+  document.getElementById('shSaveBtn').style.display        = 'flex';
+}
+
+// Closes the wizard and opens Session View so user can inspect the saved session.
+function viewSavedSession() {
+  document.getElementById('shuffleWizard').classList.remove('show');
+  document.getElementById('shFooterPostSave').style.display = 'none';
+  document.getElementById('shF3Normal').style.display       = 'flex';
+  document.getElementById('shSaveBtn').style.display        = 'flex';
+  _showSessionView();
+}
+
+// ── Share Session ──────────────────────────────────────────────────
+// Builds a plain-text share message and fires navigator.share().
+// Falls back to clipboard copy when the Web Share API is unavailable.
+function shareSession() {
+  const session = isDemoMode ? demoSession : activeSession;
+  if (!session) return;
+
+  const sessionDate = session.sessionDate
+    ? new Date(session.sessionDate).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+    : 'upcoming session';
+
+  const playerNames = (session.playerIds || [])
+    .map(id => { const p = players.find(x => x.id === id); return p ? p.name : null; })
+    .filter(Boolean);
+
+  let rosterText;
+  if (playerNames.length <= 10) {
+    rosterText = playerNames.join(', ');
+  } else {
+    rosterText = playerNames.slice(0, 10).join(', ') + ` +${playerNames.length - 10} more`;
+  }
+
+  const courts = session.courts || 1;
+  const rounds = session.rounds || 1;
+  const msg = `🏓 FORGE – Session Set for ${sessionDate}\n`
+    + `Courts: ${courts} · Rounds: ${rounds}\n`
+    + `Players (${playerNames.length}): ${rosterText}\n`
+    + `\nLineup is ready — open the app to see your court assignments!`;
+
+  if (navigator.share) {
+    navigator.share({ title: 'FORGE Pickleball Session', text: msg }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(msg)
+      .then(() => showToast('Message copied to clipboard ✓'))
+      .catch(() => showError('Could not copy to clipboard'));
   }
 }
 
@@ -9556,6 +10023,9 @@ function enterShuffleSwapMode() {
   shuffle.swapMode = true;
   shuffle.swapSelected = null;
   _applySwapModeToCards('shuffleCourtCards');
+  // Re-render bench section now that swapMode is true so chips wiggle and get handlers
+  const round = shuffle.lineup && shuffle.lineup.rounds[shuffle.activeRoundTab];
+  if (round) _renderBenchSection(shuffle.players, round, 'shuffleBenchSection', 'shuffleCourtCards');
   document.getElementById('shF3Normal').style.display = 'none';
   document.getElementById('shSaveBtn').style.display = 'none';
   document.getElementById('shSwapBtn').style.display = 'none';
@@ -9567,7 +10037,7 @@ function exitShuffleSwapMode() {
   shuffle.swapSelected = null;
   _removeSwapModeFromCards('shuffleCourtCards');
   document.getElementById('shF3Normal').style.display = 'flex';
-  document.getElementById('shSaveBtn').style.display = 'block';
+  document.getElementById('shSaveBtn').style.display = 'flex';
   document.getElementById('shSwapBtn').style.display = 'flex';
   document.getElementById('shSwapDoneBtn').style.display = 'none';
 }
@@ -9608,6 +10078,24 @@ function _removeSwapModeFromCards(containerId) {
     }
     span.onclick = null;
   });
+  // Clean up bench chip handlers and reset bench section state
+  const benchId = containerId === 'shuffleCourtCards' ? 'shuffleBenchSection' : 'sessionViewBenchSection';
+  const benchEl = document.getElementById(benchId);
+  if (benchEl) {
+    benchEl.querySelectorAll('.bench-player-chip').forEach(chip => {
+      chip.classList.remove('selected');
+      if (chip._swapTouchHandler) {
+        chip.removeEventListener('touchend', chip._swapTouchHandler);
+        delete chip._swapTouchHandler;
+      }
+      if (chip._swapClickHandler) {
+        chip.removeEventListener('click', chip._swapClickHandler);
+        delete chip._swapClickHandler;
+      }
+    });
+    const card = benchEl.querySelector('.bench-section');
+    if (card) card.classList.remove('swap-active');
+  }
 }
 
 function handleSwapTap(pid, containerId) {
@@ -9627,8 +10115,8 @@ function handleSwapTap(pid, containerId) {
       _markSwapSelected(null, containerId);
       return;
     }
-    // Execute swap
-    _executeSwap(shuffle.swapSelected, pid);
+    // Execute swap — pass containerId so _executeSwap reads the correct lineup
+    _executeSwap(shuffle.swapSelected, pid, containerId);
     shuffle.swapSelected = null;
     // Re-render current round cards maintaining swap mode
     const cardsEl = document.getElementById(containerId);
@@ -9650,16 +10138,50 @@ function _markSwapSelected(pid, containerId) {
   el.querySelectorAll('.court-player-name[data-pid]').forEach(span => {
     span.classList.toggle('selected', span.dataset.pid === pid && pid !== null);
   });
+  // Also mark bench chips so selection highlight works across court + bench
+  const benchId = containerId === 'shuffleCourtCards' ? 'shuffleBenchSection' : 'sessionViewBenchSection';
+  const benchEl = document.getElementById(benchId);
+  if (benchEl) {
+    benchEl.querySelectorAll('.bench-player-chip[data-pid]').forEach(chip => {
+      chip.classList.toggle('selected', chip.dataset.pid === pid && pid !== null);
+    });
+  }
 }
 
-function _executeSwap(pidA, pidB) {
+function _executeSwap(pidA, pidB, containerId) {
   if (!pidA || !pidB || pidA === pidB) return; // hard guard: no self-swap
-  const lineup = shuffle.lineup.rounds[shuffle.activeRoundTab];
-  for (let c = 0; c < lineup.length; c++) {
-    const court = lineup[c];
-    ['teamA','teamB'].forEach(team => {
-      court[team] = court[team].map(id => id === pidA ? pidB : id === pidB ? pidA : id);
-    });
+  // Session view stores lineup on session object; wizard stores it on shuffle.lineup.
+  // Reading from the wrong source was why session view swaps silently did nothing.
+  let lineup;
+  if (containerId === 'sessionViewCourtCards') {
+    const session = isDemoMode ? demoSession : activeSession;
+    if (!session) return;
+    lineup = session.lineup[shuffle.activeRoundTab];
+  } else {
+    if (!shuffle.lineup) return;
+    lineup = shuffle.lineup.rounds[shuffle.activeRoundTab];
+  }
+  if (!lineup) return;
+  const inCourt = (pid) => lineup.some(c => [...(c.teamA || []), ...(c.teamB || [])].includes(pid));
+  const aOnCourt = inCourt(pidA);
+  const bOnCourt = inCourt(pidB);
+  if (aOnCourt && bOnCourt) {
+    // Both on court — standard two-way swap
+    for (let c = 0; c < lineup.length; c++) {
+      ['teamA','teamB'].forEach(team => {
+        lineup[c][team] = lineup[c][team].map(id => id === pidA ? pidB : id === pidB ? pidA : id);
+      });
+    }
+  } else {
+    // One player is on bench — replace the court slot player with the bench player.
+    // The displaced player implicitly moves to bench (bench is derived, not stored).
+    const courtPid = aOnCourt ? pidA : pidB;
+    const benchPid = aOnCourt ? pidB : pidA;
+    for (let c = 0; c < lineup.length; c++) {
+      ['teamA','teamB'].forEach(team => {
+        lineup[c][team] = lineup[c][team].map(id => id === courtPid ? benchPid : id);
+      });
+    }
   }
 }
 
@@ -9744,6 +10266,7 @@ function _renderSessionViewCards() {
     const loggedId = (logged && logged[ci]) ? logged[ci] : null;
     return _buildCourtCardHTML(court, ci, shuffle.activeRoundTab, loggedId, false, snapshot);
   }).join('');
+  _renderBenchSection(session.playerIds, round, 'sessionViewBenchSection', 'sessionViewCourtCards');
 }
 
 function switchSessionViewRoundTab(idx) {
@@ -9774,9 +10297,16 @@ function sessionViewOverlayTap(e) {
 // ── Session View footer states ─────────────────────────────────────
 
 function _resetSessionViewFooter() {
-  document.getElementById('svFooterNormal').style.display   = 'flex';
-  document.getElementById('svFooterSwap').style.display     = 'none';
-  document.getElementById('svFooterSwapSave').style.display = 'none';
+  document.getElementById('svFooterNormal').style.display = 'flex';
+  document.getElementById('svFooterSwap').style.display    = 'none';
+  // Restore edit icon visibility (hidden while swap mode is active)
+  const svSwapBtn = document.getElementById('svSwapBtn');
+  if (svSwapBtn) svSwapBtn.style.display = '';
+  // Reset loading state on all footer buttons — covers success path and demo mode early-return.
+  ['svDeleteBtn', 'svSwapBtn', 'svEndBtn', 'svSwapDoneBtn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+  });
 }
 
 // ── Session fully-logged detection ────────────────────────────────
@@ -9816,6 +10346,14 @@ function closeDeleteSessionModal() {
 }
 
 async function confirmDeleteSession() {
+  // Show spinner and lock footer buttons immediately — interactionLock (z-index 600)
+  // cannot block the session view overlay (z-index 700), so we disable buttons directly.
+  const deleteBtn = document.getElementById('svDeleteBtn');
+  const swapBtn   = document.getElementById('svSwapBtn');
+  const endBtn    = document.getElementById('svEndBtn');
+  if (deleteBtn) { deleteBtn.disabled = true; deleteBtn.classList.add('loading'); }
+  if (swapBtn)   swapBtn.disabled = true;
+  if (endBtn)    endBtn.disabled  = true;
   closeDeleteSessionModal();
   if (isDemoMode) {
     demoSession = null;
@@ -9828,10 +10366,14 @@ async function confirmDeleteSession() {
     const res = await callBackend(getPayload('deleteSession', { requestId: makeRequestId() }));
     if (!res.ok) throw new Error(res.error || 'Delete failed');
     activeSession = null;
-    closeSessionView();
+    closeSessionView(); // tears down overlay — no button restore needed on success
     renderShuffleEntryButton();
     showToast('Session deleted');
   } catch(e) {
+    // Restore footer buttons so user can retry or cancel
+    if (deleteBtn) { deleteBtn.disabled = false; deleteBtn.classList.remove('loading'); }
+    if (swapBtn)   swapBtn.disabled = false;
+    if (endBtn)    endBtn.disabled  = false;
     showError('Could not delete session: ' + e.message);
   } finally {
     unlockUI();
@@ -9938,42 +10480,31 @@ function enterSessionViewSwapMode() {
   const session = isDemoMode ? demoSession : activeSession;
   _svPreSwapLineup = JSON.parse(JSON.stringify(session.lineup));
   _applySwapModeToCards('sessionViewCourtCards');
+  // Re-render bench section now that swapMode is true so chips wiggle and get handlers
+  const round = session && session.lineup[shuffle.activeRoundTab];
+  if (round) _renderBenchSection(session.playerIds, round, 'sessionViewBenchSection', 'sessionViewCourtCards');
   document.getElementById('svFooterNormal').style.display   = 'none';
   document.getElementById('svFooterSwap').style.display     = 'block';
+  // Hide edit icon while swap mode is active
+  const svSwapBtn = document.getElementById('svSwapBtn');
+  if (svSwapBtn) svSwapBtn.style.display = 'none';
 }
 
-function exitSessionViewSwapMode() {
+async function exitSessionViewSwapMode() {
   shuffle.swapMode = false;
   shuffle.swapSelected = null;
   _removeSwapModeFromCards('sessionViewCourtCards');
-  // Check if any changes were made
   const session = isDemoMode ? demoSession : activeSession;
   const changed = _svPreSwapLineup &&
     JSON.stringify(session.lineup) !== JSON.stringify(_svPreSwapLineup);
-  if (changed) {
-    document.getElementById('svFooterSwap').style.display     = 'none';
-    document.getElementById('svFooterSwapSave').style.display = 'flex';
-  } else {
-    _resetSessionViewFooter();
-  }
-}
-
-function discardSessionSwap() {
-  const session = isDemoMode ? demoSession : activeSession;
-  if (session && _svPreSwapLineup) session.lineup = _svPreSwapLineup;
   _svPreSwapLineup = null;
-  _renderSessionViewCards();
-  _resetSessionViewFooter();
-}
-
-async function saveSessionSwap() {
-  const session = isDemoMode ? demoSession : activeSession;
-  _svPreSwapLineup = null;
-  if (isDemoMode) {
-    demoSession = session;
+  if (!changed || isDemoMode) {
     _resetSessionViewFooter();
     return;
   }
+  // Auto-save — show spinner on Done button while saving
+  const doneBtn = document.getElementById('svSwapDoneBtn');
+  if (doneBtn) { doneBtn.disabled = true; doneBtn.classList.add('loading'); }
   lockUI();
   try {
     const res = await callBackend(getPayload('saveSession', { session: session, requestId: makeRequestId() }));
@@ -9981,6 +10512,7 @@ async function saveSessionSwap() {
     activeSession = res.session || session;
     showToast('Lineup updated ✓');
   } catch(e) {
+    // Keep swapped lineup in memory — user can retry via Swap Players > Done
     showError('Could not save: ' + e.message);
   } finally {
     unlockUI();
@@ -10154,6 +10686,210 @@ function formatShortDate(isoStr) {
     const d = new Date(isoStr);
     return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
   } catch(e) { return ''; }
+}
+
+
+// ==========================================================
+// ADMIN PANEL
+// ==========================================================
+
+// ── 7-tap trigger on MATCHES header title ──
+// Counts taps only when on the matches screen and not in demo mode.
+// Resets after 3s inactivity. On 7th tap: opens admin entry flow.
+document.getElementById('headerTitle').addEventListener('click', function() {
+  if (currentScreen !== 'matches') return;
+  if (isDemoMode) return;
+
+  adminTapCount++;
+  if (adminTapTimer) clearTimeout(adminTapTimer);
+
+  if (adminTapCount >= 7) {
+    adminTapCount = 0;
+    adminTapTimer = null;
+    openAdminEntry();
+    return;
+  }
+
+  adminTapTimer = setTimeout(function() {
+    adminTapCount = 0;
+    adminTapTimer = null;
+  }, 3000);
+});
+
+// ── Enter key on admin password input ──
+document.getElementById('adminPwInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') submitAdminPassword();
+});
+
+/**
+ * Entry point after the 7-tap trigger fires.
+ * If already unlocked this session, skip re-auth and show the panel directly.
+ */
+function openAdminEntry() {
+  if (isDemoMode) return;
+  if (isAdminUnlocked) {
+    showAdminPanel();
+  } else {
+    const modal = document.getElementById('adminPwModal');
+    modal.classList.add('show');
+    document.getElementById('adminPwInput').value = '';
+    document.getElementById('adminPwError').classList.remove('visible');
+    _setupAdminPwVV();
+    setTimeout(function() { document.getElementById('adminPwInput').focus(); }, 300);
+  }
+}
+
+/**
+ * Attaches visualViewport resize listener to the admin password modal sheet.
+ * Translates the sheet upward by keyboard height on Android.
+ * Self-correcting formula: kbH approximates 0 on iOS (Safari pans the visual viewport).
+ */
+function _setupAdminPwVV() {
+  const sheet = document.querySelector('#adminPwModal .modal-sheet');
+  if (!window.visualViewport || !sheet) return;
+  function onResize() {
+    const kbH = Math.max(0,
+      window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+    sheet.style.transform = kbH > 0 ? 'translateY(-' + kbH + 'px)' : '';
+  }
+  sheet._adminVvListener = onResize;
+  window.visualViewport.addEventListener('resize', onResize);
+}
+
+/**
+ * Removes the visualViewport listener and resets sheet transform.
+ * Called on close and by _resetAppUI().
+ */
+function _teardownAdminPwVV() {
+  const sheet = document.querySelector('#adminPwModal .modal-sheet');
+  if (!window.visualViewport || !sheet || !sheet._adminVvListener) return;
+  window.visualViewport.removeEventListener('resize', sheet._adminVvListener);
+  sheet._adminVvListener = null;
+  sheet.style.transform = '';
+}
+
+/**
+ * Reads the admin password input and calls adminLogin on the backend.
+ * On success: stores the password for this session, opens the admin panel.
+ * On failure: shows error in the modal, clears and re-focuses input.
+ */
+async function submitAdminPassword() {
+  const inputEl    = document.getElementById('adminPwInput');
+  const errorEl    = document.getElementById('adminPwError');
+  const confirmBtn = document.querySelector('#adminPwModal .modal-confirm');
+  const inputVal   = inputEl.value;
+  if (!inputVal) return;
+
+  confirmBtn.disabled = true;
+  try {
+    await callBackend(getPayload('adminLogin', {
+      adminPw:   inputVal,
+      requestId: makeRequestId()
+    }));
+    // Success
+    isAdminUnlocked = true;
+    adminPwSession  = inputVal;
+    _teardownAdminPwVV();
+    document.getElementById('adminPwModal').classList.remove('show');
+    showAdminPanel();
+  } catch(e) {
+    // Failure
+    errorEl.classList.add('visible');
+    inputEl.value = '';
+    inputEl.focus();
+  } finally {
+    confirmBtn.disabled = false;
+  }
+}
+
+/**
+ * Closes the admin password modal and tears down the keyboard listener.
+ * Does not change isAdminUnlocked.
+ */
+function closeAdminPwModal() {
+  _teardownAdminPwVV();
+  document.getElementById('adminPwModal').classList.remove('show');
+  document.getElementById('adminPwInput').value = '';
+  document.getElementById('adminPwError').classList.remove('visible');
+}
+
+/**
+ * Opens the admin panel modal, populating counts and last export time.
+ * players.length includes active and inactive players — accurate for export count.
+ */
+function showAdminPanel() {
+  document.getElementById('adminPlayersCount').textContent = players.length;
+  document.getElementById('adminMatchesCount').textContent = matches.length;
+  document.getElementById('adminLastExportLabel').textContent =
+    'Last export: ' + (adminLastExport || 'Never');
+
+  // Reset push button to default state
+  const btn = document.getElementById('adminPushBtn');
+  btn.disabled = false;
+  btn.className = 'admin-push-btn';
+  btn.classList.remove('loading');
+  btn.querySelector('.btn-text').textContent = '↑  PUSH DATA NOW';
+
+  document.getElementById('adminPanelModal').classList.add('show');
+}
+
+/**
+ * Closes the admin panel.
+ * Does NOT clear isAdminUnlocked — no re-auth needed within the same session.
+ */
+function closeAdminPanel() {
+  document.getElementById('adminPanelModal').classList.remove('show');
+}
+
+/**
+ * Handles the Push Data button tap.
+ * Sets loading state, calls exportData, updates UI on success or failure.
+ * adminIsExporting flag blocks overlay dismiss during the operation.
+ * Retry is supported — failure state re-enables the button.
+ */
+async function handlePushData() {
+  if (isDemoMode) return;
+  if (adminIsExporting) return;
+
+  adminIsExporting = true;
+
+  const btn = document.getElementById('adminPushBtn');
+
+  // Loading state
+  btn.disabled = true;
+  btn.className = 'admin-push-btn';
+  btn.classList.add('loading');
+
+  try {
+    const res = await callBackend(getPayload('exportData', {
+      adminPw:   adminPwSession,
+      requestId: makeRequestId()
+    }));
+
+    // Success state
+    btn.disabled = false;
+    btn.className = 'admin-push-btn success';
+    btn.classList.remove('loading');
+    btn.querySelector('.btn-text').textContent = '✓  PUSHED SUCCESSFULLY';
+
+    // Update last export display
+    adminLastExport = res.exportedAt || '';
+    document.getElementById('adminLastExportLabel').textContent =
+      'Last export: ' + (adminLastExport || 'Never');
+
+    showToast((res.playersCount || 0) + ' players · ' + (res.matchesCount || 0) + ' matches exported ✓');
+
+  } catch(e) {
+    // Failure/retry state — re-enable button for retry
+    btn.disabled = false;
+    btn.className = 'admin-push-btn failure';
+    btn.classList.remove('loading');
+    btn.querySelector('.btn-text').textContent = '✕  PUSH FAILED — tap to retry';
+
+    showError(e.message || 'Export failed. Please try again.');
+  } finally {
+    adminIsExporting = false;
+  }
 }
 
 </script>
