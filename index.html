@@ -9973,11 +9973,12 @@ function shareSession() {
   const rounds = session.rounds || 1;
   const msg = `🏓 FORGE – Session Set for ${sessionDate}\n`
     + `Courts: ${courts} · Rounds: ${rounds}\n`
+    + `\n`
     + `Players (${playerNames.length}): ${rosterText}\n`
+    + `\n`
     + `Lineup is ready — open the app to see your court assignments!\n`
-    + `\n---\n`
-    + `Smash it on Forge 🏓\n`
-    + `https://forgepickle.github.io/app`;
+    + `\n`
+    + `--- Smash it on Forge 🏓  https://forgepickle.github.io/app`;
 
   if (navigator.share) {
     navigator.share({ title: 'FORGE Pickleball Session', text: msg }).catch(() => {});
@@ -10275,6 +10276,8 @@ function switchSessionViewRoundTab(idx) {
   const tabsEl = document.getElementById('sessionViewRoundTabs');
   if (tabsEl) tabsEl.querySelectorAll('.toggle-pill').forEach((b, i) => b.classList.toggle('active', i === idx));
   _renderSessionViewCards();
+  // Re-evaluate pencil state — completed rounds lock the pencil
+  _updateSessionViewFooterState();
 }
 
 function closeSessionView() {
@@ -10318,8 +10321,14 @@ function _isSessionFullyLogged(session) {
   return session.logged.every(roundArr => roundArr.every(id => !!id));
 }
 
+function _isRoundFullyLogged(session, roundIdx) {
+  if (!session || !session.logged || !session.logged[roundIdx]) return false;
+  return session.logged[roundIdx].every(id => !!id);
+}
+
 // Updates Swap/Delete/End buttons based on whether all courts are logged.
-// Called from _showSessionView each time the session view opens.
+// Pencil is also locked when the currently viewed round is fully logged.
+// Called from _showSessionView, switchSessionViewRoundTab, and onSessionMatchLogged.
 function _updateSessionViewFooterState() {
   const session = isDemoMode ? demoSession : activeSession;
   const swapBtn   = document.getElementById('svSwapBtn');
@@ -10331,7 +10340,8 @@ function _updateSessionViewFooterState() {
     deleteBtn.style.display = 'none';
     endBtn.style.display    = 'flex';
   } else {
-    swapBtn.disabled = false;
+    // Lock pencil if the current round is fully logged, even if other rounds are not
+    swapBtn.disabled = _isRoundFullyLogged(session, shuffle.activeRoundTab);
     deleteBtn.style.display = 'flex';
     endBtn.style.display    = 'none';
   }
@@ -10386,14 +10396,30 @@ async function confirmDeleteSession() {
 
 function openEndSessionModal() {
   document.getElementById('endSessionModal').classList.add('show');
+  // Lock Share and Pencil while End Session flow is active
+  const shareBtn = document.getElementById('svShareBtn');
+  const swapBtn  = document.getElementById('svSwapBtn');
+  if (shareBtn) shareBtn.disabled = true;
+  if (swapBtn)  swapBtn.disabled  = true;
 }
 
 function closeEndSessionModal() {
   document.getElementById('endSessionModal').classList.remove('show');
+  // Restore Share and Pencil on cancel — confirmEndSession re-locks them if proceeding
+  const shareBtn = document.getElementById('svShareBtn');
+  const swapBtn  = document.getElementById('svSwapBtn');
+  if (shareBtn) shareBtn.disabled = false;
+  if (swapBtn)  swapBtn.disabled  = false;
 }
 
 async function confirmEndSession() {
-  closeEndSessionModal();
+  closeEndSessionModal(); // restores buttons briefly — re-lock immediately below
+  const endBtn   = document.getElementById('svEndBtn');
+  const shareBtn = document.getElementById('svShareBtn');
+  const swapBtn  = document.getElementById('svSwapBtn');
+  if (endBtn)   { endBtn.disabled = true; endBtn.classList.add('loading'); }
+  if (shareBtn)   shareBtn.disabled = true;
+  if (swapBtn)    swapBtn.disabled  = true;
   if (isDemoMode) {
     demoSession = null;
     closeSessionView();
@@ -10401,9 +10427,6 @@ async function confirmEndSession() {
     showToast('Session ended ✓');
     return;
   }
-  // Show spinner on End Session button in session view footer while GAS responds
-  const endBtn = document.getElementById('svEndBtn');
-  if (endBtn) { endBtn.disabled = true; endBtn.classList.add('loading'); }
   lockUI();
   try {
     const res = await callBackend(getPayload('deleteSession', { requestId: makeRequestId() }));
@@ -10413,7 +10436,9 @@ async function confirmEndSession() {
     renderShuffleEntryButton();
     showToast('Session ended ✓');
   } catch(e) {
-    if (endBtn) { endBtn.disabled = false; endBtn.classList.remove('loading'); }
+    if (endBtn)   { endBtn.disabled = false; endBtn.classList.remove('loading'); }
+    if (shareBtn)   shareBtn.disabled = false;
+    if (swapBtn)    swapBtn.disabled  = false;
     showError('Could not end session: ' + e.message);
   } finally {
     unlockUI();
@@ -10462,8 +10487,12 @@ async function onSessionMatchLogged(roundIdx, courtIdx, newMatchId) {
   session.logged[roundIdx][courtIdx] = newMatchId;
   if (isDemoMode) {
     demoSession = session;
+    // Re-evaluate pencil + footer state immediately after logging
+    _updateSessionViewFooterState();
     return;
   }
+  // Re-evaluate pencil + footer state immediately after logging
+  _updateSessionViewFooterState();
   // Persist updated logged state to backend
   try {
     await callBackend(getPayload('saveSession', { session: session, requestId: makeRequestId() }));
