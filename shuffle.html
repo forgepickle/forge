@@ -2,16 +2,23 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.9.9 — Share Session + Swap UX    ║
-  ║  Date: 2026-05-17                            ║
-  ║  Changes: Edit icon inline with meta row in  ║
-  ║           Step 3 wizard and Session View.    ║
-  ║           Post-save wizard shows Done +      ║
-  ║           View Session instead of auto-close.║
-  ║           Share button in Session View footer║
-  ║           fires navigator.share() with       ║
-  ║           clipboard fallback; player roster  ║
-  ║           capped at 10 names + N more.       ║
+  ║  Version: 8.0.0 — Session Flow Bug Fix Pass   ║
+  ║  Date: 2026-05-18                            ║
+  ║  Changes: Share button disabled during       ║
+  ║           Delete. All Step 3 wizard buttons  ║
+  ║           (Back, Start Over, Swap, Save)     ║
+  ║           reset on wizard open. Pencil icon  ║
+  ║           hidden when session fully logged.  ║
+  ║           svShareBtn added to footer reset.  ║
+  ║           Back from Add Match now instant    ║
+  ║           (skips backend fetch, renders from ║
+  ║           memory). Back from Add Match       ║
+  ║           restores Leaderboard as underlying ║
+  ║           screen, fixing post-delete landing.║
+  ║           Delete button greys out visually   ║
+  ║           during spinner.                    ║
+  ║                                              ║
+  ║  v7.9.9 — Share Session + Swap UX            ║
   ║                                              ║
   ║  v7.9.8 — Spinner Centering Fix              ║
   ║                                              ║
@@ -3879,6 +3886,8 @@ body {
 #svDeleteBtn .btn-spinner { border-color: rgba(220,53,69,0.3); border-top-color: var(--error); }
 #svDeleteBtn.loading .btn-text { display: none; }
 #svDeleteBtn.loading .btn-spinner { display: block; }
+/* Override red inline colour during loading so Delete visually greys out like other disabled footer buttons */
+#svDeleteBtn.loading { color: var(--grey-mid) !important; border-color: var(--grey-light) !important; }
 /* Generate Lineup button spinner */
 #shGenerateBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
 #shGenerateBtn.loading .btn-text { display: none; }
@@ -7608,9 +7617,14 @@ function stepNext() {
   showStep(am.step + 1);
 }
 function stepBack() {
-  // If pre-filled from session and currently on Step 2, back returns to Session View
+  // If pre-filled from session and currently on Step 2, back returns to Session View.
+  // Bypass openSessionView() — no backend fetch needed, session is already in memory.
+  // Restore underlying screen to leaderboard first (logSessionMatch changed it to 'add')
+  // so that a subsequent Delete or close correctly returns to leaderboard, not Add Match.
   if (am.step === 2 && am.sessionSource) {
-    openSessionView();
+    _doNavigateTo('leaderboard');
+    document.getElementById('sessionViewOverlay').classList.add('show');
+    _showSessionView(isDemoMode ? demoSession : activeSession);
     return;
   }
   if (am.step > 1) showStep(am.step - 1);
