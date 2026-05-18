@@ -1758,6 +1758,7 @@ body {
 }
 .score-input {
   flex: 1;
+  min-width: 0; /* type="text" has a large intrinsic size — allow flex to override it */
   background: var(--bg);
   border: 2px solid var(--grey-light);
   border-radius: 10px;
