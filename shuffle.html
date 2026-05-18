@@ -9472,6 +9472,16 @@ async function shuffleEntryTap() {
 function openShuffleWizard() {
   resetShuffle();
   shuffle.step = 1;
+  // Reset all Step 3 buttons — disabled/loading states persist from a previous successful save
+  // since the success path closes the overlay without restoring them.
+  const saveBtn = document.getElementById('shSaveBtn');
+  const backBtn = document.getElementById('shBackBtn3');
+  const overBtn = document.getElementById('shStartOverBtn');
+  const swapBtn = document.getElementById('shSwapBtn');
+  if (saveBtn) { saveBtn.disabled = false; saveBtn.classList.remove('loading'); }
+  if (backBtn)   backBtn.disabled = false;
+  if (overBtn) { overBtn.disabled = false; overBtn.classList.remove('loading'); }
+  if (swapBtn)   swapBtn.disabled = false;
   // Reset mode row selections
   ['Random','Balanced','Tiered'].forEach(m => {
     const row = document.getElementById('shMode' + m);
@@ -10319,7 +10329,8 @@ function _resetSessionViewFooter() {
   const svSwapBtn = document.getElementById('svSwapBtn');
   if (svSwapBtn) svSwapBtn.style.display = '';
   // Reset loading state on all footer buttons — covers success path and demo mode early-return.
-  ['svDeleteBtn', 'svSwapBtn', 'svEndBtn', 'svSwapDoneBtn'].forEach(id => {
+  // svShareBtn is included so it is always re-enabled on next session open after a Delete/End success.
+  ['svDeleteBtn', 'svSwapBtn', 'svEndBtn', 'svSwapDoneBtn', 'svShareBtn'].forEach(id => {
     const btn = document.getElementById(id);
     if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
   });
@@ -10348,6 +10359,7 @@ function _updateSessionViewFooterState() {
   if (!swapBtn || !deleteBtn || !endBtn) return;
   if (_isSessionFullyLogged(session)) {
     swapBtn.disabled = true;
+    swapBtn.style.display   = 'none';
     deleteBtn.style.display = 'none';
     endBtn.style.display    = 'flex';
   } else {
@@ -10374,9 +10386,11 @@ async function confirmDeleteSession() {
   const deleteBtn = document.getElementById('svDeleteBtn');
   const swapBtn   = document.getElementById('svSwapBtn');
   const endBtn    = document.getElementById('svEndBtn');
+  const shareBtn  = document.getElementById('svShareBtn');
   if (deleteBtn) { deleteBtn.disabled = true; deleteBtn.classList.add('loading'); }
   if (swapBtn)   swapBtn.disabled = true;
   if (endBtn)    endBtn.disabled  = true;
+  if (shareBtn)  shareBtn.disabled = true;
   closeDeleteSessionModal();
   if (isDemoMode) {
     demoSession = null;
@@ -10397,6 +10411,7 @@ async function confirmDeleteSession() {
     if (deleteBtn) { deleteBtn.disabled = false; deleteBtn.classList.remove('loading'); }
     if (swapBtn)   swapBtn.disabled = false;
     if (endBtn)    endBtn.disabled  = false;
+    if (shareBtn)  shareBtn.disabled = false;
     showError('Could not delete session: ' + e.message);
   } finally {
     unlockUI();
