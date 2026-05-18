@@ -2,16 +2,34 @@
 <!--
   ╔══════════════════════════════════════════════╗
   ║  FORGE — Your Pickleball Mettle              ║
-  ║  Version: 7.9.9 — Share Session + Swap UX    ║
-  ║  Date: 2026-05-17                            ║
-  ║  Changes: Edit icon inline with meta row in  ║
-  ║           Step 3 wizard and Session View.    ║
-  ║           Post-save wizard shows Done +      ║
-  ║           View Session instead of auto-close.║
-  ║           Share button in Session View footer║
-  ║           fires navigator.share() with       ║
-  ║           clipboard fallback; player roster  ║
-  ║           capped at 10 names + N more.       ║
+  ║  Version: 8.1.0 — Score Entry UX              ║
+  ║  Date: 2026-05-18                            ║
+  ║  Changes: Score inputs switched to           ║
+  ║           type=text inputmode=numeric so     ║
+  ║           iOS shows numeric keyboard.        ║
+  ║           Enter key advances to next enabled ║
+  ║           score field; blurs on last or      ║
+  ║           locked field. 2-digit cap + strip  ║
+  ║           non-numeric chars in              ║
+  ║           clampScoreInput(). Dead webkit     ║
+  ║           spin-button CSS removed.           ║
+  ║                                              ║
+  ║  v8.0.0 — Session Flow Bug Fix Pass          ║
+  ║           Share button disabled during       ║
+  ║           Delete. All Step 3 wizard buttons  ║
+  ║           (Back, Start Over, Swap, Save)     ║
+  ║           reset on wizard open. Pencil icon  ║
+  ║           hidden when session fully logged.  ║
+  ║           svShareBtn added to footer reset.  ║
+  ║           Back from Add Match now instant    ║
+  ║           (skips backend fetch, renders from ║
+  ║           memory). Back from Add Match       ║
+  ║           restores Leaderboard as underlying ║
+  ║           screen, fixing post-delete landing.║
+  ║           Delete button greys out visually   ║
+  ║           during spinner.                    ║
+  ║                                              ║
+  ║  v7.9.9 — Share Session + Swap UX            ║
   ║                                              ║
   ║  v7.9.8 — Spinner Centering Fix              ║
   ║                                              ║
@@ -1740,6 +1758,7 @@ body {
 }
 .score-input {
   flex: 1;
+  min-width: 0; /* type="text" has a large intrinsic size — allow flex to override it */
   background: var(--bg);
   border: 2px solid var(--grey-light);
   border-radius: 10px;
@@ -1749,10 +1768,7 @@ body {
   text-align: center; color: var(--black);
   outline: none;
   transition: border-color 0.2s;
-  -moz-appearance: textfield;
 }
-.score-input::-webkit-outer-spin-button,
-.score-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .score-input:focus { border-color: var(--accent); }
 .score-input.team-a:focus { border-color: #4a90d9; }
 .score-dash {
@@ -3879,6 +3895,11 @@ body {
 #svDeleteBtn .btn-spinner { border-color: rgba(220,53,69,0.3); border-top-color: var(--error); }
 #svDeleteBtn.loading .btn-text { display: none; }
 #svDeleteBtn.loading .btn-spinner { display: block; }
+/* Grey out Delete button during loading — drives appearance from .loading class, not :disabled,
+   because iOS Safari standalone does not reliably trigger :disabled opacity.
+   Also grey the spinner so the red ring does not bleed through. */
+#svDeleteBtn.loading { color: var(--grey-mid) !important; border-color: var(--grey-light) !important; opacity: 0.5; }
+#svDeleteBtn.loading .btn-spinner { border-color: rgba(0,0,0,0.12) !important; border-top-color: var(--grey-mid) !important; }
 /* Generate Lineup button spinner */
 #shGenerateBtn .btn-spinner { border-color: rgba(0,0,0,0.2); border-top-color: var(--black); }
 #shGenerateBtn.loading .btn-text { display: none; }
@@ -4514,14 +4535,8 @@ body {
       <button class="share-match-btn" type="button" onclick="showMatchShareCard()">📤 Share this result</button>
     </div>
 
-    <!-- STEP 1: DATE -->
+    <!-- STEP 1: PLAYERS -->
     <div class="step-panel active" id="step1">
-      <div class="step-title">When did you play?</div>
-      <input class="date-native" type="date" id="matchDate">
-    </div>
-
-    <!-- STEP 2: PLAYERS -->
-    <div class="step-panel" id="step2">
       <div class="step-title">Who played?</div>
       <div class="step2-hint" id="step2Hint">Tap once → Team A &nbsp;·&nbsp; Tap again → Team B &nbsp;·&nbsp; Tap again → Deselect</div>
       <div class="player-select-grid" id="playerSelectGrid"></div>
@@ -4536,8 +4551,8 @@ body {
       </div>
     </div>
 
-    <!-- STEP 3: FORMAT -->
-    <div class="step-panel" id="step3">
+    <!-- STEP 2: FORMAT -->
+    <div class="step-panel" id="step2">
       <div class="step-title">How did you play?</div>
       <div class="format-group">
         <div class="format-group-label">Scoring Type</div>
@@ -4556,8 +4571,8 @@ body {
       </div>
     </div>
 
-    <!-- STEP 4: SCORES -->
-    <div class="step-panel" id="step4">
+    <!-- STEP 3: SCORES -->
+    <div class="step-panel" id="step3">
       <div class="step-title">Enter Scores</div>
       <div class="score-teams-header">
         <div class="score-team-name a" id="scoreTeamALabel">Team A</div>
@@ -4569,11 +4584,11 @@ body {
       <div class="score-row-wrap" id="scoreRow1">
         <div class="game-label">Game 1</div>
         <div class="score-row">
-          <input class="score-input team-a" id="g1a" type="number" min="0" max="99" placeholder="0"
-            oninput="clampScoreInput(this);onScoreInput()">
+          <input class="score-input team-a" id="g1a" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0"
+            oninput="clampScoreInput(this);onScoreInput()" onkeydown="advanceScoreInput(event)">
           <div class="score-dash">—</div>
-          <input class="score-input" id="g1b" type="number" min="0" max="99" placeholder="0"
-            oninput="clampScoreInput(this);onScoreInput()">
+          <input class="score-input" id="g1b" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0"
+            oninput="clampScoreInput(this);onScoreInput()" onkeydown="advanceScoreInput(event)">
         </div>
         <div id="g1winner"></div>
       </div>
@@ -4582,11 +4597,11 @@ body {
       <div class="score-row-wrap" id="scoreRow2" style="opacity:0.4;">
         <div class="game-label">Game 2</div>
         <div class="score-row">
-          <input class="score-input team-a" id="g2a" type="number" min="0" max="99" placeholder="0"
-            oninput="clampScoreInput(this);onScoreInput()" disabled>
+          <input class="score-input team-a" id="g2a" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0"
+            oninput="clampScoreInput(this);onScoreInput()" onkeydown="advanceScoreInput(event)" disabled>
           <div class="score-dash">—</div>
-          <input class="score-input" id="g2b" type="number" min="0" max="99" placeholder="0"
-            oninput="clampScoreInput(this);onScoreInput()" disabled>
+          <input class="score-input" id="g2b" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0"
+            oninput="clampScoreInput(this);onScoreInput()" onkeydown="advanceScoreInput(event)" disabled>
         </div>
         <div id="g2winner"></div>
       </div>
@@ -4595,17 +4610,23 @@ body {
       <div class="score-row-wrap" id="scoreRow3" style="opacity:0.4;">
         <div class="game-label">Game 3</div>
         <div class="score-row">
-          <input class="score-input team-a" id="g3a" type="number" min="0" max="99" placeholder="0"
-            oninput="clampScoreInput(this);onScoreInput()" disabled>
+          <input class="score-input team-a" id="g3a" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0"
+            oninput="clampScoreInput(this);onScoreInput()" onkeydown="advanceScoreInput(event)" disabled>
           <div class="score-dash">—</div>
-          <input class="score-input" id="g3b" type="number" min="0" max="99" placeholder="0"
-            oninput="clampScoreInput(this);onScoreInput()" disabled>
+          <input class="score-input" id="g3b" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0"
+            oninput="clampScoreInput(this);onScoreInput()" onkeydown="advanceScoreInput(event)" disabled>
         </div>
         <div id="g3winner"></div>
       </div>
 
       <div class="forge-advisory" id="scoreGapWarning"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span class="advisory-body">Please fill games in order</span></div>
       <div class="match-status-bar" id="matchStatusBar">Enter scores above</div>
+    </div>
+
+    <!-- STEP 4: DATE -->
+    <div class="step-panel" id="step4">
+      <div class="step-title">When did you play?</div>
+      <input class="date-native" type="date" id="matchDate">
     </div>
 
     <!-- STEP 5: REVIEW -->
@@ -6589,8 +6610,8 @@ function navigateTo(screen) {
   // ── Guard: warn before leaving Add Match mid-flow ──
   if (currentScreen === 'add' && screen !== 'add') {
     const hasProgress = (
-      (am.step >= 2 && (am.teamA.length > 0 || am.teamB.length > 0)) ||
-      am.step >= 3 ||
+      am.teamA.length > 0 || am.teamB.length > 0 ||
+      am.step >= 2 ||
       document.getElementById('submitSuccess')?.classList.contains('show')
     );
     // Don't intercept if submit success is showing — Done handles that
@@ -7490,8 +7511,8 @@ function initAddMatch(prefill) {
     if (dateEl) { dateEl.value = am.date; }
     // Update team summary display
     updatePlayerSelectUI();
-    // Jump directly to Step 3 (format picker)
-    showStep(3);
+    // Jump directly to Step 2 (format picker) — teams/date pre-filled from session
+    showStep(2);
     // Show context label if from session
     _renderSessionSourceLabel();
   } else {
@@ -7500,16 +7521,16 @@ function initAddMatch(prefill) {
 }
 
 function _renderSessionSourceLabel() {
-  // Inject or clear the "📌 From session" context label at top of Step 3
-  const step3 = document.getElementById('step3');
-  if (!step3) return;
+  // Inject or clear the "📌 From session" context label at top of Step 2 (format picker)
+  const step2 = document.getElementById('step2');
+  if (!step2) return;
   let label = document.getElementById('sessionSourceLabel');
   if (am.sessionSource) {
     if (!label) {
       label = document.createElement('div');
       label.id = 'sessionSourceLabel';
       label.className = 'step2-hint';
-      step3.insertBefore(label, step3.firstChild);
+      step2.insertBefore(label, step2.firstChild);
     }
     label.textContent = '📌 From session: Court ' + (am.sessionSource.court + 1) + ' · Round ' + (am.sessionSource.round + 1);
   } else {
@@ -7564,6 +7585,9 @@ function resetAddMatch(silent) {
   // Clear all chip visual states — am.teamA/B are already [] so
   // updatePlayerSelectUI removes team-a/team-b classes from every chip
   updatePlayerSelectUI();
+  // Always clean up the session source label from the DOM (am.sessionSource is
+  // now gone from the reset am object, so this call removes any stale label)
+  _renderSessionSourceLabel();
   showStep(1);
   if (!silent) { currentScreen = 'add'; navigateTo('players'); }
 }
@@ -7593,7 +7617,7 @@ function showStep(n) {
       ? 'Submit Match <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
       : 'Next <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
   }
-  if (n === 4) { updateScoreLabels(); onScoreInput(); }
+  if (n === 3) { updateScoreLabels(); onScoreInput(); }
   validateStep(n);
   const s = document.getElementById('screenAddMatch'); if (s) s.scrollTop = 0;
 }
@@ -7601,14 +7625,18 @@ function showStep(n) {
 function stepNext() {
   if (!validateStep(am.step)) return;
   if (am.step === 5) { submitMatch(); return; }
-  if (am.step === 1) am.date = document.getElementById('matchDate').value;
-  if (am.step === 4) buildReviewCard();
+  if (am.step === 4) { am.date = document.getElementById('matchDate').value; buildReviewCard(); }
   showStep(am.step + 1);
 }
 function stepBack() {
-  // If pre-filled from session and currently on Step 3, back returns to Session View
-  if (am.step === 3 && am.sessionSource) {
-    openSessionView();
+  // If pre-filled from session and currently on Step 2, back returns to Session View.
+  // Bypass openSessionView() — no backend fetch needed, session is already in memory.
+  // Restore underlying screen to leaderboard first (logSessionMatch changed it to 'add')
+  // so that a subsequent Delete or close correctly returns to leaderboard, not Add Match.
+  if (am.step === 2 && am.sessionSource) {
+    _doNavigateTo('leaderboard');
+    document.getElementById('sessionViewOverlay').classList.add('show');
+    _showSessionView(isDemoMode ? demoSession : activeSession);
     return;
   }
   if (am.step > 1) showStep(am.step - 1);
@@ -7622,10 +7650,10 @@ function getTodayStr() {
 function validateStep(n) {
   const nb = document.getElementById('stepNextBtn');
   let valid = false;
-  if (n===1) { const dv = document.getElementById('matchDate').value; valid = !!dv && dv <= getTodayStr(); }
-  else if (n===2) valid = am.teamA.length === 2 && am.teamB.length === 2;
-  else if (n===3) valid = !!am.scoring && !!am.points;
-  else if (n===4) { const hg = checkScoreGap(); valid = isRowFilled('g1a','g1b') && !hg; }
+  if (n===1) valid = am.teamA.length === 2 && am.teamB.length === 2;
+  else if (n===2) valid = !!am.scoring && !!am.points;
+  else if (n===3) { const hg = checkScoreGap(); valid = isRowFilled('g1a','g1b') && !hg; }
+  else if (n===4) { const dv = document.getElementById('matchDate').value; valid = !!dv && dv <= getTodayStr(); }
   else if (n===5) valid = true;
   if (nb) nb.disabled = !valid;
   return valid;
@@ -7678,7 +7706,7 @@ function togglePlayerSelect(id) {
   } else if (inA) am.teamA = am.teamA.filter(x => x !== id);
   else if (inB) am.teamB = am.teamB.filter(x => x !== id);
   updatePlayerSelectUI();
-  validateStep(2);
+  validateStep(1);
 }
 
 function updatePlayerSelectUI() {
@@ -7705,7 +7733,7 @@ function selectFormat(type, value, el) {
   if (type === 'scoring') { document.querySelectorAll('#fmt-standard,#fmt-rally').forEach(p => p.classList.remove('selected')); am.scoring = value; }
   else { document.querySelectorAll('#fmt-11,#fmt-15,#fmt-21').forEach(p => p.classList.remove('selected')); am.points = value; }
   el.classList.add('selected');
-  validateStep(3);
+  validateStep(2);
 }
 
 function updateScoreLabels() {
@@ -7728,12 +7756,27 @@ function checkScoreGap() {
 }
 
 function clampScoreInput(el) {
-  // GOVERNANCE: Only prevent negative numbers.
-  // No upper bound — deuce/advantage can legally exceed points-to-win
-  // (e.g. 16-14 in a "to 15" game). Upper bound validation removed.
-  if (el.value === '') return;
-  let v = parseInt(el.value);
-  if (isNaN(v) || v < 0) el.value = 0;
+  // Strip non-numeric characters — type="text" has no native filter so this guards
+  // against desktop keyboard and clipboard paste. Cap at 2 digits (max 99), which
+  // covers all realistic pickleball scores including extended deuce scenarios.
+  let v = el.value.replace(/\D/g, '');
+  if (v.length > 2) v = v.slice(0, 2);
+  el.value = v;
+}
+
+// Advances focus to the next enabled score input when the user taps Enter/Next
+// on the numeric keyboard. Skips disabled fields (locked games). Blurs if no
+// enabled field remains — dismisses the keyboard cleanly.
+function advanceScoreInput(e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const order = ['g1a', 'g1b', 'g2a', 'g2b', 'g3a', 'g3b'];
+  const idx = order.indexOf(e.target.id);
+  for (let i = idx + 1; i < order.length; i++) {
+    const next = document.getElementById(order[i]);
+    if (next && !next.disabled) { next.focus(); return; }
+  }
+  e.target.blur();
 }
 
 function onScoreInput() {
@@ -7752,7 +7795,7 @@ function onScoreInput() {
   document.getElementById('scoreRow1').classList.toggle('active-game', r1);
   document.getElementById('scoreRow2').classList.toggle('active-game', r2);
   updateMatchStatus(s1, s2, getRowScores('g3a','g3b'));
-  validateStep(4);
+  validateStep(3);
 }
 
 function renderGameWinner(ia, ib, tid) {
@@ -9389,7 +9432,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Date input change handler
   const de = document.getElementById('matchDate');
-  if (de) de.addEventListener('change', function() { am.date = this.value; validateStep(1); });
+  if (de) de.addEventListener('change', function() { am.date = this.value; validateStep(4); });
 
   // Zoom prevention
   document.addEventListener('gesturestart',  e => e.preventDefault(), { passive:false });
@@ -9470,6 +9513,16 @@ async function shuffleEntryTap() {
 function openShuffleWizard() {
   resetShuffle();
   shuffle.step = 1;
+  // Reset all Step 3 buttons — disabled/loading states persist from a previous successful save
+  // since the success path closes the overlay without restoring them.
+  const saveBtn = document.getElementById('shSaveBtn');
+  const backBtn = document.getElementById('shBackBtn3');
+  const overBtn = document.getElementById('shStartOverBtn');
+  const swapBtn = document.getElementById('shSwapBtn');
+  if (saveBtn) { saveBtn.disabled = false; saveBtn.classList.remove('loading'); }
+  if (backBtn)   backBtn.disabled = false;
+  if (overBtn) { overBtn.disabled = false; overBtn.classList.remove('loading'); }
+  if (swapBtn)   swapBtn.disabled = false;
   // Reset mode row selections
   ['Random','Balanced','Tiered'].forEach(m => {
     const row = document.getElementById('shMode' + m);
@@ -10317,7 +10370,8 @@ function _resetSessionViewFooter() {
   const svSwapBtn = document.getElementById('svSwapBtn');
   if (svSwapBtn) svSwapBtn.style.display = '';
   // Reset loading state on all footer buttons — covers success path and demo mode early-return.
-  ['svDeleteBtn', 'svSwapBtn', 'svEndBtn', 'svSwapDoneBtn'].forEach(id => {
+  // svShareBtn is included so it is always re-enabled on next session open after a Delete/End success.
+  ['svDeleteBtn', 'svSwapBtn', 'svEndBtn', 'svSwapDoneBtn', 'svShareBtn'].forEach(id => {
     const btn = document.getElementById(id);
     if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
   });
@@ -10346,6 +10400,7 @@ function _updateSessionViewFooterState() {
   if (!swapBtn || !deleteBtn || !endBtn) return;
   if (_isSessionFullyLogged(session)) {
     swapBtn.disabled = true;
+    swapBtn.style.display   = 'none';
     deleteBtn.style.display = 'none';
     endBtn.style.display    = 'flex';
   } else {
@@ -10372,9 +10427,11 @@ async function confirmDeleteSession() {
   const deleteBtn = document.getElementById('svDeleteBtn');
   const swapBtn   = document.getElementById('svSwapBtn');
   const endBtn    = document.getElementById('svEndBtn');
+  const shareBtn  = document.getElementById('svShareBtn');
   if (deleteBtn) { deleteBtn.disabled = true; deleteBtn.classList.add('loading'); }
   if (swapBtn)   swapBtn.disabled = true;
   if (endBtn)    endBtn.disabled  = true;
+  if (shareBtn)  shareBtn.disabled = true;
   closeDeleteSessionModal();
   if (isDemoMode) {
     demoSession = null;
@@ -10395,6 +10452,7 @@ async function confirmDeleteSession() {
     if (deleteBtn) { deleteBtn.disabled = false; deleteBtn.classList.remove('loading'); }
     if (swapBtn)   swapBtn.disabled = false;
     if (endBtn)    endBtn.disabled  = false;
+    if (shareBtn)  shareBtn.disabled = false;
     showError('Could not delete session: ' + e.message);
   } finally {
     unlockUI();
