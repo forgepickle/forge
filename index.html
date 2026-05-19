@@ -3185,6 +3185,10 @@ body {
 #pillAlpha.active { background: var(--alpha-gold); color: #0f0f0f; border-color: var(--alpha-gold); }
 #pillAlpha:not(.active) { border: 1.5px solid var(--alpha-gold); color: var(--alpha-gold); }
 
+/* Top 3s leaderboard pill — same gold scheme as Alpha */
+#lbPillTop3s.active { background: var(--alpha-gold); color: #0f0f0f; border-color: var(--alpha-gold); }
+#lbPillTop3s:not(.active) { border: 1.5px solid var(--alpha-gold); color: var(--alpha-gold); }
+
 /* α glyph — Georgia italic */
 .alpha-glyph {
   font-family: Georgia, 'Times New Roman', serif;
@@ -4429,7 +4433,7 @@ body {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
-            Reset
+            Clear
           </button>
         </div>
       </div>
@@ -4907,6 +4911,7 @@ body {
     <div class="toggle-pills">
       <button class="toggle-pill active" id="lbPillIndividual" onclick="switchLbTab('individual')">Individual</button>
       <button class="toggle-pill" id="lbPillPairs" onclick="switchLbTab('pairs')">Pairs</button>
+      <button class="toggle-pill" id="lbPillTop3s" onclick="switchLbTab('top3s')">Top 3s</button>
     </div>
 
     <!-- INDIVIDUAL PANEL -->
@@ -4932,6 +4937,17 @@ body {
       </div>
       <!-- Actual list -->
       <div class="lb-list" id="lbListPairs" style="display:none;"></div>
+    </div>
+
+    <!-- TOP 3S PANEL -->
+    <div class="analytics-panel" id="lbPanelTop3s">
+      <div class="forge-notice" style="margin:8px clamp(12px,4vw,20px) 12px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:1px;color:var(--grey-mid);"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div>
+          <span class="notice-title">Coming Soon</span>
+          <span class="notice-body">Who's the most feared? Who elevates every partner? Who just keeps showing up? The Top 3s tab is coming. Start playing like someone's watching — because soon, everyone will see.</span>
+        </div>
+      </div>
     </div>
 
   </div><!-- /screenLeaderboard -->
@@ -4967,7 +4983,7 @@ body {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
-          Reset
+          Clear
         </button>
       </div>
 
@@ -7947,8 +7963,10 @@ function switchLbTab(tab) {
   currentLbTab = tab;
   document.getElementById('lbPillIndividual').classList.toggle('active', tab === 'individual');
   document.getElementById('lbPillPairs').classList.toggle('active', tab === 'pairs');
+  document.getElementById('lbPillTop3s').classList.toggle('active', tab === 'top3s');
   document.getElementById('lbPanelIndividual').classList.toggle('active', tab === 'individual');
   document.getElementById('lbPanelPairs').classList.toggle('active', tab === 'pairs');
+  document.getElementById('lbPanelTop3s').classList.toggle('active', tab === 'top3s');
 }
 
 function renderLeaderboard() { renderLbIndividual(); renderLbPairs(); renderShuffleEntryButton(); }
